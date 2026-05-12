@@ -17,6 +17,9 @@ public class DocumentParser
     readonly Stack<DomElement> chierarchy = new Stack<DomElement>(16);
     int startOfSentence = -1;
 
+    Dictionary<string, string> pool = [];
+    Dictionary<string, string>.AlternateLookup<ReadOnlySpan<char>> lookup;
+
     readonly bool debug = false;
     #region Node variables
     CurrentToken currentToken = CurrentToken.Unknown;
@@ -32,7 +35,19 @@ public class DocumentParser
     {
         this.debug = debug;
         this.document = new Document();
+        lookup = pool.GetAlternateLookup<ReadOnlySpan<char>>();
+
         ScanDocument(document);
+    }
+
+    string Intern(ReadOnlySpan<char> span)
+    {
+        if (lookup.TryGetValue(span, out var existing))
+            return existing;          // zero alloc lookup
+
+        var s = new string(span);    // only alloc when truly new
+        pool[s] = s;
+        return s;
     }
 
     public void ResetVariables()
@@ -157,7 +172,7 @@ public class DocumentParser
                 startOfSentence++;
                 return;
             }
-            attributeKey = documentSpan[startOfSentence..i].ToString();
+            attributeKey = Intern(documentSpan[startOfSentence..i]);
             Print("Opening attribute content for " + attributeKey + ":");
             if (character == '=')
             {
@@ -234,12 +249,12 @@ public class DocumentParser
                 startOfSentence = i;
                 return;
             }
-            string tagName = documentSpan[startOfSentence..i].ToString();
-
-            var _nodeBehaviour = PredefinedNodesBehaviour.Get(tagName);
+            
+            
+            var _nodeBehaviour = PredefinedNodesBehaviour.Get(documentSpan[startOfSentence..i]);
             currentElement = _nodeBehaviour.GetElement();
-            currentElement.SetNodeName(tagName);
-            Print("Creating type: " + currentElement.GetType() + " tag: " + tagName);
+            currentElement.SetNodeName(Intern(documentSpan[startOfSentence..i]));
+            Print("Creating type: " + currentElement.GetType() + " tag: " + documentSpan[startOfSentence..i].ToString());
 
 
             if (char.IsWhiteSpace(character))

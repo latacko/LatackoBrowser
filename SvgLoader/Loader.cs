@@ -25,7 +25,7 @@ public static class Loader
         //     new HTMLParser.DocumentParser(svgContent, false);
         // }
 
-        const int iteractions = 100;
+        const int iteractions = 1;
         Stopwatch stopwatch = new();
 
         stopwatch.Start();

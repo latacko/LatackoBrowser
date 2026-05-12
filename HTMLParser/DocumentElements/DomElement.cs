@@ -16,8 +16,14 @@ public class DomElement : Element
 
     internal void AddAttribute(string key, string value)
     {
-        Attributes ??= new Dictionary<string, string>(4);
+        Attributes ??= new Dictionary<string, string>(PredefinedNodesBehaviour.Get(NodeName).InitialAttributesDictionarySize);
+        // int beforeCapacity = Attributes.EnsureCapacity(Attributes.Count);
         Attributes.Add(key, value);
+        // int afterCapacity = Attributes.EnsureCapacity(Attributes.Count);
+        // if (afterCapacity > beforeCapacity)
+        // {
+        //     Console.WriteLine($"Resized for: "+NodeName+$" {beforeCapacity} → {afterCapacity}");
+        // }
     }
 
     public override string ToString()
@@ -42,7 +48,7 @@ public class DomElement : Element
         {
             _attributes += item.Key + "=\"" + item.Value + "\"" + " ";
         }
-        return _attributes.Substring(0, _attributes.Length-1);
+        return _attributes.Substring(0, _attributes.Length - 1);
     }
 
     internal void SetChildrenList()

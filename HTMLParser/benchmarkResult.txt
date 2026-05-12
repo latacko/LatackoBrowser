@@ -1,3 +1,18 @@
+added switch:
 | Method   | Mean     | Error    | StdDev   | Gen0     | Gen1     | Allocated |
 |--------- |---------:|---------:|---------:|---------:|---------:|----------:|
 | MyParser | 14.22 ms | 0.192 ms | 0.287 ms | 718.7500 | 703.1250 |  13.56 MB |
+
+added Intern (string reference if the same):
+| Method   | Mean     | Error    | StdDev   | Gen0     | Gen1     | Allocated |
+|--------- |---------:|---------:|---------:|---------:|---------:|----------:|
+| MyParser | 13.16 ms | 0.111 ms | 0.166 ms | 640.6250 | 625.0000 |  12.26 MB |
+
+img attribute size set to 16 
+| Method   | Mean     | Error    | StdDev   | Gen0     | Gen1     | Allocated |
+|--------- |---------:|---------:|---------:|---------:|---------:|----------:|
+| MyParser | 12.59 ms | 0.099 ms | 0.145 ms | 640.6250 | 593.7500 |  12.17 MB |
+
+| Method   | Mean     | Error    | StdDev   | Gen0     | Gen1     | Allocated |
+|--------- |---------:|---------:|---------:|---------:|---------:|----------:|
+| MyParser | 12.87 ms | 0.191 ms | 0.287 ms | 640.6250 | 593.7500 |  12.17 MB |

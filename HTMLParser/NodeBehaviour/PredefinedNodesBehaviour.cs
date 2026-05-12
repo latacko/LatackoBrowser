@@ -52,6 +52,7 @@ public static class PredefinedNodesBehaviour
         ["img"] = new NodeBehaviourInfo()
         {
             CanHaveChildren = false,
+            InitialAttributesDictionarySize = 16,
         },
         ["input"] = new NodeBehaviourInfo()
         {
@@ -99,12 +100,14 @@ public static class PredefinedNodesBehaviour
             InitialChildrenListSize=16,
         },
     };
-    
+
+    static Dictionary<string, NodeBehaviourInfo>.AlternateLookup<ReadOnlySpan<char>> behavioursLookup = behaviours.GetAlternateLookup<ReadOnlySpan<char>>();
+
     static DomElement DomElementFactory()=> new DomElement();
 
-    public static NodeBehaviourInfo Get(string nodeName)
+    public static NodeBehaviourInfo Get(ReadOnlySpan<char> nodeName)
     {
-        if (behaviours.TryGetValue(nodeName, out var behaviour))
+        if (behavioursLookup.TryGetValue(nodeName, out var behaviour))
             return behaviour;
         else
             return defaultBahaviour;

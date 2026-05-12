@@ -10,6 +10,7 @@ public class NodeBehaviourInfo
     public bool CanHaveChildren = true;
     public bool AutoClose = false;
     public int InitialChildrenListSize = 4;
+    public int InitialAttributesDictionarySize = 4;
     public Func<DomElement> Factory { get; init; } = static () => new HtmlElement();
 
     public DomElement GetElement()
