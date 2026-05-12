@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="Browser/Browser.csproj" />
+  <Project Path="HTMLParser/HTMLParser.csproj" />
+  <Project Path="SvgLoader/SvgLoader.csproj" />
+</Solution>

@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compileShaders",
+            "type": "shell",
+            "command": "bash compile.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/Browser/shaders"
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "dotnet build ${workspaceFolder}/Browser/Browser.csproj -c Debug",
+            "dependsOn": "compileShaders",
+            "dependsOrder": "sequence"
+        }
+    ]
+}

@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "C#: Browser Debug",
+            "type": "dotnet",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "projectPath": "${workspaceFolder}/Browser/Browser.csproj"
+        }
+    ]
+}
