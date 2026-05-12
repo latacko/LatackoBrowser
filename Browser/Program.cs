@@ -56,15 +56,12 @@ Console.WriteLine(AppContext.BaseDirectory);
 // Console.WriteLine("Time of my parsing: " + (stopwatch.Elapsed.TotalMilliseconds / iterations) + "ms");
 // Console.WriteLine("My parser is " + anglesharpPerformance/myPerformance + "x faster");
 
-// #if DEBUG
+#if RELEASE
+BenchmarkRunner.Run<ParserBenchmark>();
+return;
+#endif
+
 string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
-// var document =  HTMLParser.Document.Parse(_document, false);
-// Console.WriteLine(document);
-// Console.WriteLine(Document.elementCount);
-// #else
-// string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
-// BenchmarkRunner.Run<ParserBenchmark>();
-// #endif
 
 // Environment.SetEnvironmentVariable("socket","x11");
 

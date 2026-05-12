@@ -9,6 +9,9 @@ namespace SvgLoader;
 public static class Loader
 {
 
+    // Fist parser: 30187ms
+    // Hange to switch 
+
     public static List<Vector2[]> Parse(string svgContent)
     {
         // const int startup_iteractions = 200000;
@@ -22,7 +25,7 @@ public static class Loader
         //     new HTMLParser.DocumentParser(svgContent, false);
         // }
 
-        const int iteractions = 1;
+        const int iteractions = 100;
         Stopwatch stopwatch = new();
 
         stopwatch.Start();

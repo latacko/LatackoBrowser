@@ -11,6 +11,8 @@ public class DocumentParser
 {
     Document document = new Document();
     int documentLength;
+    ReadOnlyMemory<char> documentMemory;
+
     DomElement? currentElement = null;
     readonly Stack<DomElement> chierarchy = new Stack<DomElement>(16);
     int startOfSentence = -1;
@@ -58,23 +60,45 @@ public class DocumentParser
 
     void ScanDocument(string document)
     {
-        ReadOnlySpan<char> documentSpan = document.AsSpan();
+        documentMemory = document.AsMemory();
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
+
         documentLength = documentSpan.Length;
 
         for (int i = 0; i < documentLength; i++)
         {
             var _char = documentSpan[i];
-            if (currentToken != CurrentToken.ContextComment && _char == '<')
-                OpeningTagChar(documentSpan, i);
-            else if (currentToken == CurrentToken.ContextComment)
-                GeneratingComment(documentSpan, i, _char);
-            else if (currentToken != CurrentToken.Unknown)
-                GeneratingNode(documentSpan, i, _char);
+            switch (currentToken)
+            {
+                case CurrentToken.ContextComment:
+                    if (_char == '>' && i >= 2 && documentSpan[i - 1] == '-' && documentSpan[i - 2] == '-')
+                    {
+                        currentElement.Childrens.Add(new CommentElement()
+                        {
+                            Content = documentSpan[startOfSentence..(i - 2)].ToString()
+                        });
+                        ResetVariables();
+                    }
+                    break;
+                default:
+                    if (_char == '<') OpeningTagChar(i);
+                    else if (currentToken != CurrentToken.Unknown)
+                        GeneratingNode(i, _char);
+                    break;
+            }
+            // if (currentToken != CurrentToken.ContextComment && _char == '<')
+            //     OpeningTagChar(i);
+            // else if (currentToken == CurrentToken.ContextComment)
+            //     GeneratingComment(i);
+            // else if (currentToken != CurrentToken.Unknown)
+            //     GeneratingNode(i, _char);
         }
     }
 
-    void OpeningTagChar(ReadOnlySpan<char> documentSpan, int i)
+    void OpeningTagChar(int i)
     {
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
+
         if (currentToken == CurrentToken.Context)
         {
             if (currentElement.Childrens == null)
@@ -102,8 +126,10 @@ public class DocumentParser
         Print("Opening new node and scaning tag:");
     }
 
-    void GeneratingNode(ReadOnlySpan<char> documentSpan, int i, char character)
+    void GeneratingNode(int i, char character)
     {
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
+
         if (currentToken == CurrentToken.Context)
         {
             return;
@@ -117,12 +143,12 @@ public class DocumentParser
 
         if (currentToken == CurrentToken.Tag)
         {
-            GeneratingTag(documentSpan, i, character);
+            GeneratingTag(i, character);
         }
         else if (character == '>')
         {
             var _nodeBehaviour = PredefinedNodesBehaviour.Get(currentElement.NodeName);
-            SetUpNode(documentSpan, i, _nodeBehaviour);
+            SetUpNode(i, _nodeBehaviour);
         }
         else if (currentToken == CurrentToken.Attribute && (character == '=' || char.IsWhiteSpace(character)))
         {
@@ -150,7 +176,7 @@ public class DocumentParser
         }
         else if (currentToken == CurrentToken.AttributeContent && startOfSentence != i && (character == attributeChar))
         {
-            GeneratingAttribute(documentSpan, i, character);
+            GeneratingAttribute(i, character);
         }
         else if (currentToken != CurrentToken.AttributeContent && character == '/')
         {
@@ -159,8 +185,9 @@ public class DocumentParser
         }
     }
 
-    void GeneratingTag(ReadOnlySpan<char> documentSpan, int i, char character)
+    void GeneratingTag(int i, char character)
     {
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
         if (char.IsWhiteSpace(character) || character == '>')
         {
             Print("Done char: |" + character + "|");
@@ -224,26 +251,26 @@ public class DocumentParser
             else
             {
                 Print("Node done.");
-                SetUpNode(documentSpan, i, _nodeBehaviour);
+                SetUpNode(i, _nodeBehaviour);
             }
         }
     }
 
-    void GeneratingComment(ReadOnlySpan<char> documentSpan, int i, char character)
+    void GeneratingComment(int i)
     {
-        if (i >= 3 && documentSpan[i] == '>' && documentSpan[i - 1] == '-' && documentSpan[i - 2] == '-')
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
+
+        if (documentSpan[i] == '>' && i >= 2 && documentSpan[i - 1] == '-' && documentSpan[i - 2] == '-')
         {
-            currentElement.Childrens.Add(new CommentElement()
-            {
-                Content = documentSpan[startOfSentence..(i - 2)].ToString()
-            });
-            ResetVariables();
+
             return;
         }
     }
 
-    void SetUpNode(ReadOnlySpan<char> documentSpan, int i, NodeBehaviourInfo nodeBehaviourInfo)
+    void SetUpNode(int i, NodeBehaviourInfo nodeBehaviourInfo)
     {
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
+
         if (currentToken == CurrentToken.Attribute && startOfSentence != i)
         {
             Print("Adding attribute " + documentSpan[startOfSentence..i].ToString() + "|");
@@ -295,8 +322,9 @@ public class DocumentParser
         startOfSentence = i + 1;
     }
 
-    void GeneratingAttribute(ReadOnlySpan<char> documentSpan, int i, char character)
+    void GeneratingAttribute(int i, char character)
     {
+        ReadOnlySpan<char> documentSpan = documentMemory.Span;
         Print("Closing attribute content for " + attributeKey + ":" + documentSpan[startOfSentence..(i + 1)].ToString());
         currentToken = CurrentToken.Attribute;
         if (documentSpan[startOfSentence] == documentSpan[i])

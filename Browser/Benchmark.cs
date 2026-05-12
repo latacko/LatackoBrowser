@@ -1,26 +1,42 @@
 using AngleSharp;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
+using BenchmarkDotNet.Jobs;
 using HTMLParser;
 
 [MemoryDiagnoser]
-[EventPipeProfiler(EventPipeProfile.CpuSampling)]
+[SimpleJob(RuntimeMoniker.Net10_0, warmupCount: 0, iterationCount: 30)]
 public class ParserBenchmark
 {
-    string _document = "";
-    IBrowsingContext context;
+    private string[] _inputs = null!;
+    private int _index = 0;
 
     [GlobalSetup]
     public void Setup()
     {
-        _document = File.ReadAllText(AppContext.BaseDirectory + "../" + "../" + "../" + "../" + "wiki.html"); // BDN sets working dir correctly
-        context = BrowsingContext.New(Configuration.Default);
+        _inputs = Enumerable.Range(0, 30)
+            .Select(_ => File.ReadAllText(AppContext.BaseDirectory + "../" + "../" + "../" + "../" + "wiki.html") + "")
+            .ToArray();
+
+        var _content = File.ReadAllText(AppContext.BaseDirectory + "../" + "../" + "../" + "../" + "wiki.html");
+        
+        Console.WriteLine($"File size: {_content.Length:N0} chars ({_content.Length * 2:N0} bytes as UTF-16)");
+        Console.WriteLine($"Single parse: {MeasureAlloc(() => new HTMLParser.DocumentParser(_content, false)):N0} bytes");
+        Console.WriteLine($"Ratio: {MeasureAlloc(() => new HTMLParser.DocumentParser(_content, false)) / (double)(_content.Length * 2):F1}x file size");
+    }
+
+    static long MeasureAlloc(Action a)
+    {
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        a();
+        return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
     [GlobalCleanup]
     public void Cleanup()
     {
-        context.Dispose();
+        GC.Collect(2, GCCollectionMode.Forced, blocking: true);
+        GC.WaitForPendingFinalizers();
     }
 
     // [Benchmark]
@@ -31,9 +47,9 @@ public class ParserBenchmark
     // }
 
     [Benchmark]
-    public void Parse1()
+    public object MyParser()
     {
-        Document.Parse(_document, false);
+        return new HTMLParser.DocumentParser(_inputs[_index++ % _inputs.Length], false);
     }
 
 }
