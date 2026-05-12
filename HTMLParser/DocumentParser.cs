@@ -163,6 +163,7 @@ public class DocumentParser
         else if (character == '>')
         {
             var _nodeBehaviour = PredefinedNodesBehaviour.Get(currentElement.NodeName);
+            // startOfSentence = i;
             SetUpNode(i, _nodeBehaviour);
         }
         else if (currentToken == CurrentToken.Attribute && (character == '=' || char.IsWhiteSpace(character)))
@@ -249,8 +250,8 @@ public class DocumentParser
                 startOfSentence = i;
                 return;
             }
-            
-            
+
+
             var _nodeBehaviour = PredefinedNodesBehaviour.Get(documentSpan[startOfSentence..i]);
             currentElement = _nodeBehaviour.GetElement();
             currentElement.SetNodeName(Intern(documentSpan[startOfSentence..i]));
@@ -288,8 +289,8 @@ public class DocumentParser
 
         if (currentToken == CurrentToken.Attribute && startOfSentence != i)
         {
-            Print("Adding attribute " + documentSpan[startOfSentence..i].ToString() + "|");
-            currentElement.AddAttribute(documentSpan[startOfSentence..i].ToString(), "");
+            Print("Adding attribute " + documentSpan[startOfSentence..i].ToString() + "| start: " + startOfSentence + " end: " + i);
+            currentElement.AddAttribute(Intern(documentSpan[startOfSentence..i ]), "");
         }
 
         if (!nodeBehaviourInfo.CanHaveChildren)
@@ -347,7 +348,7 @@ public class DocumentParser
             if ((startOfSentence + 1) == i)
                 currentElement.AddAttribute(attributeKey, "");
             else
-                currentElement.AddAttribute(attributeKey, documentSpan[(startOfSentence + 1)..(i - 1)].ToString());
+                currentElement.AddAttribute(attributeKey, documentSpan[(startOfSentence + 1)..i].ToString());
         }
         else
             currentElement.AddAttribute(attributeKey, documentSpan[startOfSentence..i].ToString());

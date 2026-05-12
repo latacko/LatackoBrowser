@@ -18,11 +18,6 @@ public class ParserBenchmark
         _inputs = Enumerable.Range(0, 30)
             .Select(_ => File.ReadAllText(AppContext.BaseDirectory + "../" + "../" + "../" + "../" + "wiki.html") + "")
             .ToArray();
-
-        var _content = File.ReadAllText(AppContext.BaseDirectory + "../" + "../" + "../" + "../" + "wiki.html");
-        Console.WriteLine($"File size: {_content.Length:N0} chars ({_content.Length * 2:N0} bytes as UTF-16)");
-        Console.WriteLine($"Single parse: {MeasureAlloc(() => new HTMLParser.DocumentParser(_content, false)):N0} bytes");
-        Console.WriteLine($"Ratio: {MeasureAlloc(() => new HTMLParser.DocumentParser(_content, false)) / (double)(_content.Length * 2):F1}x file size");
     }
 
     static long MeasureAlloc(Action a)

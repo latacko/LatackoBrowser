@@ -57,7 +57,8 @@ Console.WriteLine(AppContext.BaseDirectory);
 // Console.WriteLine("My parser is " + anglesharpPerformance/myPerformance + "x faster");
 
 #if RELEASE
-BenchmarkRunner.Run<ParserBenchmark>();
+// BenchmarkRunner.Run<ParserBenchmark>();
+BenchmarkRunner.Run<BenchmarkToXDoc>();
 return;
 #endif
 
@@ -70,10 +71,11 @@ string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"
 // BrowserWindow window = new();
 // window.Run();
 
-SvgLoader.Loader.Parse(_document);
+// SvgLoader.Loader.Parse(_document);
 
-// SvgLoader.Loader.Parse(@"
-// <svg  viewBox=""0 0 640 640"">
-//     <!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
-//     <path d=""M39 39C48.4 29.6 63.6 29.6 72.9 39L601 567C610.4 576.4 610.4 591.6 601 600.9C591.6 610.2 576.4 610.3 567.1 600.9L39 73C29.7 63.6 29.7 48.4 39 39z""/>
-// </svg>");
+SvgLoader.Loader.Parse(@"
+<svg  viewBox=""0 0 640 640"" html>
+    <!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+    <path d=""M39 39C48.4 29.6 63.6 29.6 72.9 39L601 567C610.4 576.4 610.4 591.6 601 600.9C591.6 610.2 576.4 610.3 567.1 600.9L39 73C29.7 63.6 29.7 48.4 39 39z"" a/>
+</svg>");
+

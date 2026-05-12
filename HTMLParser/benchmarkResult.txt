@@ -16,3 +16,15 @@ img attribute size set to 16
 | Method   | Mean     | Error    | StdDev   | Gen0     | Gen1     | Allocated |
 |--------- |---------:|---------:|---------:|---------:|---------:|----------:|
 | MyParser | 12.87 ms | 0.191 ms | 0.287 ms | 640.6250 | 593.7500 |  12.17 MB |
+
+
+Comparance on loading simple svg xml:
+<svg  viewBox=""0 0 640 640"" html>
+    <!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+    <path d=""M39 39C48.4 29.6 63.6 29.6 72.9 39L601 567C610.4 576.4 610.4 591.6 601 600.9C591.6 610.2 576.4 610.3 567.1 600.9L39 73C29.7 63.6 29.7 48.4 39 39z"" a/>
+</svg>
+
+| Method          | Mean       | Error   | StdDev   | Median     | Gen0   | Gen1   | Allocated |
+|---------------- |-----------:|--------:|---------:|-----------:|-------:|-------:|----------:|
+| MyParser        | 1,671.0 ns | 1.25 ns | 16.85 ns | 1,671.2 ns | 0.1507 |      - |   2.78 KB |
+| XDocumentParser |   973.5 ns | 1.88 ns | 24.08 ns |   966.0 ns | 0.6294 | 0.0267 |  11.56 KB |
