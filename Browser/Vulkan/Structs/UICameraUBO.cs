@@ -1,4 +1,5 @@
 using Silk.NET.Maths;
+namespace Vulkan;
 
 public struct UICameraUBO
 {

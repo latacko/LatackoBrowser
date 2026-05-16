@@ -1,93 +1,133 @@
 using Browser;
 using Silk.NET.Maths;
+using Silk.NET.Vulkan;
+using Units;
+using Vulkan;
 
 public class RuntimeModelData : IDisposable
 {
+    [Flags]
+    private enum DirtyFlags : byte
+    {
+        None = 0,
+        Matrix = 1 << 0,
+        Object = 1 << 1,
+        All = Matrix | Object
+    }
     public ModelData<ushort> ModelData { get; private set; }
-    public int ObjectIndex; // index into shader's object storage buffer
+    public uint ObjectIndex;
 
-    public UIVector2 Pos;
-    public UIVector2 Size;
-    public float RotationX { get; private set; }
-    public float RotationY { get; private set; }
-    public float RotationZ { get; private set; }
+    Rect2D bounds = new();
+    public Rect2D Bounds => bounds;
 
-    public Vector4D<float> BackgroundColor = new(1, 1, 1, 1);
+    public Vector2 Pos;
+    public Vector2 Size;
+    public Transform Transform = new();
+    public Properties Properties = new();
 
-    private bool _matrixDirty = true;
+    private DirtyFlags[] dirty = new DirtyFlags[VulkanManager.MAX_FRAMES_IN_FLIGHT];
     private Matrix4X4<float> _cachedModel;
 
-    public RuntimeModelData(ModelData<ushort> modelData, int objectIndex)
+    public RuntimeModelData(ModelData<ushort> modelData, uint objectIndex)
     {
         ModelData = modelData;
         ObjectIndex = objectIndex;
     }
 
-    public void SetPosition(UIVector2 pos)
+    void AddFlag(DirtyFlags flags)
     {
-        if (Pos == pos) return;
+        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            dirty[i] |= flags;
+        }
+    }
+
+    void RemoveFlag(DirtyFlags flags, uint frame)
+    {
+        dirty[frame] &= flags;
+    }
+
+    public RuntimeModelData SetPosition(Vector2 pos)
+    {
+        if (Pos == pos) return this;
         Pos = pos;
-        _matrixDirty = true;
+        
+        bounds.Offset = new()
+        {
+            X = (int)Pos.X,
+            Y = (int)Pos.Y
+        };
+
+        AddFlag(DirtyFlags.Matrix);
+        return this;
     }
 
-    public void SetSize(UIVector2 size)
+    public RuntimeModelData SetSize(Vector2 size)
     {
-        if (this.Size == size) return;
+        if (this.Size == size) return this;
         Size = size;
-        _matrixDirty = true;
+        bounds.Extent = new()
+        {
+            Width = (uint)Size.X,
+            Height = (uint)Size.Y
+        };
+        AddFlag(DirtyFlags.Matrix);
+        return this;
     }
 
-    public void SetRotation(float x, float y, float z)
+    public RuntimeModelData SetTransform(Func<Transform, Transform> setTransform)
     {
-        if (RotationX == x && RotationY == y && RotationZ == z) return;
-        RotationX = x; RotationY = y; RotationZ = z;
-        _matrixDirty = true;
+        Transform = setTransform.Invoke(Transform);
+        AddFlag(DirtyFlags.Matrix);
+        return this;
     }
 
-    public void SetBackgroundColor255(float r, float g, float b, float a)
+    public RuntimeModelData SetProperties(Func<Properties, Properties> setProperties)
     {
-        BackgroundColor = new(r/255, g/255, b/255, a);
-        _matrixDirty = true;
+        Properties = setProperties.Invoke(Properties);
+        AddFlag(DirtyFlags.Matrix);
+        return this;
     }
 
-    public void SetBackgroundColor(float r, float g, float b, float a)
-    {
-        BackgroundColor = new(r, g, b, a);
-        _matrixDirty = true;
-    }
 
-    // returns true if object buffer needs updating
-    public bool TryGetObjectData(out ObjectData data)
+    public bool TryGetObjectData(out ObjectData data, uint frame)
     {
-        if (!_matrixDirty && !BrowserWindow.recreatedSwapChain)
+        if (Swapchain.Instance.recreatedSwapChain)
+        {
+            Pos.ConvertToPx();
+            Size.ConvertToPx();
+
+            Transform.ConvertToPx();
+
+            AddFlag(DirtyFlags.Matrix);
+        }
+
+        if (dirty[frame] == DirtyFlags.None)
         {
             data = default;
             return false;
         }
 
-        if (BrowserWindow.recreatedSwapChain)
+
+        if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
-            Pos.ConvertToPx();
-            Size.ConvertToPx();
+            _cachedModel =
+                Matrix4X4.CreateScale(Size.X, Size.Y, 1f) *
+                Matrix4X4.CreateTranslation(-Transform.Translate.X, -Transform.Translate.Y, 0f) *
+                Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
+                Matrix4X4.CreateTranslation(Pos.X, Pos.Y, 0f);
+            RemoveFlag(DirtyFlags.Matrix, frame);
         }
-
-        float centerX = Pos.X + Size.X / 2f;
-        float centerY = Pos.Y + Size.Y / 2f;
-
-        _cachedModel =
-            Matrix4X4.CreateScale(Size.X, Size.Y, 1f) *
-            Matrix4X4.CreateFromYawPitchRoll(RotationY, RotationX, RotationZ) *
-            Matrix4X4.CreateTranslation(Pos.X, Pos.Y, 0f);
 
         data = new ObjectData
         {
             Model = _cachedModel,
-            Color = BackgroundColor,
-            hasTexture = 0,
+            Color = Properties.BackgroundColor,
+            TextureIndex = 0,
             hasTexture2 = 0,
         };
+        RemoveFlag(DirtyFlags.Object, frame);
 
-        _matrixDirty = false;
         return true;
     }
 

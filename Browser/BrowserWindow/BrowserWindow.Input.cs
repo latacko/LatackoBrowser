@@ -15,13 +15,20 @@ public partial class BrowserWindow
         Console.WriteLine("Key up: " + key);
     }
 
-    private void OnMouseClick(IMouse mouse, MouseButton button, Vector2 pos)
+    private void OnMouseClick(IMouse mouse, MouseButton button, System.Numerics.Vector2 pos)
     {
         Console.WriteLine(button + " pos: " + pos);
     }
 
-    private void OnMouseMove(IMouse mouse, Vector2 vector)
+    private void OnMouseMove(IMouse mouse, System.Numerics.Vector2 vector)
     {
+        if(BoundsHelper.Contains(browserUI.TopBar.Bounds, vector))
+        {
+            CursorManager.SetHand();
+        } else
+        {
+            CursorManager.SetDefault();
+        }
         // throw new NotImplementedException();
     }
 

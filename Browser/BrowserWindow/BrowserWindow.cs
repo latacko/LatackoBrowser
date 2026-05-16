@@ -41,8 +41,11 @@ public unsafe partial class BrowserWindow
     public void Run()
     {
         CreateWindow();
+        Console.WriteLine("Creating vulkan");
         CreateVulkan();
+        Console.WriteLine("Created vulkan");
         MainLoop();
+        Console.WriteLine("Ended main loop");
         CleanUp();
     }
 
@@ -60,6 +63,7 @@ public unsafe partial class BrowserWindow
         options.FramesPerSecond = 0;
 
         window = Window.Create(options);
+        CursorManager.Init(Silk.NET.SDL.Sdl.GetApi());
 
 
         window.Initialize();
@@ -98,8 +102,12 @@ public unsafe partial class BrowserWindow
     }
 
     float speed = 0.2f;
+    float DegToRad(float deg) => deg * (MathF.PI / 180f);
     private void OnUpdate(double deltaTime)
     {
+        // browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
+        // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
+        // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
 
         // runtimeModelData.SetRotation((float)(runtimeModelData.RotationX + deltaTime * speed), 0, 0);
@@ -112,25 +120,25 @@ public unsafe partial class BrowserWindow
 
     private void OnRender(double deltaTime)
     {
-        vk.WaitForFences(device, 1, in inFlightFences[currentFrame], Vk.True, ulong.MaxValue);
+        Vulkan.CreateVulkan.vk.WaitForFences(Vulkan.LogicalDevice.device, 1, in vulkanManager.fences[currentFrame], Vk.True, ulong.MaxValue);
 
 
         uint imageIndex;
-        var _result = khrSwapChain!.AcquireNextImage(device, swapChain, ulong.MaxValue, imageAvailableSemaphores[currentFrame], default, &imageIndex);
+        var _result = swapchain.khrSwapChain!.AcquireNextImage(Vulkan.LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, vulkanManager.imageAcquiredSemaphores[currentFrame], default, &imageIndex);
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
-            RecreateSwapChain();
+            swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
             return;
         }
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
 
-        vk.ResetFences(device, 1, in inFlightFences[currentFrame]);
+        Vulkan.CreateVulkan.vk.ResetFences(Vulkan.LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
 
-        vk.ResetCommandBuffer(commandBuffers[currentFrame], 0);
+        Vulkan.CreateVulkan.vk.ResetCommandBuffer(vulkanManager.commandBuffers[currentFrame], 0);
 
-        RecordCommandBuffer(commandBuffers[currentFrame], imageIndex);
+        RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
 
 
         UpdateUniformBuffer(currentFrame);
@@ -139,34 +147,33 @@ public unsafe partial class BrowserWindow
 
         SubmitInfo submitInfo = new()
         {
-            SType = StructureType.SubmitInfo
+            SType = StructureType.SubmitInfo,
         };
 
-        Semaphore[] waitSemaphores = [imageAvailableSemaphores[currentFrame]];
-        Semaphore[] signalSemaphores = [renderFinishedSemaphores[currentFrame]];
-        PipelineStageFlags[] waitStages = [PipelineStageFlags.ColorAttachmentOutputBit];
-        submitInfo.WaitSemaphoreCount = 1;
-        SwapchainKHR[] swapChains = [swapChain];
+        PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
 
-        fixed (Semaphore* waitSemaphoresPtr = waitSemaphores)
-        fixed (Semaphore* signalSemaphoresPtr = signalSemaphores)
-        fixed (PipelineStageFlags* waitStagesPtr = waitStages)
-        fixed (CommandBuffer* cmdBufferPtr = &commandBuffers[currentFrame])
-        fixed (SwapchainKHR* swapChainsPtr = swapChains)
+        fixed (Semaphore* waitSemaphoresPtr = &vulkanManager.imageAcquiredSemaphores[currentFrame])
+        fixed (CommandBuffer* commandBufferPtr = &vulkanManager.commandBuffers[currentFrame])
+        fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanManager.renderCompleteSemaphores[imageIndex])
+        fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
         {
+            submitInfo.WaitSemaphoreCount = 1;
             submitInfo.PWaitSemaphores = waitSemaphoresPtr;
-            submitInfo.PWaitDstStageMask = waitStagesPtr;
+
+            submitInfo.PWaitDstStageMask = &waitStages;
 
             submitInfo.CommandBufferCount = 1;
-            submitInfo.PCommandBuffers = cmdBufferPtr;
+            submitInfo.PCommandBuffers = commandBufferPtr;
 
             submitInfo.SignalSemaphoreCount = 1;
-            submitInfo.PSignalSemaphores = signalSemaphoresPtr;
+            submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
 
-            if (vk.QueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != Result.Success)
+            if (Vulkan.CreateVulkan.vk.QueueSubmit(Vulkan.LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanManager.fences[currentFrame]) != Result.Success)
             {
                 throw new Exception("Failed to submit command buffer!");
             }
+
+            currentFrame = (currentFrame + 1) % Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT;
 
 
             PresentInfoKHR presentInfo = new()
@@ -174,26 +181,25 @@ public unsafe partial class BrowserWindow
                 SType = StructureType.PresentInfoKhr,
 
                 WaitSemaphoreCount = 1,
-                PWaitSemaphores = signalSemaphoresPtr,
+                PWaitSemaphores = renderCompleteSemaphoresPtr,
 
                 SwapchainCount = 1,
-                PSwapchains = swapChainsPtr,
+                PSwapchains = swapChainPtr,
                 PImageIndices = &imageIndex
             };
 
-            _result = khrSwapChain.QueuePresent(presentQueue, &presentInfo);
+            _result = swapchain.khrSwapChain.QueuePresent(Vulkan.LogicalDevice.presentQueue, &presentInfo);
 
             if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
             {
                 framebufferResized = false;
-                RecreateSwapChain();
+                swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
             }
             else if (_result != Result.Success)
             {
                 throw new Exception("failed to present swap chain image!");
             }
 
-            currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
         }
 
         _frameCount++;
@@ -207,37 +213,39 @@ public unsafe partial class BrowserWindow
         }
     }
 
+    Vector2D<int> GetFrameBufferSize()
+    {
+        return window.FramebufferSize;
+    }
+
+    void OnWindowMinimized()
+    {
+        window.DoEvents();
+    }
+
     void UpdateUniformBuffer(uint currentImage)
     {
         var time = (float)window!.Time;
 
-        UICameraUBO ubo = new()
+        Vulkan.UICameraUBO ubo = new()
         {
-            Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, swapChainExtent.Width, 0, swapChainExtent.Height, -1000, 1000),
+            Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, swapchain.swapChainExtent.Width, 0, swapchain.swapChainExtent.Height, -1000, 1000),
         };
 
-        cameraBuffer.Update(currentImage, ubo.Proj);
-
-
-        static float Radians(float angle) => angle * MathF.PI / 180f;
+        vulkanManager.UpdateCameraBuffer(currentImage, ubo.Proj);
     }
 
     void UpdateUniformBufferPerspective(uint currentImage)
     {
         var time = (float)window!.Time;
 
-        UniformBufferObject ubo = new()
+        Vulkan.UICameraUBO ubo = new()
         {
-            Model = Matrix4X4<float>.Identity * Matrix4X4.CreateFromAxisAngle<float>(new Vector3D<float>(0, 0, 1), time * Radians(90.0f)),
-            View = Matrix4X4.CreateLookAt(new Vector3D<float>(2, 2, 2), new Vector3D<float>(0, 0, 0), new Vector3D<float>(0, 0, 1)),
-            Proj = Matrix4X4.CreatePerspectiveFieldOfView(Radians(45.0f), (float)swapChainExtent.Width / swapChainExtent.Height, 0.1f, 10.0f),
+            Proj = Matrix4X4.CreatePerspectiveFieldOfView(Radians(45.0f), (float)swapchain.swapChainExtent.Width / swapchain.swapChainExtent.Height, 0.1f, 10.0f),
         };
         ubo.Proj.M22 *= -1;
 
-        void* data;
-        vk!.MapMemory(device, CameraBuffer.Instance._uniformMemory[currentImage], 0, (ulong)Unsafe.SizeOf<UICameraUBO>(), 0, &data);
-        new Span<UniformBufferObject>(data, 1)[0] = ubo;
-        vk!.UnmapMemory(device, CameraBuffer.Instance._uniformMemory[currentImage]);
+        vulkanManager.UpdateCameraBuffer(currentImage, ubo.Proj);
 
         static float Radians(float angle) => angle * MathF.PI / 180f;
     }
@@ -246,7 +254,7 @@ public unsafe partial class BrowserWindow
     {
         window.Run();
 
-        vk.DeviceWaitIdle(device);
+        Vulkan.CreateVulkan.vk.DeviceWaitIdle(Vulkan.LogicalDevice.device);
     }
 
     void CleanUp()

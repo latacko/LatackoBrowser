@@ -1,8 +1,10 @@
 using Browser;
 using Browser.DataTypes;
+using Silk.NET.Assimp;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
+using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 public unsafe abstract class BaseShader : IDisposable
@@ -10,117 +12,50 @@ public unsafe abstract class BaseShader : IDisposable
     public Pipeline Pipeline;
     public PipelineLayout PipelineLayout;
     public List<RuntimeModelData> elements = new();
-    public int LastCreatedIndex = 0;
-
-    private protected DescriptorSetLayout descriptorSetLayoutForMaterial;
-    private protected DescriptorSetLayout descriptorSetLayoutForObject;
-
-    private protected DescriptorSet materialDescriptorSet;
-    private protected DescriptorSet objectDescriptorSet;
-
-    private protected Buffer objectBuffer;
-    private protected DeviceMemory objectBufferMemory;
-    public void* persistentMappedObjectBuffer;
 
     private protected virtual int GetMaxObjectForShader() => 10000;
     private protected virtual ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
 
-    protected abstract string VertexShaderPath { get; }
-    protected abstract string FragmentShaderPath { get; }
+    protected abstract string moduleShaderPath { get; }
 
 
     #region Init
     public virtual void Init()
     {
-        CreateDescriptorSetLayoutForMaterial();
-        CreateDescriptorSetLayoutForObject();
-
-        BufferHelper.CreateBuffer(GetSizeOfObjectDatas(), BufferUsageFlags.StorageBufferBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref objectBuffer, ref objectBufferMemory);
-        fixed (void** ptr = &persistentMappedObjectBuffer)
-            BrowserWindow.vk.MapMemory(BrowserWindow.device, objectBufferMemory, 0, GetSizeOfObjectDatas(), 0, ptr);
-
-
-        CreateDescriptorSetsForMaterial();
-        CreateDescriptorSetForObject();
+        CreatePipeline();
     }
 
-    void CreateDescriptorSetLayoutForMaterial()
-    {
-        DescriptorSetLayoutBinding _samplerLayoutBinding = new()
-        {
-            Binding = 0,
-            DescriptorCount = 1,
-            DescriptorType = DescriptorType.CombinedImageSampler,
-            PImmutableSamplers = null,
-            StageFlags = ShaderStageFlags.FragmentBit,
-        };
 
-        DescriptorSetLayoutCreateInfo _layoutInfo = new()
-        {
-            SType = StructureType.DescriptorSetLayoutCreateInfo,
-
-            BindingCount = 1,
-            PBindings = &_samplerLayoutBinding,
-        };
-
-        if (BrowserWindow.vk.CreateDescriptorSetLayout(BrowserWindow.device, &_layoutInfo, null, out descriptorSetLayoutForMaterial) != Result.Success)
-        {
-            throw new Exception("Failed to create descriptor set layout!");
-        }
-    }
-
-    void CreateDescriptorSetLayoutForObject()
-    {
-        DescriptorSetLayoutBinding _samplerLayoutBinding = new()
-        {
-            Binding = 0,
-            DescriptorType = DescriptorType.StorageBuffer,
-            DescriptorCount = 1,
-
-            StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-        };
-
-        DescriptorSetLayoutCreateInfo _layoutInfo = new()
-        {
-            SType = StructureType.DescriptorSetLayoutCreateInfo,
-
-            BindingCount = 1,
-            PBindings = &_samplerLayoutBinding,
-        };
-
-        if (BrowserWindow.vk.CreateDescriptorSetLayout(BrowserWindow.device, &_layoutInfo, null, out descriptorSetLayoutForObject) != Result.Success)
-        {
-            throw new Exception("Failed to create descriptor set layout!");
-        }
-    }
 
     #endregion
 
     public virtual DescriptorSetLayout[] GetLayouts()
     {
-        return [CameraBuffer.Instance.Layout, descriptorSetLayoutForMaterial, descriptorSetLayoutForObject];
+        return [VulkanManager.descriptorSetLayoutForTextures];
     }
 
-    public virtual unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, KhrPushDescriptor khrPushDescriptor)
+    public virtual unsafe void Render(CommandBuffer commandBuffer, uint currentFrame)
     {
-        BrowserWindow.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
+        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
 
-        // BrowserWindow.vk.CmdDraw(commandBuffer, 3, 1, 0, 0);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanManager.descriptorSetForTextures, 0, null);
 
-        // set 0 — camera, same for all shaders
-        fixed (DescriptorSet* ptr = CameraBuffer.Instance.DescriptorSets)
-            BrowserWindow.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ptr + currentFrame, 0, null);
+        ulong vOffset = 0;
+        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
+        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, PrimitiveModelsDb.primitiveBuffer, PrimitiveModelsDb.indicesOffset, IndexType.Uint16);
 
-        // set 2 — object buffer, once per shader
-        fixed (DescriptorSet* ptr = &objectDescriptorSet)
-            BrowserWindow.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 2, 1, ptr, 0, null);
+        ulong* addresses = stackalloc ulong[2]
+        {
+            VulkanManager.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
+            VulkanManager.Instance.objectsBuffers.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
+        };
+        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
 
-        // subclass renders its elements
-        RenderElements(commandBuffer, currentFrame, khrPushDescriptor);
+        RenderElements(commandBuffer, currentFrame);
     }
 
     // subclass overrides this to render its own elements
-    protected abstract void RenderElements(CommandBuffer commandBuffer, uint currentFrame, KhrPushDescriptor khrPushDescriptor);
+    protected abstract void RenderElements(CommandBuffer commandBuffer, uint currentFrame);
 
     #region Graphic pipeline
     protected virtual PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
@@ -136,7 +71,7 @@ public unsafe abstract class BaseShader : IDisposable
     protected virtual PipelineColorBlendAttachmentState GetColorBlend() => new()
     {
         ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
-                         ColorComponentFlags.BBit | ColorComponentFlags.ABit,
+                        ColorComponentFlags.BBit | ColorComponentFlags.ABit,
         BlendEnable = Vk.False,
     };
 
@@ -157,34 +92,54 @@ public unsafe abstract class BaseShader : IDisposable
     protected virtual PushConstantRange[] GetPushConstantRanges() => [
         new()
         {
-            StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-            Offset     = 0,
-            Size       = sizeof(int) // object index
-        }
+            StageFlags = ShaderStageFlags.VertexBit,
+            Size       = sizeof(ulong)*2 // camera ubo & objects ubo
+        },
     ];
 
-    public virtual void CreatePipeline(RenderPass renderPass)
+    public virtual void CreatePipeline()
     {
-        var vertCode = File.ReadAllBytes(VertexShaderPath);
-        var fragCode = File.ReadAllBytes(FragmentShaderPath);
+        #region Pipeline layout
+        var pushRanges = GetPushConstantRanges();
+        var layouts = GetLayouts();
 
-        var vertModule = CreateShaderModule(vertCode);
-        var fragModule = CreateShaderModule(fragCode);
+
+        fixed (PushConstantRange* pushRangesPtr = pushRanges)
+        fixed (DescriptorSetLayout* layoutsPtr = layouts)
+        {
+            PipelineLayoutCreateInfo layoutInfo = new()
+            {
+                SType = StructureType.PipelineLayoutCreateInfo,
+                SetLayoutCount = (uint)layouts.Length,
+                PSetLayouts = layoutsPtr,
+                PushConstantRangeCount = (uint)pushRanges.Length,
+                PPushConstantRanges = pushRangesPtr,
+            };
+
+
+            if (CreateVulkan.vk.CreatePipelineLayout(LogicalDevice.device, &layoutInfo, null, out PipelineLayout) != Result.Success)
+                throw new Exception("Failed to create pipeline layout!");
+        }
+        #endregion
+
+        var vertCode = System.IO.File.ReadAllBytes(moduleShaderPath);
+
+        var shaderModule = CreateShaderModule(vertCode);
 
         PipelineShaderStageCreateInfo vertStage = new()
         {
             SType = StructureType.PipelineShaderStageCreateInfo,
             Stage = ShaderStageFlags.VertexBit,
-            Module = vertModule,
-            PName = (byte*)SilkMarshal.StringToPtr("main")
+            Module = shaderModule,
+            PName = (byte*)SilkMarshal.StringToPtr("VertexMain")
         };
 
         PipelineShaderStageCreateInfo fragStage = new()
         {
             SType = StructureType.PipelineShaderStageCreateInfo,
             Stage = ShaderStageFlags.FragmentBit,
-            Module = fragModule,
-            PName = (byte*)SilkMarshal.StringToPtr("main")
+            Module = shaderModule,
+            PName = (byte*)SilkMarshal.StringToPtr("FragmentMain")
         };
 
         PipelineShaderStageCreateInfo[] stages = [vertStage, fragStage];
@@ -195,17 +150,15 @@ public unsafe abstract class BaseShader : IDisposable
         var depthStencil = GetDepthStencil();
         var colorBlend = GetColorBlend();
         var rasterizer = GetRasterizer();
-        var pushRanges = GetPushConstantRanges();
-        var layouts = GetLayouts();
 
         DynamicState[] dynamicStates = [DynamicState.Viewport, DynamicState.Scissor];
 
         fixed (VertexInputAttributeDescription* attrPtr = attributeDescs)
         fixed (DynamicState* dynPtr = dynamicStates)
-        fixed (DescriptorSetLayout* layoutsPtr = layouts)
-        fixed (PushConstantRange* pushRangesPtr = pushRanges)
         fixed (PipelineShaderStageCreateInfo* stagesPtr = stages)
+        fixed (Format* colorFormatPtr = &Swapchain.swapChainImageFormat)
         {
+
             PipelineVertexInputStateCreateInfo vertexInput = new()
             {
                 SType = StructureType.PipelineVertexInputStateCreateInfo,
@@ -231,23 +184,6 @@ public unsafe abstract class BaseShader : IDisposable
                 ScissorCount = 1,
             };
 
-            PipelineMultisampleStateCreateInfo multisampling = new()
-            {
-                SType = StructureType.PipelineMultisampleStateCreateInfo,
-                SampleShadingEnable = Vk.False,
-                RasterizationSamples = SampleCountFlags.Count1Bit,
-            };
-
-            PipelineColorBlendStateCreateInfo colorBlending = new()
-            {
-                SType = StructureType.PipelineColorBlendStateCreateInfo,
-
-                LogicOpEnable = Vk.False,
-                LogicOp = LogicOp.Copy,
-                AttachmentCount = 1,
-                PAttachments = &colorBlend,
-            };
-
             PipelineDynamicStateCreateInfo dynamicState = new()
             {
                 SType = StructureType.PipelineDynamicStateCreateInfo,
@@ -255,47 +191,53 @@ public unsafe abstract class BaseShader : IDisposable
                 PDynamicStates = dynPtr,
             };
 
-            PipelineLayoutCreateInfo layoutInfo = new()
+            PipelineRenderingCreateInfo renderingCI = new()
             {
-                SType = StructureType.PipelineLayoutCreateInfo,
-                SetLayoutCount = (uint)layouts.Length,
-                PSetLayouts = layoutsPtr,
-                PushConstantRangeCount = (uint)pushRanges.Length,
-                PPushConstantRanges = pushRangesPtr,
+                SType = StructureType.PipelineRenderingCreateInfo,
+                ColorAttachmentCount = 1,
+                PColorAttachmentFormats = colorFormatPtr,
+                DepthAttachmentFormat = Depth.depthFormat,
             };
 
+            PipelineColorBlendStateCreateInfo colorBlendState = new()
+            {
+                SType = StructureType.PipelineColorBlendStateCreateInfo,
+                AttachmentCount = 1,
+                PAttachments = &colorBlend,
+            };
 
-            if (BrowserWindow.vk.CreatePipelineLayout(BrowserWindow.device, &layoutInfo, null, out PipelineLayout) != Result.Success)
-                throw new Exception("Failed to create pipeline layout!");
+            PipelineMultisampleStateCreateInfo multisampleState = new()
+            {
+                SType = StructureType.PipelineMultisampleStateCreateInfo,
+                RasterizationSamples = SampleCountFlags.Count1Bit,
+            };
 
-            GraphicsPipelineCreateInfo pipelineInfo = new()
+            GraphicsPipelineCreateInfo pipelineCI = new()
             {
                 SType = StructureType.GraphicsPipelineCreateInfo,
+                PNext = &renderingCI,
+
                 StageCount = (uint)stages.Length,
                 PStages = stagesPtr,
+
                 PVertexInputState = &vertexInput,
                 PInputAssemblyState = &inputAssembly,
                 PViewportState = &viewportState,
                 PRasterizationState = &rasterizer,
-                PMultisampleState = &multisampling,
+                PMultisampleState = &multisampleState,
                 PDepthStencilState = &depthStencil,
-                PColorBlendState = &colorBlending,
+                PColorBlendState = &colorBlendState,
                 PDynamicState = &dynamicState,
                 Layout = PipelineLayout,
-                RenderPass = renderPass,
-                Subpass = 0,
-                BasePipelineHandle = default,
-                BasePipelineIndex = -1,
             };
 
-            if (BrowserWindow.vk.CreateGraphicsPipelines(BrowserWindow.device, default, 1, &pipelineInfo, null, out Pipeline) != Result.Success)
+            if (CreateVulkan.vk.CreateGraphicsPipelines(LogicalDevice.device, default, 1, &pipelineCI, null, out Pipeline) != Result.Success)
                 throw new Exception("Failed to create graphics pipeline!");
         }
 
         SilkMarshal.FreeString((nint)vertStage.PName);
         SilkMarshal.FreeString((nint)fragStage.PName);
-        BrowserWindow.vk.DestroyShaderModule(BrowserWindow.device, vertModule, null);
-        BrowserWindow.vk.DestroyShaderModule(BrowserWindow.device, fragModule, null);
+        CreateVulkan.vk.DestroyShaderModule(LogicalDevice.device, shaderModule, null);
     }
 
     ShaderModule CreateShaderModule(byte[] code)
@@ -309,16 +251,12 @@ public unsafe abstract class BaseShader : IDisposable
                 PCode = (uint*)codePtr,
             };
 
-            BrowserWindow.vk.CreateShaderModule(BrowserWindow.device, &createInfo, null, out ShaderModule module);
+            CreateVulkan.vk.CreateShaderModule(LogicalDevice.device, &createInfo, null, out ShaderModule module);
             return module;
         }
     }
     #endregion
 
-    #region Create descriptor sets
-    private protected abstract void CreateDescriptorSetsForMaterial();
-    private protected abstract void CreateDescriptorSetForObject();
-    #endregion
     public virtual void Dispose()
     {
         foreach (var element in elements)
@@ -326,13 +264,7 @@ public unsafe abstract class BaseShader : IDisposable
             element.Dispose();
         }
 
-        BrowserWindow.vk.UnmapMemory(BrowserWindow.device, objectBufferMemory);
-        BufferHelper.DestroyBuffer(objectBuffer, objectBufferMemory);
-
-        BrowserWindow.vk.DestroyPipeline(BrowserWindow.device, Pipeline, null);
-        BrowserWindow.vk.DestroyPipelineLayout(BrowserWindow.device, PipelineLayout, null);
-
-        BrowserWindow.vk.DestroyDescriptorSetLayout(BrowserWindow.device, descriptorSetLayoutForMaterial, null);
-        BrowserWindow.vk.DestroyDescriptorSetLayout(BrowserWindow.device, descriptorSetLayoutForObject, null);
+        CreateVulkan.vk.DestroyPipeline(LogicalDevice.device, Pipeline, null);
+        CreateVulkan.vk.DestroyPipelineLayout(LogicalDevice.device, PipelineLayout, null);
     }
 }
