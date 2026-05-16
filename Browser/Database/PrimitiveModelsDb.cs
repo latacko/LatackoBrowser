@@ -2,16 +2,14 @@ using System.Numerics;
 using Browser;
 using Browser.DataTypes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsWPF;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 public class PrimitiveModelsDb : IDisposable
 {
-    Buffer primitiveVertexBuffer;
-    DeviceMemory primitiveVertexBufferMemory;
-
-    Buffer primitiveIndicesBuffer;
-    DeviceMemory primitiveIndicesBufferMemory;
+    Buffer primitiveBuffer;
+    DeviceMemory primitiveBufferMemory;
 
     readonly Dictionary<PrimitiveUIModel, ModelData<ushort>> uiDb = new()
     {
@@ -61,59 +59,34 @@ public class PrimitiveModelsDb : IDisposable
             indicesIndex += primitiveModelInfo.Value.Indices.Length;
         }
 
-        CreateVertexBuffer(vertices, ref primitiveVertexBuffer, ref primitiveVertexBufferMemory);
-        CreateIndexBuffer(indices, ref primitiveIndicesBuffer, ref primitiveIndicesBufferMemory);
-
+        CreateVertexAndIndicesBuffer(vertices, indices);
         foreach (var primitiveModelInfo in uiDb)
         {
-            primitiveModelInfo.Value.vertexBuffer = primitiveVertexBuffer;
-            primitiveModelInfo.Value.indexBuffer = primitiveIndicesBuffer;
+            primitiveModelInfo.Value.vertexBuffer = primitiveBuffer;
         }
 
 
-        Console.WriteLine("Created vertices buffer " + primitiveVertexBuffer);
-        Console.WriteLine("Created Indices buffer " + primitiveIndicesBuffer);
+        Console.WriteLine("Created vertices buffer " + primitiveBuffer);
     }
 
-    public unsafe void CreateVertexBuffer(Vertex[] vertices, ref Buffer vertexBuffer, ref DeviceMemory vertexBufferMemory)
+    public unsafe void CreateVertexAndIndicesBuffer<TIndices>(Vertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>
     {
-        var _bufferSize = (ulong)(sizeof(Vertex) * vertices.Length);
-        Buffer _stagingBuffer = new();
-        DeviceMemory _stagingBufferMemory = new();
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _stagingBuffer, ref _stagingBufferMemory);
+        ulong _vertexSize = (ulong)(sizeof(Vertex) * vertices.Length);
+        ulong _indicesSize = (ulong)(sizeof(TIndices) * indices.Length);
+        ulong _bufferSize = _vertexSize + _indicesSize;
+
+        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit, MemoryPropertyFlags.DeviceLocalBit | MemoryPropertyFlags.HostVisibleBit, ref primitiveBuffer, ref primitiveBufferMemory);
 
         void* data;
-        BrowserWindow.vk.MapMemory(BrowserWindow.device, _stagingBufferMemory, 0, _bufferSize, 0, &data);
-        vertices.CopyTo(new Span<Vertex>(data, vertices.Length));
-        BrowserWindow.vk.UnmapMemory(BrowserWindow.device, _stagingBufferMemory);
-
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferDstBit | BufferUsageFlags.VertexBufferBit, MemoryPropertyFlags.DeviceLocalBit, ref vertexBuffer, ref vertexBufferMemory);
-
-        BufferHelper.CopyBuffer(_stagingBuffer, vertexBuffer, _bufferSize);
-
-        BrowserWindow.vk.DestroyBuffer(BrowserWindow.device, _stagingBuffer, null);
-        BrowserWindow.vk.FreeMemory(BrowserWindow.device, _stagingBufferMemory, null);
+        BrowserWindow.vk.MapMemory(BrowserWindow.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);
+        byte* ptr = (byte*)data;
+        vertices.CopyTo(new Span<Vertex>(ptr, vertices.Length));
+        ptr += sizeof(Vertex) * vertices.Length;
+        indices.CopyTo(new Span<TIndices>(ptr, indices.Length));
+        BrowserWindow.vk.UnmapMemory(BrowserWindow.device, primitiveBufferMemory);
     }
 
-    internal unsafe void CreateIndexBuffer<TIndex>(TIndex[] indices, ref Buffer indexBuffer, ref DeviceMemory indexBufferMemory) where TIndex : unmanaged, IBinaryInteger<TIndex>
-    {
-        ulong _bufferSize = (ulong)(sizeof(TIndex) * indices.Length);
-        Buffer _stagingBuffer = new();
-        DeviceMemory _stagingBufferMemory = new();
 
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _stagingBuffer, ref _stagingBufferMemory);
-
-        void* data;
-        BrowserWindow.vk.MapMemory(BrowserWindow.device, _stagingBufferMemory, 0, _bufferSize, 0, &data);
-        indices.CopyTo(new Span<TIndex>(data, indices.Length));
-        BrowserWindow.vk.UnmapMemory(BrowserWindow.device, _stagingBufferMemory);
-
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferDstBit | BufferUsageFlags.IndexBufferBit, MemoryPropertyFlags.DeviceLocalBit, ref indexBuffer, ref indexBufferMemory);
-        BufferHelper.CopyBuffer(_stagingBuffer, indexBuffer, _bufferSize);
-
-        BrowserWindow.vk.DestroyBuffer(BrowserWindow.device, _stagingBuffer, null);
-        BrowserWindow.vk.FreeMemory(BrowserWindow.device, _stagingBufferMemory, null);
-    }
 
     public ModelData<ushort> Get(PrimitiveUIModel model)
     {
@@ -122,7 +95,6 @@ public class PrimitiveModelsDb : IDisposable
 
     public void Dispose()
     {
-        BufferHelper.DestroyBuffer(primitiveVertexBuffer, primitiveVertexBufferMemory);
-        BufferHelper.DestroyBuffer(primitiveIndicesBuffer, primitiveIndicesBufferMemory);
+        BufferHelper.DestroyBuffer(primitiveBuffer, primitiveBufferMemory);
     }
 }

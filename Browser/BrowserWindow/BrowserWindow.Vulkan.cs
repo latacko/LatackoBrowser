@@ -7,6 +7,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
 using Silk.NET.Vulkan.Extensions.KHR;
+using Units;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
@@ -14,124 +15,16 @@ namespace Browser;
 
 public unsafe partial class BrowserWindow
 {
-    public const int MAX_FRAMES_IN_FLIGHT = 2;
-
-    internal static Vk vk { get; private set; }
-    Instance vulkanInstance;
-
-    private ExtDebugUtils? debugUtils;
-    DebugUtilsMessengerEXT debugMessenger;
-
-    internal static PhysicalDevice physicalDevice;
-    internal static Device device;
-
-    internal static Queue graphicsQueue;
-    internal static bool recreatedSwapChain;
-    Queue presentQueue;
-
-
-    KhrSurface khrSurface;
-    SurfaceKHR surface;
-
-    KhrSwapchain? khrSwapChain;
-    SwapchainKHR swapChain;
-    Image[] swapChainImages;
-    Format swapChainImageFormat;
-    Extent2D swapChainExtent;
-    ImageView[] swapChainImageViews;
-
-    RenderPass renderPass;
-
-    Framebuffer[] swapChainFrameBuffers;
-
-    internal static CommandPool commandPool;
-
-    CommandBuffer[] commandBuffers;
-
-    Semaphore[] imageAvailableSemaphores;
-    Semaphore[] renderFinishedSemaphores;
-    Fence[] inFlightFences;
-
-    #region Shaders
-    CameraBuffer cameraBuffer;
-    internal static BaseShader[] loadedShader = [
-        new UIShader()
-    ];
-
-    #endregion
-
-    internal static Sampler textureSampler;
-
-    Image depthImage;
-    DeviceMemory depthImageMemory;
-    ImageView depthImageView;
-
-    // ModelData loadedModel;
-    RuntimeModelData runtimeModelData;
-
-    internal static PrimitiveModelsDb primitiveModelsDb = new();
-
-    bool framebufferResized = false;
-
-    string[] validationLayers =
-    [
-        "VK_LAYER_KHRONOS_validation",
-    ];
-
-    private readonly string[] deviceExtensions = new[]
-    {
-        KhrSwapchain.ExtensionName,
-        "VK_KHR_push_descriptor",
-        "VK_KHR_synchronization2",
-    };
-
-#if DEBUG
-    const bool enableValidationLayers = true;
-#else
-    const bool enableValidationLayers = false;
-#endif
+    bool framebufferResized;
+    Vulkan.CreateVulkan createVulkan = new();
+    Vulkan.VulkanManager vulkanManager = new();
+    Vulkan.Swapchain swapchain;
 
     void CreateVulkan()
     {
-        vk = Vk.GetApi();
-        cameraBuffer = new();
-
-        CreateInstance();
-        SetUpDebugMessenger();
-        CreateSurface();
-        // Console.WriteLine("1");
-        PickPhysicalDevice();
-        CreateLogicalDevice();
-        // Console.WriteLine("2");
-        CreateSwapChain();
-        CreateImageViews();
-        // Console.WriteLine("3");
-        CreateCommandPool();
-        CreateTextureSampler();
-        
-        CreateRenderPass();
-        CreateDescriptorSetLayout();
-        // Console.WriteLine("4");
-
-        CreateDepthResources();
-        CreateFrameBuffers();
-
-        primitiveModelsDb.CreateBuffers();
-        // Console.WriteLine("5");
-
-        // CreateTextureImage();
-        // CreateTextureImageView();
-
-        // CreateVertexBuffer();
-        // CreateIndexBuffer();
-
-        Console.WriteLine("Create model when vulcan");
-        // CreateModel();
-        // Console.WriteLine("6");
-
-        CreateCommandBuffers();
-        // Console.WriteLine("7");
-        CreateSyncObjects();
+        createVulkan.Create(window.VkSurface.GetRequiredExtensions(out uint count), count);
+        vulkanManager.Init();
+        swapchain = new(window.FramebufferSize);
 
         OnStart?.Invoke();
     }
@@ -139,55 +32,7 @@ public unsafe partial class BrowserWindow
     #region Instance creation
     private void CreateInstance()
     {
-        if (enableValidationLayers && !CheckValidationLayerSupport())
-        {
-            throw new System.Exception("validation layers requested, but not available!");
-        }
-
-        ApplicationInfo applicationInfo = new()
-        {
-            SType = StructureType.ApplicationInfo,
-            PApplicationName = (byte*)SilkMarshal.StringToPtr("Latacko Browser"),
-            ApplicationVersion = new Version32(0, 1, 0),
-            PEngineName = (byte*)SilkMarshal.StringToPtr("Latacko Engine"),
-            EngineVersion = new Version32(0, 1, 0),
-            ApiVersion = Vk.Version12,
-        };
-
-        InstanceCreateInfo createInfo = new()
-        {
-            SType = StructureType.InstanceCreateInfo,
-            PApplicationInfo = &applicationInfo
-        };
-
-        createInfo = SetRequiredExtensions(createInfo);
-        if (enableValidationLayers)
-        {
-            createInfo.EnabledLayerCount = (uint)validationLayers.Length;
-            createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(validationLayers);
-
-            var _debugCreateInfo = PopulateDebugMessengerCreateInfo();
-            createInfo.PNext = &_debugCreateInfo;
-        }
-        else
-        {
-            createInfo.EnabledLayerCount = 0;
-        }
-
-        var _requiredExtensions = GetRequiredExtensions();
-        createInfo.EnabledExtensionCount = (uint)_requiredExtensions.Length;
-        createInfo.PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(_requiredExtensions);
-
-        var result = vk.CreateInstance(ref createInfo, null, out vulkanInstance);
-
-        if (result != Result.Success)
-        {
-            throw new System.Exception("Coudn't initialize vulkan instance. Error: " + result);
-        }
-
-        SilkMarshal.FreeString((nint)applicationInfo.PApplicationName);
-        SilkMarshal.FreeString((nint)applicationInfo.PEngineName);
-        SilkMarshal.Free((nint)createInfo.PpEnabledExtensionNames);
+        
     }
 
     private InstanceCreateInfo SetRequiredExtensions(InstanceCreateInfo createInfo)
@@ -198,21 +43,7 @@ public unsafe partial class BrowserWindow
         return createInfo;
     }
 
-    bool CheckValidationLayerSupport()
-    {
-        uint _layerCount = 0;
-        vk.EnumerateInstanceLayerProperties(&_layerCount, null);
 
-        LayerProperties[] _availableLayers = new LayerProperties[_layerCount];
-        fixed (LayerProperties* layersPtr = _availableLayers)
-        {
-            vk.EnumerateInstanceLayerProperties(&_layerCount, _availableLayers);
-        }
-
-        var availableLayerNames = _availableLayers.Select(layer => SilkMarshal.PtrToString((IntPtr)layer.LayerName)).ToHashSet();
-
-        return validationLayers.All(availableLayerNames.Contains);
-    }
 
     string[] GetRequiredExtensions()
     {
@@ -282,215 +113,15 @@ public unsafe partial class BrowserWindow
     #endregion
 
     #region Physical Device
-    private void PickPhysicalDevice()
-    {
-        uint _deviceCount = 0;
-        vk.EnumeratePhysicalDevices(vulkanInstance, &_deviceCount, null);
-        if (_deviceCount == 0)
-            throw new Exception("Failed to find GPUs with Vulkan support!");
-
-        PhysicalDevice[] _devices = new PhysicalDevice[_deviceCount];
-        fixed (PhysicalDevice* devicesPtr = _devices)
-        {
-            vk.EnumeratePhysicalDevices(vulkanInstance, &_deviceCount, devicesPtr);
-        }
-
-        PhysicalDevice _bestDevice = default;
-        int _bestDeviceScore = 0;
-
-        foreach (var device in _devices)
-        {
-            vk.GetPhysicalDeviceProperties(device, out PhysicalDeviceProperties _physicalDeviceProperties);
-            vk.GetPhysicalDeviceFeatures(device, out PhysicalDeviceFeatures _physicalDeviceFeatures);
-
-            if (!IsDeviceSuitable(device)) continue;
-
-            int _score = RateDeviceSuitability(_physicalDeviceProperties, _physicalDeviceFeatures);
-            if (_score > _bestDeviceScore)
-            {
-                _bestDevice = device;
-                _bestDeviceScore = _score;
-            }
-        }
-
-        physicalDevice = _bestDevice;
-
-        if (physicalDevice.Handle == 0)
-        {
-            throw new Exception("Failed to find a suitable GPU!");
-        }
-        else
-        {
-            vk.GetPhysicalDeviceProperties(physicalDevice, out PhysicalDeviceProperties _physicalDeviceProperties);
-            Console.WriteLine("Using " + SilkMarshal.PtrToString((nint)_physicalDeviceProperties.DeviceName) + " gpu");
-        }
-    }
-
-    bool IsDeviceSuitable(PhysicalDevice physicalDevice)
-    {
-        QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
-
-        bool extensionsSupported = CheckDeviceExtensionSupport(physicalDevice);
-
-        bool swapChainAdequate = false;
-        if (extensionsSupported)
-        {
-            SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(physicalDevice);
-            swapChainAdequate = !(swapChainSupport.Formats.Length == 0) && !(swapChainSupport.PresentModes.Length == 0);
-        }
-
-        vk.GetPhysicalDeviceFeatures(physicalDevice, out var _supportedFeatures);
-
-        return indices.IsComplete() && extensionsSupported && swapChainAdequate && _supportedFeatures.SamplerAnisotropy;
-    }
-
-    int RateDeviceSuitability(PhysicalDeviceProperties physicalDeviceProperties, PhysicalDeviceFeatures physicalDeviceFeatures)
-    {
-        int score = 0;
-
-        // Discrete GPUs have a significant performance advantage
-        if (physicalDeviceProperties.DeviceType == PhysicalDeviceType.DiscreteGpu)
-        {
-            score += 1000;
-        }
-
-        // Maximum possible size of textures affects graphics quality
-        score += (int)physicalDeviceProperties.Limits.MaxImageDimension2D;
-
-        // Application can't function without geometry shaders
-        if (!physicalDeviceFeatures.GeometryShader)
-        {
-            return 0;
-        }
-
-        return score;
-    }
-
-    bool CheckDeviceExtensionSupport(PhysicalDevice physicalDevice)
-    {
-        uint _extensionCount = 0;
-        vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, null);
-        ExtensionProperties[] _extensionProperties = new ExtensionProperties[_extensionCount];
-        fixed (ExtensionProperties* extensionsPtr = _extensionProperties)
-        {
-            vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, extensionsPtr);
-        }
-
-        var availableExtensionsNames = _extensionProperties.Select(layer => SilkMarshal.PtrToString((IntPtr)layer.ExtensionName)).ToHashSet();
-        return deviceExtensions.All(availableExtensionsNames.Contains);
-    }
-
-    QueueFamilyIndices FindQueueFamilies(PhysicalDevice physicalDevice)
-    {
-        QueueFamilyIndices indices = default;
-
-        uint _queueFamiliesCount = 0;
-        vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, null);
-        QueueFamilyProperties[] _queueFamilyProperties = new QueueFamilyProperties[_queueFamiliesCount];
-        fixed (QueueFamilyProperties* proportiesPtr = _queueFamilyProperties)
-        {
-            vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, proportiesPtr);
-        }
-
-        uint i = 0;
-        foreach (var queueFamily in _queueFamilyProperties)
-        {
-            if (queueFamily.QueueFlags.HasFlag(QueueFlags.GraphicsBit))
-            {
-                indices.GraphicsFamily = i;
-            }
-
-            khrSurface!.GetPhysicalDeviceSurfaceSupport(physicalDevice, i, surface, out var presentSupport);
-            if (presentSupport)
-            {
-                indices.PresentFamily = i;
-            }
-
-            if (indices.IsComplete())
-            {
-                break;
-            }
-
-            i++;
-        }
-
-        return indices;
-    }
+    
     #endregion
 
     #region Logical Device
-    void CreateLogicalDevice()
-    {
-        QueueFamilyIndices indices = FindQueueFamilies(physicalDevice);
-
-        var uniqueQueueFamilies = new[] { indices.GraphicsFamily!.Value, indices.PresentFamily!.Value };
-        uniqueQueueFamilies = uniqueQueueFamilies.Distinct().ToArray();
-
-        DeviceQueueCreateInfo[] _queueCreateInfos = new DeviceQueueCreateInfo[uniqueQueueFamilies.Length];
-
-
-        float queuePriority = 1.0f;
-        for (int i = 0; i < uniqueQueueFamilies.Length; i++)
-        {
-            _queueCreateInfos[i] = new()
-            {
-                SType = StructureType.DeviceQueueCreateInfo,
-                QueueFamilyIndex = indices.GraphicsFamily!.Value,
-                QueueCount = 1,
-                PQueuePriorities = &queuePriority,
-                PNext = null
-            };
-        }
-
-
-        PhysicalDeviceFeatures _deviceFeatures = new()
-        {
-            SamplerAnisotropy = Vk.True,
-        };
-
-        fixed (DeviceQueueCreateInfo* queueCreateInfoPtr = _queueCreateInfos)
-        {
-            DeviceCreateInfo _createInfo = new()
-            {
-                SType = StructureType.DeviceCreateInfo,
-
-                PQueueCreateInfos = queueCreateInfoPtr,
-                QueueCreateInfoCount = (uint)_queueCreateInfos.Length,
-
-                PEnabledFeatures = &_deviceFeatures,
-
-                EnabledExtensionCount = (uint)deviceExtensions.Length,
-                PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(deviceExtensions),
-
-                PNext = null,
-            };
-
-            if (enableValidationLayers)
-            {
-                _createInfo.EnabledLayerCount = (uint)validationLayers.Length;
-                _createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(validationLayers);
-
-                var _debugCreateInfo = PopulateDebugMessengerCreateInfo();
-                // _createInfo.PNext = &_debugCreateInfo;
-            }
-
-            if (vk.CreateDevice(physicalDevice, &_createInfo, null, out device) != Result.Success)
-            {
-                throw new Exception("Failed to create logical device!");
-            }
-
-            vk.GetDeviceQueue(device, indices.GraphicsFamily.Value, 0, out graphicsQueue);
-            vk.GetDeviceQueue(device, indices.PresentFamily.Value, 0, out presentQueue);
-
-            SilkMarshal.Free((nint)_createInfo.PpEnabledLayerNames);
-            SilkMarshal.Free((nint)_createInfo.PpEnabledExtensionNames);
-        }
-
-    }
+    
     #endregion
 
     #region Swap Chain
-    SwapChainSupportDetails QuerySwapChainSupport(PhysicalDevice physicalDevice)
+    SwapChainSupportDetails QuerySwapChainSupport(Silk.NET.Vulkan.PhysicalDevice physicalDevice)
     {
         SwapChainSupportDetails _details = new();
 
@@ -865,77 +496,13 @@ public unsafe partial class BrowserWindow
 
     #region Depth
 
-    void CreateDepthResources()
-    {
-        Format _depthFormat = FindDepthFormat();
-
-        CreateImage(swapChainExtent.Width, swapChainExtent.Height, _depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref depthImage, ref depthImageMemory);
-        depthImageView = CreateImageView(depthImage, _depthFormat, ImageAspectFlags.DepthBit);
-    }
-
-    bool HasStencilComponent(Format format)
-    {
-        return format == Format.D32SfloatS8Uint || format == Format.D32SfloatS8Uint;
-    }
-
-    Format FindDepthFormat()
-    {
-        return FindSupportedFormat([Format.D32Sfloat, Format.D32SfloatS8Uint, Format.D32SfloatS8Uint], ImageTiling.Optimal, FormatFeatureFlags.DepthStencilAttachmentBit);
-    }
-
-    Format FindSupportedFormat(Format[] candidates, ImageTiling tiling, FormatFeatureFlags features)
-    {
-        foreach (var format in candidates)
-        {
-            vk.GetPhysicalDeviceFormatProperties(physicalDevice, format, out var props);
-
-            if (tiling == ImageTiling.Linear && (props.LinearTilingFeatures & features) == features)
-            {
-                return format;
-            }
-            else if (tiling == ImageTiling.Optimal && (props.OptimalTilingFeatures & features) == features)
-            {
-                return format;
-            }
-        }
-
-        throw new Exception("failed to find supported format!");
-    }
+    
 
     #endregion
 
     #region Create texture
 
-    public void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory)
-    {
-        using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(path);
-
-        if (img == null)
-        {
-            throw new Exception("Failed to load texture image!");
-        }
-
-        ulong _imageSize = (ulong)(img.Width * img.Height * img.PixelType.BitsPerPixel / 8);
-
-        Buffer _stagingBuffer = new();
-        DeviceMemory _stagingBufferMemory = new();
-
-        CreateBuffer(_imageSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _stagingBuffer, ref _stagingBufferMemory);
-
-        void* data;
-        vk!.MapMemory(device, _stagingBufferMemory, 0, _imageSize, 0, &data);
-        img.CopyPixelDataTo(new Span<byte>(data, (int)_imageSize));
-        vk!.UnmapMemory(device, _stagingBufferMemory);
-
-        CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref textureImage, ref textureImageMemory);
-        TransitionImageLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
-        CopyBufferToImage(_stagingBuffer, textureImage, (uint)img.Width, (uint)img.Height);
-
-        TransitionImageLayout(textureImage, Format.R8G8B8A8Srgb, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
-
-        vk.DestroyBuffer(device, _stagingBuffer, null);
-        vk.FreeMemory(device, _stagingBufferMemory, null);
-    }
+    
 
     void CreateImage(uint width, uint height, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, ref Image image, ref DeviceMemory imageMemory)
     {
@@ -1351,11 +918,11 @@ public unsafe partial class BrowserWindow
         {
             SType = StructureType.CommandBufferBeginInfo,
 
-            Flags = 0,
+            Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
             PInheritanceInfo = null,
         };
 
-        if (vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
+        if (Vulkan.CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
         {
             throw new Exception("Failed to begin recording command buffer!");
         }

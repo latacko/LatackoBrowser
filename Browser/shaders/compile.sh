@@ -1,8 +1,7 @@
 #!/bin/bash
 # compile_shaders.sh
 
-GLSLC=~/Dokumenty/vulkanSDK/x86_64/bin/glslc
-FLAGS="-I. -O0 -g --target-env=vulkan1.2"
+SLANGC=/opt/slang/bin/slangc
+FLAGS="-target spirv"
 
-$GLSLC $FLAGS shader.vert -o vert.spv && echo "✅ vert compiled" || echo "❌ vert failed"
-$GLSLC $FLAGS shader.frag -o frag.spv && echo "✅ frag compiled" || echo "❌ frag failed"
+$SLANGC uiShader.slang $FLAGS -o uiShader.spv && echo "✅ shader compiled" || echo "❌ shader failed"

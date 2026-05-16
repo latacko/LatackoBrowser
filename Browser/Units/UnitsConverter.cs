@@ -1,3 +1,4 @@
+namespace Units;
 
 public static class UnitsConverter {
     readonly static Dictionary<UnitType, float> unitToPx = new(){

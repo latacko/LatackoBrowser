@@ -1,20 +1,26 @@
 using Browser;
 using Silk.NET.Maths;
+using Units;
 
 public class RuntimeModelData : IDisposable
 {
+    [Flags]
+    private enum DirtyFlags : byte
+    {
+        None = 0,
+        Matrix = 1 << 0,
+        Object = 1 << 1,
+        All = Matrix | Object
+    }
     public ModelData<ushort> ModelData { get; private set; }
-    public int ObjectIndex; // index into shader's object storage buffer
+    public int ObjectIndex;
 
-    public UIVector2 Pos;
-    public UIVector2 Size;
-    public float RotationX { get; private set; }
-    public float RotationY { get; private set; }
-    public float RotationZ { get; private set; }
+    public Vector2 Pos;
+    public Vector2 Size;
+    public Transform Transform = new();
+    public Properties Properties = new();
 
-    public Vector4D<float> BackgroundColor = new(1, 1, 1, 1);
-
-    private bool _matrixDirty = true;
+    private DirtyFlags dirty = DirtyFlags.None;
     private Matrix4X4<float> _cachedModel;
 
     public RuntimeModelData(ModelData<ushort> modelData, int objectIndex)
@@ -23,71 +29,71 @@ public class RuntimeModelData : IDisposable
         ObjectIndex = objectIndex;
     }
 
-    public void SetPosition(UIVector2 pos)
+    public void SetPosition(Vector2 pos)
     {
         if (Pos == pos) return;
         Pos = pos;
-        _matrixDirty = true;
+        dirty |= DirtyFlags.Matrix;
     }
 
-    public void SetSize(UIVector2 size)
+    public void SetSize(Vector2 size)
     {
         if (this.Size == size) return;
         Size = size;
-        _matrixDirty = true;
+        dirty |= DirtyFlags.Matrix;
     }
 
-    public void SetRotation(float x, float y, float z)
+    public void SetTransform(Transform transform)
     {
-        if (RotationX == x && RotationY == y && RotationZ == z) return;
-        RotationX = x; RotationY = y; RotationZ = z;
-        _matrixDirty = true;
+        Transform = transform;
+        dirty |= DirtyFlags.Matrix;
     }
 
-    public void SetBackgroundColor255(float r, float g, float b, float a)
+    public void SetProperties(Properties properties)
     {
-        BackgroundColor = new(r/255, g/255, b/255, a);
-        _matrixDirty = true;
+        Properties = properties;
+        dirty |= DirtyFlags.Object;
     }
 
-    public void SetBackgroundColor(float r, float g, float b, float a)
-    {
-        BackgroundColor = new(r, g, b, a);
-        _matrixDirty = true;
-    }
 
-    // returns true if object buffer needs updating
     public bool TryGetObjectData(out ObjectData data)
     {
-        if (!_matrixDirty && !BrowserWindow.recreatedSwapChain)
+        if (BrowserWindow.recreatedSwapChain)
+        {
+            Pos.ConvertToPx();
+            Size.ConvertToPx();
+
+            Transform.ConvertToPx();
+
+            dirty |= DirtyFlags.Matrix;
+        }
+
+        if (dirty == DirtyFlags.None)
         {
             data = default;
             return false;
         }
 
-        if (BrowserWindow.recreatedSwapChain)
+
+        if (dirty.HasFlag(DirtyFlags.Matrix))
         {
-            Pos.ConvertToPx();
-            Size.ConvertToPx();
+            _cachedModel =
+                Matrix4X4.CreateScale(Size.X, Size.Y, 1f) *
+                Matrix4X4.CreateTranslation(-Transform.Translate.X, -Transform.Translate.Y, 0f)*
+                Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z)*
+                Matrix4X4.CreateTranslation(Pos.X, Pos.Y, 0f);
+            dirty &= DirtyFlags.Matrix;
         }
-
-        float centerX = Pos.X + Size.X / 2f;
-        float centerY = Pos.Y + Size.Y / 2f;
-
-        _cachedModel =
-            Matrix4X4.CreateScale(Size.X, Size.Y, 1f) *
-            Matrix4X4.CreateFromYawPitchRoll(RotationY, RotationX, RotationZ) *
-            Matrix4X4.CreateTranslation(Pos.X, Pos.Y, 0f);
 
         data = new ObjectData
         {
             Model = _cachedModel,
-            Color = BackgroundColor,
+            Color = Properties.BackgroundColor,
             hasTexture = 0,
             hasTexture2 = 0,
         };
+        dirty &= DirtyFlags.Object;
 
-        _matrixDirty = false;
         return true;
     }
 

@@ -1,6 +1,7 @@
 using Browser;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
+namespace Vulkan;
 
 static public class BufferHelper
 {
@@ -15,26 +16,26 @@ static public class BufferHelper
             SharingMode = SharingMode.Exclusive
         };
 
-        if (BrowserWindow.vk.CreateBuffer(BrowserWindow.device, ref bufferInfo, null, out buffer) != Result.Success)
+        if (CreateVulkan.vk.CreateBuffer(LogicalDevice.device, ref bufferInfo, null, out buffer) != Result.Success)
         {
             throw new Exception("Failed to create vertex buffer!");
         }
 
-        BrowserWindow.vk.GetBufferMemoryRequirements(BrowserWindow.device, buffer, out var _memRequirements);
+        CreateVulkan.vk.GetBufferMemoryRequirements(LogicalDevice.device, buffer, out var _memRequirements);
 
         MemoryAllocateInfo allocInfo = new()
         {
             SType = StructureType.MemoryAllocateInfo,
             AllocationSize = _memRequirements.Size,
-            MemoryTypeIndex = FindMemoryType(BrowserWindow.vk, BrowserWindow.physicalDevice, _memRequirements.MemoryTypeBits, properties)
+            MemoryTypeIndex = FindMemoryType(CreateVulkan.vk, PhysicalDevice.physicalDevice, _memRequirements.MemoryTypeBits, properties)
         };
 
-        if (BrowserWindow.vk.AllocateMemory(BrowserWindow.device, ref allocInfo, null, out bufferMemory) != Result.Success)
+        if (CreateVulkan.vk.AllocateMemory(LogicalDevice.device, ref allocInfo, null, out bufferMemory) != Result.Success)
         {
             throw new Exception("Failed to allocate vertex buffer memory!");
         }
 
-        BrowserWindow.vk.BindBufferMemory(BrowserWindow.device, buffer, bufferMemory, 0);
+        CreateVulkan.vk.BindBufferMemory(LogicalDevice.device, buffer, bufferMemory, 0);
     }
 
     public static unsafe void CopyBuffer(Buffer srcBuffer, Buffer dstBuffer, ulong size)
@@ -48,18 +49,18 @@ static public class BufferHelper
             Size = size,
         };
 
-        BrowserWindow.vk.CmdCopyBuffer(_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+        CreateVulkan.vk.CmdCopyBuffer(_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
         CmdHelper.EndSingleTimeCommands(_commandBuffer);
     }
 
-    public static uint FindMemoryType(Vk vk, PhysicalDevice device, uint typeFilter, MemoryPropertyFlags properties)
+    public static uint FindMemoryType(Vk vk, Silk.NET.Vulkan.PhysicalDevice device, uint typeFilter, MemoryPropertyFlags properties)
     {
-        vk.GetPhysicalDeviceMemoryProperties(device, out var memProperties);
+        vk.GetPhysicalDeviceMemoryProperties2(device, out var memProperties);
 
-        for (int i = 0; i < memProperties.MemoryTypeCount; i++)
+        for (int i = 0; i < memProperties.MemoryProperties.MemoryTypeCount; i++)
         {
-            if ((typeFilter & (1u << i)) != 0 && (memProperties.MemoryTypes[i].PropertyFlags & properties) == properties)
+            if ((typeFilter & (1u << i)) != 0 && (memProperties.MemoryProperties.MemoryTypes[i].PropertyFlags & properties) == properties)
             {
                 return (uint)i;
             }
@@ -69,7 +70,7 @@ static public class BufferHelper
 
     public static unsafe void DestroyBuffer(Buffer buffer, DeviceMemory memory)
     {
-        BrowserWindow.vk.DestroyBuffer(BrowserWindow.device, buffer, null);
-        BrowserWindow.vk.FreeMemory(BrowserWindow.device, memory, null);
+        CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, buffer, null);
+        CreateVulkan.vk.FreeMemory(LogicalDevice.device, memory, null);
     }
 }
