@@ -4,9 +4,10 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 public static class ObjectsManager
 {
-    public static unsafe RuntimeModelData AddObject(BaseShader baseShader, ModelData<ushort> modelData)
+    public static uint LastCreatedIndex = 0;
+    public static RuntimeModelData AddObject(BaseShader baseShader, ModelData<ushort> modelData)
     {
-        int objectIndex = baseShader.LastCreatedIndex++;
+        uint objectIndex = LastCreatedIndex++;
         RuntimeModelData runtimeModelData = new(modelData, objectIndex);
 
         baseShader.elements.Add(runtimeModelData);

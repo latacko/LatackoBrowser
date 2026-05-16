@@ -1,21 +1,16 @@
 using Browser;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
+using Vulkan;
 
 public unsafe class UIShader : BaseShader
 {
-    public Image TextureImage;
-    public DeviceMemory TextureImageMemory;
-    public ImageView TextureImageView;
-
     protected override string moduleShaderPath => "shaders/uiShader.spv";
 
     private protected override int GetMaxObjectForShader() => 1000;
 
     public override void Init()
     {
-        BrowserWindow.Instance.CreateTextureImage("textures/viking_room.png", ref TextureImage, ref TextureImageMemory);
-        TextureImageView = BrowserWindow.Instance.CreateTextureImageView(TextureImage);
         base.Init();
     }
 
@@ -56,56 +51,20 @@ public unsafe class UIShader : BaseShader
     };
 
 
-    protected override unsafe void RenderElements(CommandBuffer commandBuffer, uint currentFrame, KhrPushDescriptor khrPushDescriptor)
+    protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
     {
         foreach (var element in elements)
         {
-            if (element.TryGetObjectData(out var data))
+            if (element.TryGetObjectData(out var data, currentFrame))
             {
-                // write into storage buffer at element's index
-                var bufferData = (ObjectData*)persistentMappedObjectBuffer + element.ObjectIndex;
-                *bufferData = data;
+                VulkanManager.Instance.objectsBuffers.Update(currentFrame, element.ObjectIndex, data);
             }
-        }
-
-        // draw
-        foreach (var element in elements)
-        {
-            element.ModelData.BindVertexBuffers(BrowserWindow.vk, commandBuffer);
-            element.ModelData.BindIndexBuffer(BrowserWindow.vk, commandBuffer);
-
-            // DescriptorImageInfo imageInfo = new()
-            // {
-            //     ImageLayout = ImageLayout.ShaderReadOnlyOptimal,
-            //     ImageView = element.TextureImageView,
-            //     Sampler = BrowserWindow.textureSampler,
-            // };
-
-            // WriteDescriptorSet write = new()
-            // {
-            //     SType = StructureType.WriteDescriptorSet,
-            //     DstBinding = 0,
-            //     DescriptorType = DescriptorType.CombinedImageSampler,
-            //     DescriptorCount = 1,
-            //     PImageInfo = &imageInfo,
-            // };
-
-            fixed (DescriptorSet* ptr = &materialDescriptorSet)
-                BrowserWindow.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 1, 1, ptr, 0, null);
-
-            // khrPushDescriptor.CmdPushDescriptorSet(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 1, 1, &write);
-
-            int index = element.ObjectIndex;
-            BrowserWindow.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(int), &index);
-
-            BrowserWindow.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, 0, 0, 0);
+            CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);
         }
     }
 
     public override void Dispose()
     {
         base.Dispose();
-
-        BrowserWindow.Instance.DestroyTexture(TextureImage, TextureImageMemory, TextureImageView);
     }
 }

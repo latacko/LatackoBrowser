@@ -2,6 +2,7 @@ using System.Numerics;
 using Browser;
 using Browser.DataTypes;
 using Silk.NET.Vulkan;
+using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
@@ -10,10 +11,10 @@ public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
     public TIndex[] Indices;
 
     public Buffer vertexBuffer;
-    internal ulong vertexOffset;
+    internal uint vertexOffset;
 
     public Buffer indexBuffer;
-    internal ulong indexOffset;
+    internal uint indexOffset;
 
     public ModelData(Vertex[] vertices, TIndex[] indices)
     {
@@ -26,16 +27,6 @@ public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
 
         Vertices = vertices;
         Indices = indices;
-    }
-
-    public void BindVertexBuffers(Vk vk, CommandBuffer commandBuffer)
-    {
-        vk!.CmdBindVertexBuffers(commandBuffer, 0, 1, ref vertexBuffer, ref vertexOffset);
-    }
-
-    public void BindIndexBuffer(Vk vk, CommandBuffer commandBuffer)
-    {
-        vk!.CmdBindIndexBuffer(commandBuffer, indexBuffer, indexOffset, IndexType.Uint16);
     }
 
     public int GetIndicesCount()=>Indices.Length;

@@ -7,24 +7,25 @@ namespace Vulkan;
 
 public unsafe class CameraBuffers
 {
-    internal ShaderDataBuffer[] shaderDataBuffers = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal ShaderDataBuffer[] shaderDataBuffersForCamera = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
 
 
     internal void CreateBuffers()
     {
         for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            BufferHelper.CreateBuffer((ulong)Unsafe.SizeOf<UICameraUBO>(), BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffers[i].Buffer, ref shaderDataBuffers[i].Memory);
+            BufferHelper.CreateBuffer((ulong)Unsafe.SizeOf<UICameraUBO>(), BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffersForCamera[i].Buffer, ref shaderDataBuffersForCamera[i].Memory);
             void* data;
-            CreateVulkan.vk.MapMemory(LogicalDevice.device, shaderDataBuffers[i].Memory, 0, (ulong)Unsafe.SizeOf<UICameraUBO>(), 0, &data);
-            shaderDataBuffers[i].Mapped = data;
+            CreateVulkan.vk.MapMemory(LogicalDevice.device, shaderDataBuffersForCamera[i].Memory, 0, (ulong)Unsafe.SizeOf<UICameraUBO>(), 0, &data);
+            shaderDataBuffersForCamera[i].Mapped = data;
 
             BufferDeviceAddressInfo addrInfo = new()
             {
-                Buffer = shaderDataBuffers[i].Buffer
+                SType = StructureType.BufferDeviceAddressInfo,
+                Buffer = shaderDataBuffersForCamera[i].Buffer
             };
 
-            shaderDataBuffers[i].DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
+            shaderDataBuffersForCamera[i].DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
         }
     }
 
@@ -32,15 +33,15 @@ public unsafe class CameraBuffers
     {
         var ubo = new UICameraUBO { Proj = proj };
 
-        new Span<UICameraUBO>(shaderDataBuffers[currentFrame].Mapped, 1)[0] = ubo;
+        new Span<UICameraUBO>(shaderDataBuffersForCamera[currentFrame].Mapped, 1)[0] = ubo;
     }
 
     public void Dispose()
     {
         for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            CreateVulkan.vk.UnmapMemory(LogicalDevice.device, shaderDataBuffers[i].Memory);
-            BufferHelper.DestroyBuffer(shaderDataBuffers[i].Buffer, shaderDataBuffers[i].Memory);
+            CreateVulkan.vk.UnmapMemory(LogicalDevice.device, shaderDataBuffersForCamera[i].Memory);
+            BufferHelper.DestroyBuffer(shaderDataBuffersForCamera[i].Buffer, shaderDataBuffersForCamera[i].Memory);
         }
     }
 }

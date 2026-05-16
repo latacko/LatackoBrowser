@@ -22,13 +22,13 @@ public struct Vector3
     public Vector3(float x, float y, float z, UnitType xType = UnitType.px, UnitType yType = UnitType.px, UnitType zType = UnitType.px)
     {
         xyz.X = x;
-        XType = xType;
+        XType = x==0 ? UnitType.px : xType;
 
         xyz.Y = y;
-        YType = yType;
+        YType = y==0 ? UnitType.px : yType;
 
         xyz.Z = z;
-        ZType = zType;
+        ZType = z==0 ? UnitType.px : zType;
 
         ConvertToPx();
     }

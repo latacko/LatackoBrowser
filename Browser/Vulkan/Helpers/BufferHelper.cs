@@ -23,11 +23,18 @@ static public class BufferHelper
 
         CreateVulkan.vk.GetBufferMemoryRequirements(LogicalDevice.device, buffer, out var _memRequirements);
 
+        MemoryAllocateFlagsInfo allocFlags = new()
+        {
+            SType = StructureType.MemoryAllocateFlagsInfo,
+            Flags = MemoryAllocateFlags.DeviceAddressBit
+        };
+
         MemoryAllocateInfo allocInfo = new()
         {
             SType = StructureType.MemoryAllocateInfo,
             AllocationSize = _memRequirements.Size,
-            MemoryTypeIndex = FindMemoryType(CreateVulkan.vk, PhysicalDevice.physicalDevice, _memRequirements.MemoryTypeBits, properties)
+            MemoryTypeIndex = FindMemoryType(CreateVulkan.vk, PhysicalDevice.physicalDevice, _memRequirements.MemoryTypeBits, properties),
+            PNext = (usage & BufferUsageFlags.ShaderDeviceAddressBit) != 0 ? &allocFlags : null,
         };
 
         if (CreateVulkan.vk.AllocateMemory(LogicalDevice.device, ref allocInfo, null, out bufferMemory) != Result.Success)
@@ -51,7 +58,7 @@ static public class BufferHelper
 
         CreateVulkan.vk.CmdCopyBuffer(_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-        CmdHelper.EndSingleTimeCommands(_commandBuffer);
+        CmdHelper.EndSingleTimeCommandsIdle(_commandBuffer);
     }
 
     public static uint FindMemoryType(Vk vk, Silk.NET.Vulkan.PhysicalDevice device, uint typeFilter, MemoryPropertyFlags properties)

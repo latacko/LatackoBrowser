@@ -19,10 +19,10 @@ public struct Vector2
     public Vector2(float x, float y, UnitType xType = UnitType.px, UnitType yType = UnitType.px)
     {
         xy.X = x;
-        XType = xType;
+        XType = x==0 ? UnitType.px : xType;
 
         xy.Y = y;
-        YType = yType;
+        YType = y==0 ? UnitType.px : yType;
 
         ConvertToPx();
     }

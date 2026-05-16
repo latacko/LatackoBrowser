@@ -22,6 +22,13 @@ public partial class BrowserWindow
 
     private void OnMouseMove(IMouse mouse, System.Numerics.Vector2 vector)
     {
+        if(BoundsHelper.Contains(browserUI.TopBar.Bounds, vector))
+        {
+            CursorManager.SetHand();
+        } else
+        {
+            CursorManager.SetDefault();
+        }
         // throw new NotImplementedException();
     }
 

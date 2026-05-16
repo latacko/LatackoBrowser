@@ -121,7 +121,7 @@ public unsafe class ImageHelper
         };
 
         CreateVulkan.vk.CreateFence(LogicalDevice.device, ref _fenceOneTimeCI, null, out Fence _fenceOneTime);
-        CommandBuffer commandBuffer = VulkanManager.BeginSingleTimeCommands();
+        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
 
         CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref textureImage, ref textureImageMemory);
 
@@ -140,7 +140,7 @@ public unsafe class ImageHelper
         _barrierTexInfo.PImageMemoryBarriers = &_barrierTexRead;
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfo);
 
-        VulkanManager.EndSingleTimeCommands(commandBuffer, _fenceOneTime);
+        CmdHelper.EndSingleTimeCommands(commandBuffer, _fenceOneTime);
         CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, &_fenceOneTime, Vk.True, ulong.MaxValue);
 
 
@@ -148,7 +148,7 @@ public unsafe class ImageHelper
         CreateVulkan.vk.FreeMemory(LogicalDevice.device, _stagingBufferMemory, null);
     }
 
-    ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout)
+    public static ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout)
     {
         ImageMemoryBarrier2 _barrier2 = new()
         {
@@ -190,7 +190,7 @@ public unsafe class ImageHelper
 
     void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height)
     {
-        CommandBuffer commandBuffer = VulkanManager.BeginSingleTimeCommands();
+        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
 
         BufferImageCopy region = new()
         {
@@ -216,8 +216,5 @@ public unsafe class ImageHelper
         };
 
         CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, buffer, image, ImageLayout.TransferDstOptimal, 1, &region);
-
-
-        VulkanManager.EndSingleTimeCommandsIdle(commandBuffer);
     }
 }

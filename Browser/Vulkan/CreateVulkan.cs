@@ -4,7 +4,7 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
 namespace Vulkan;
 
-public unsafe class CreateVulkan
+public unsafe class CreateVulkan : IDisposable
 {
     internal static Vk vk { get; private set; }
     internal static Instance vulkanInstance;
@@ -59,15 +59,13 @@ public unsafe class CreateVulkan
             ApplicationVersion = new Version32(0, 1, 0),
             PEngineName = (byte*)SilkMarshal.StringToPtr("Latacko Engine"),
             EngineVersion = new Version32(0, 1, 0),
-            ApiVersion = Vk.Version12,
+            ApiVersion = Vk.Version13,
         };
 
         InstanceCreateInfo createInfo = new()
         {
             SType = StructureType.InstanceCreateInfo,
             PApplicationInfo = &applicationInfo,
-            PpEnabledExtensionNames = requiredExtensions,
-            EnabledExtensionCount = count,
         };
 
         if (ENABLE_VALIDATION_LAYERS)
@@ -78,6 +76,12 @@ public unsafe class CreateVulkan
             var _debugCreateInfo = PopulateDebugMessengerCreateInfo();
             createInfo.PNext = &_debugCreateInfo;
         }
+        
+
+        var _requiredExtensions = GetRequiredExtensions(requiredExtensions, count);
+        createInfo.EnabledExtensionCount = (uint)_requiredExtensions.Length;
+        createInfo.PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(_requiredExtensions);
+
 
         var _result = vk.CreateInstance(ref createInfo, null, out vulkanInstance);
 
@@ -89,6 +93,18 @@ public unsafe class CreateVulkan
         SilkMarshal.FreeString((nint)applicationInfo.PApplicationName);
         SilkMarshal.FreeString((nint)applicationInfo.PEngineName);
         SilkMarshal.Free((nint)createInfo.PpEnabledExtensionNames);
+    }
+
+    string[] GetRequiredExtensions(byte** requiredExtensions, uint count)
+    {
+        var extensions = SilkMarshal.PtrToStringArray((nint)requiredExtensions, (int)count);
+
+        if (ENABLE_VALIDATION_LAYERS)
+        {
+            return extensions.Append(ExtDebugUtils.ExtensionName).ToArray();
+        }
+
+        return extensions;
     }
 
     #region Debug Manager
@@ -130,4 +146,15 @@ public unsafe class CreateVulkan
     }
 
     #endregion
+
+    public void Dispose()
+    {
+
+        if (ENABLE_VALIDATION_LAYERS)
+        {
+            //DestroyDebugUtilsMessenger equivilant to method DestroyDebugUtilsMessengerEXT from original tutorial.
+            debugUtils!.DestroyDebugUtilsMessenger(vulkanInstance, debugMessenger, null);
+        }
+        vk.DestroyInstance(vulkanInstance, null);
+    }
 }

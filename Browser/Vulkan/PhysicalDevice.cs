@@ -7,32 +7,28 @@ public unsafe class PhysicalDevice
 {
     internal static PhysicalDevice Instance {get; private set; }
     internal static Silk.NET.Vulkan.PhysicalDevice physicalDevice;
-    Vk vk;
-    Instance vulkanInstance;
 
     KhrSurface khrSurface;
-    SurfaceKHR surface;
+    SurfaceKHR surfaceKHR;
 
-    public PhysicalDevice(Vk vk, Instance vulkanInstance, KhrSurface khrSurface, SurfaceKHR surface)
+    public PhysicalDevice(KhrSurface khrSurface, SurfaceKHR surfaceKHR)
     {
         Instance = this;
-        this.vk = vk;
-        this.vulkanInstance = vulkanInstance;
         this.khrSurface = khrSurface;
-        this.surface = surface;
+        this.surfaceKHR = surfaceKHR;
     }
 
-    private void Pick()
+    internal void Pick()
     {
         uint _deviceCount = 0;
-        vk.EnumeratePhysicalDevices(vulkanInstance, &_deviceCount, null);
+        CreateVulkan.vk.EnumeratePhysicalDevices(CreateVulkan.vulkanInstance, &_deviceCount, null);
         if (_deviceCount == 0)
             throw new Exception("Failed to find GPUs with Vulkan support!");
 
         Silk.NET.Vulkan.PhysicalDevice[] _devices = new Silk.NET.Vulkan.PhysicalDevice[_deviceCount];
         fixed (Silk.NET.Vulkan.PhysicalDevice* devicesPtr = _devices)
         {
-            vk.EnumeratePhysicalDevices(vulkanInstance, &_deviceCount, devicesPtr);
+            CreateVulkan.vk.EnumeratePhysicalDevices(CreateVulkan.vulkanInstance, &_deviceCount, devicesPtr);
         }
 
         Silk.NET.Vulkan.PhysicalDevice _bestDevice = default;
@@ -40,10 +36,11 @@ public unsafe class PhysicalDevice
 
         foreach (var device in _devices)
         {
-            vk.GetPhysicalDeviceProperties2(device, out PhysicalDeviceProperties2 _physicalDeviceProperties);
-            vk.GetPhysicalDeviceFeatures2(device, out PhysicalDeviceFeatures2 _physicalDeviceFeatures);
-
+            CreateVulkan.vk.GetPhysicalDeviceProperties2(device, out PhysicalDeviceProperties2 _physicalDeviceProperties);
+            CreateVulkan.vk.GetPhysicalDeviceFeatures2(device, out PhysicalDeviceFeatures2 _physicalDeviceFeatures);
+            Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is found");
             if (!IsDeviceSuitable(device)) continue;
+            Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is suitable");
 
             int _score = RateDeviceSuitability(_physicalDeviceProperties, _physicalDeviceFeatures);
             if (_score > _bestDeviceScore)
@@ -61,7 +58,7 @@ public unsafe class PhysicalDevice
         }
         else
         {
-            vk.GetPhysicalDeviceProperties2(physicalDevice, out PhysicalDeviceProperties2 _physicalDeviceProperties);
+            CreateVulkan.vk.GetPhysicalDeviceProperties2(physicalDevice, out PhysicalDeviceProperties2 _physicalDeviceProperties);
             Console.WriteLine("Using " + SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " gpu");
         }
     }
@@ -75,12 +72,11 @@ public unsafe class PhysicalDevice
         bool swapChainAdequate = false;
         if (extensionsSupported)
         {
-            SwapChainSupportDetails swapChainSupport = Swapchain.Instance.QuerySwapChainSupport(physicalDevice);
+            SwapChainSupportDetails swapChainSupport = Swapchain.QuerySwapChainSupport(physicalDevice);
             swapChainAdequate = !(swapChainSupport.Formats.Length == 0) && !(swapChainSupport.PresentModes.Length == 0);
         }
 
-        vk.GetPhysicalDeviceFeatures2(physicalDevice, out var _supportedFeatures);
-
+        CreateVulkan.vk.GetPhysicalDeviceFeatures2(physicalDevice, out var _supportedFeatures);
         return indices.IsComplete() && extensionsSupported && swapChainAdequate && _supportedFeatures.Features.SamplerAnisotropy;
     }
 
@@ -106,11 +102,11 @@ public unsafe class PhysicalDevice
     bool CheckDeviceExtensionSupport(Silk.NET.Vulkan.PhysicalDevice physicalDevice)
     {
         uint _extensionCount = 0;
-        vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, null);
+        CreateVulkan.vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, null);
         ExtensionProperties[] _extensionProperties = new ExtensionProperties[_extensionCount];
         fixed (ExtensionProperties* extensionsPtr = _extensionProperties)
         {
-            vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, extensionsPtr);
+            CreateVulkan.vk.EnumerateDeviceExtensionProperties(physicalDevice, (byte*)IntPtr.Zero, &_extensionCount, extensionsPtr);
         }
 
         var availableExtensionsNames = _extensionProperties.Select(layer => SilkMarshal.PtrToString((IntPtr)layer.ExtensionName)).ToHashSet();
@@ -122,11 +118,11 @@ public unsafe class PhysicalDevice
         QueueFamilyIndices indices = default;
 
         uint _queueFamiliesCount = 0;
-        vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, null);
+        CreateVulkan.vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, null);
         QueueFamilyProperties[] _queueFamilyProperties = new QueueFamilyProperties[_queueFamiliesCount];
         fixed (QueueFamilyProperties* proportiesPtr = _queueFamilyProperties)
         {
-            vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, proportiesPtr);
+            CreateVulkan.vk.GetPhysicalDeviceQueueFamilyProperties(physicalDevice, &_queueFamiliesCount, proportiesPtr);
         }
 
         uint i = 0;
@@ -137,7 +133,7 @@ public unsafe class PhysicalDevice
                 indices.GraphicsFamily = i;
             }
 
-            khrSurface!.GetPhysicalDeviceSurfaceSupport(physicalDevice, i, surface, out var presentSupport);
+            khrSurface!.GetPhysicalDeviceSurfaceSupport(physicalDevice, i, surfaceKHR, out var presentSupport);
             if (presentSupport)
             {
                 indices.PresentFamily = i;

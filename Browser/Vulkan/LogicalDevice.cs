@@ -3,19 +3,19 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 namespace Vulkan;
 
-public unsafe class LogicalDevice
+public unsafe class LogicalDevice: IDisposable
 {
     public static Device device;
 
     internal static Queue graphicsQueue;
-    Queue presentQueue;
+    internal static Queue presentQueue;
 
     internal readonly static string[] deviceExtensions = new[]
     {
         KhrSwapchain.ExtensionName,
     };
 
-    void Create()
+    public void Create()
     {
         QueueFamilyIndices indices = PhysicalDevice.Instance.FindQueueFamilies(PhysicalDevice.physicalDevice);
 
@@ -118,5 +118,10 @@ public unsafe class LogicalDevice
     public static void DestroyFramebuffer(Framebuffer framebuffer, AllocationCallbacks* pAllocator)
     {
         CreateVulkan.vk.DestroyFramebuffer(device, framebuffer, pAllocator);
+    }
+
+    public void Dispose()
+    {
+        CreateVulkan.vk.DestroyDevice(device, null);
     }
 }

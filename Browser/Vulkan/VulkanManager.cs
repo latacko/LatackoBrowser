@@ -7,17 +7,17 @@ namespace Vulkan;
 
 public unsafe class VulkanManager : IDisposable
 {
+    public static VulkanManager Instance;
     public const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    ShaderDataBuffer[] shaderDataBuffers = new ShaderDataBuffer[MAX_FRAMES_IN_FLIGHT];
     public CommandBuffer[] commandBuffers = new CommandBuffer[MAX_FRAMES_IN_FLIGHT];
-    CameraBuffers cameraBuffers = new();
+    internal ObjectsBuffers objectsBuffers = new();
+    internal CameraBuffers cameraBuffers = new();
+    internal PrimitiveModelsDb primitiveModelsDb = new();
 
     internal static DescriptorPool descriptorPool;
     internal static DescriptorSetLayout descriptorSetLayoutForTextures;
     internal static DescriptorSet descriptorSetForTextures;
-    internal static DescriptorSetLayout descriptorSetLayoutForObjects;
-    internal static DescriptorSet descriptorSetForObjects;
 
     Sampler sampler;
 
@@ -27,7 +27,12 @@ public unsafe class VulkanManager : IDisposable
     public Fence[] fences = new Fence[MAX_FRAMES_IN_FLIGHT];
     #endregion
 
-    static CommandPool commandPool;
+    internal static CommandPool commandPool;
+
+    public VulkanManager()
+    {
+        Instance = this;
+    }
 
     internal void Init()
     {
@@ -37,14 +42,19 @@ public unsafe class VulkanManager : IDisposable
         CreateCommandPool();
         CreateCommandBuffers();
 
-        CreateDescriptorSetLayoutForTextures();
+        CreateImageSampler();
+        CreateDescriptorPool();
 
-        CreateDescriptorPool(0);
+        CreateDescriptorSetLayoutForTextures();
+        CreateDescriptorSetsForTextures();
+
     }
 
     void CreateShaderDataBuffers()
     {
         cameraBuffers.CreateBuffers();
+        objectsBuffers.CreateBuffers();
+        primitiveModelsDb.CreateBuffers();
     }
 
     void CreateSynchronizationObjects()
@@ -104,7 +114,7 @@ public unsafe class VulkanManager : IDisposable
         };
 
         fixed (CommandBuffer* commandBuffersPtr = commandBuffers)
-            CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, null, commandBuffersPtr);
+            CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandPoolCI, commandBuffersPtr);
     }
 
     void CreateImageSampler()
@@ -133,7 +143,7 @@ public unsafe class VulkanManager : IDisposable
         {
             DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new()
             {
-                SType = StructureType.DescriptorSetLayoutCreateInfo,
+                SType = StructureType.DescriptorSetLayoutBindingFlagsCreateInfo,
                 BindingCount = (uint)_descVariableFlag.Length,
                 PBindingFlags = _descVariableFlagPtr
             };
@@ -174,45 +184,7 @@ public unsafe class VulkanManager : IDisposable
             }
         }
     }
-    void CreateDescriptorSetLayoutForObject()
-    {
-        DescriptorBindingFlags[] _descVariableFlag = [DescriptorBindingFlags.VariableDescriptorCountBit];
-        fixed (DescriptorBindingFlags* _descVariableFlagPtr = _descVariableFlag)
-        {
-            DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new()
-            {
-                SType = StructureType.DescriptorSetLayoutCreateInfo,
-                BindingCount = (uint)_descVariableFlag.Length,
-                PBindingFlags = _descVariableFlagPtr
-            };
-
-            DescriptorSetLayoutBinding _samplerLayoutBinding = new()
-            {
-                Binding = 0,
-                DescriptorType = DescriptorType.StorageBuffer,
-                DescriptorCount = 1,
-
-                StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-            };
-
-            DescriptorSetLayoutCreateInfo _layoutInfo = new()
-            {
-                SType = StructureType.DescriptorSetLayoutCreateInfo,
-
-                BindingCount = 1,
-                PBindings = &_samplerLayoutBinding,
-
-                PNext = &_descBindingFlags,
-            };
-
-            if (CreateVulkan.vk.CreateDescriptorSetLayout(LogicalDevice.device, &_layoutInfo, null, out descriptorSetLayoutForObjects) != Result.Success)
-            {
-                throw new Exception("Failed to create descriptor set layout!");
-            }
-        }
-    }
-
-    void CreateDescriptorPool(int shaderCount)
+    void CreateDescriptorPool()
     {
         DescriptorPoolSize _poolSamplerSize = new()
         {
@@ -274,13 +246,7 @@ public unsafe class VulkanManager : IDisposable
                 Sampler = sampler,
             };
 
-            DescriptorImageInfo _texInfo = new()
-            {
-                ImageView = default,
-                ImageLayout = ImageLayout.ShaderReadOnlyOptimal,
-            };
-
-            WriteDescriptorSet[] _descriptorWrites = [
+            List<WriteDescriptorSet> _descriptorWrites = [
                 new (){
                     SType = StructureType.WriteDescriptorSet,
 
@@ -293,7 +259,19 @@ public unsafe class VulkanManager : IDisposable
 
                     PImageInfo = &_samplerInfo,
                 },
-                new (){
+            ];
+
+            bool textures = false;
+            if (textures)
+            {
+                DescriptorImageInfo _texInfo = new()
+                {
+                    ImageView = default,
+                    ImageLayout = ImageLayout.ShaderReadOnlyOptimal,
+                };
+
+                _descriptorWrites.Add(new()
+                {
                     SType = StructureType.WriteDescriptorSet,
 
                     DstSet = descriptorSetForTextures,
@@ -304,66 +282,13 @@ public unsafe class VulkanManager : IDisposable
                     DescriptorCount = 1,
 
                     PImageInfo = &_texInfo,
-                },
-            ];
+                });
+            }
 
-            fixed (WriteDescriptorSet* descriptorWritesPtr = _descriptorWrites)
-                CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, (uint)_descriptorWrites.Length, descriptorWritesPtr, 0, null);
+            var _writesArray = _descriptorWrites.ToArray();
+            fixed (WriteDescriptorSet* descriptorWritesPtr = _writesArray)
+                CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, (uint)_descriptorWrites.Count, descriptorWritesPtr, 0, null);
         }
-    }
-
-    public static CommandBuffer BeginSingleTimeCommands()
-    {
-        CommandBufferAllocateInfo _allocInfo = new()
-        {
-            SType = StructureType.CommandBufferAllocateInfo,
-            Level = CommandBufferLevel.Primary,
-            CommandPool = commandPool,
-            CommandBufferCount = 1,
-        };
-
-        CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, &_allocInfo, out var _commandBuffer);
-
-        CommandBufferBeginInfo _beginInfo = new()
-        {
-            SType = StructureType.CommandBufferBeginInfo,
-            Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
-        };
-
-        CreateVulkan.vk.BeginCommandBuffer(_commandBuffer, &_beginInfo);
-
-        return _commandBuffer;
-    }
-
-    public static void EndSingleTimeCommandsIdle(CommandBuffer commandBuffer)
-    {
-        CreateVulkan.vk.EndCommandBuffer(commandBuffer);
-
-        SubmitInfo _submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo,
-            CommandBufferCount = 1,
-            PCommandBuffers = &commandBuffer,
-        };
-
-        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, default);
-        CreateVulkan.vk.QueueWaitIdle(LogicalDevice.graphicsQueue);
-
-        CreateVulkan.vk.FreeCommandBuffers(LogicalDevice.device, commandPool, 1, &commandBuffer);
-    }
-
-    public static void EndSingleTimeCommands(CommandBuffer commandBuffer, Fence fence)
-    {
-        CreateVulkan.vk.EndCommandBuffer(commandBuffer);
-
-        SubmitInfo _submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo,
-            CommandBufferCount = 1,
-            PCommandBuffers = &commandBuffer,
-        };
-
-        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, fence);
     }
 
     public void UpdateCameraBuffer(uint currentFrame, Matrix4X4<float> proj)
@@ -373,6 +298,24 @@ public unsafe class VulkanManager : IDisposable
 
     public void Dispose()
     {
+        for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            CreateVulkan.vk.DestroyFence(LogicalDevice.device, fences[i], null);
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, imageAcquiredSemaphores[i], null);
+        }
+
+        for (int i = 0; i < renderCompleteSemaphores.Length; i++)
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, renderCompleteSemaphores[i], null);
+
         CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, descriptorSetLayoutForTextures, null);
+        CreateVulkan.vk.DestroyDescriptorPool(LogicalDevice.device, descriptorPool, null);
+
+        CreateVulkan.vk.DestroyCommandPool(LogicalDevice.device, commandPool, null);
+
+        CreateVulkan.vk.DestroySampler(LogicalDevice.device, sampler, null);
+
+        cameraBuffers.Dispose();
+        objectsBuffers.Dispose();
+        primitiveModelsDb.Dispose();
     }
 }

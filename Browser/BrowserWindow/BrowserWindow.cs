@@ -41,8 +41,11 @@ public unsafe partial class BrowserWindow
     public void Run()
     {
         CreateWindow();
+        Console.WriteLine("Creating vulkan");
         CreateVulkan();
+        Console.WriteLine("Created vulkan");
         MainLoop();
+        Console.WriteLine("Ended main loop");
         CleanUp();
     }
 
@@ -60,6 +63,7 @@ public unsafe partial class BrowserWindow
         options.FramesPerSecond = 0;
 
         window = Window.Create(options);
+        CursorManager.Init(Silk.NET.SDL.Sdl.GetApi());
 
 
         window.Initialize();
@@ -79,7 +83,7 @@ public unsafe partial class BrowserWindow
         }
         Console.WriteLine($"Windowing backend: {window.GetType().Name}");
 
-        if (window.Vulkan.CreateVulkan.vkSurface is null)
+        if (window.VkSurface is null)
         {
             throw new Exception("Windowing platform doesn't support Vulkan.");
         }
@@ -101,9 +105,9 @@ public unsafe partial class BrowserWindow
     float DegToRad(float deg) => deg * (MathF.PI / 180f);
     private void OnUpdate(double deltaTime)
     {
-        browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
-        browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
-        browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
+        // browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
+        // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
+        // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
 
         // runtimeModelData.SetRotation((float)(runtimeModelData.RotationX + deltaTime * speed), 0, 0);
@@ -124,7 +128,7 @@ public unsafe partial class BrowserWindow
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
-            RecreateSwapChain();
+            swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
             return;
         }
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
@@ -143,34 +147,33 @@ public unsafe partial class BrowserWindow
 
         SubmitInfo submitInfo = new()
         {
-            SType = StructureType.SubmitInfo
+            SType = StructureType.SubmitInfo,
         };
 
-        Semaphore[] waitSemaphores = [imageAvailableSemaphores[currentFrame]];
-        Semaphore[] signalSemaphores = [renderFinishedSemaphores[currentFrame]];
-        PipelineStageFlags[] waitStages = [PipelineStageFlags.ColorAttachmentOutputBit];
-        submitInfo.WaitSemaphoreCount = 1;
-        SwapchainKHR[] swapChains = [swapChain];
+        PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
 
-        fixed (Semaphore* waitSemaphoresPtr = waitSemaphores)
-        fixed (Semaphore* signalSemaphoresPtr = signalSemaphores)
-        fixed (PipelineStageFlags* waitStagesPtr = waitStages)
-        fixed (CommandBuffer* cmdBufferPtr = &commandBuffers[currentFrame])
-        fixed (SwapchainKHR* swapChainsPtr = swapChains)
+        fixed (Semaphore* waitSemaphoresPtr = &vulkanManager.imageAcquiredSemaphores[currentFrame])
+        fixed (CommandBuffer* commandBufferPtr = &vulkanManager.commandBuffers[currentFrame])
+        fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanManager.renderCompleteSemaphores[imageIndex])
+        fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
         {
+            submitInfo.WaitSemaphoreCount = 1;
             submitInfo.PWaitSemaphores = waitSemaphoresPtr;
-            submitInfo.PWaitDstStageMask = waitStagesPtr;
+
+            submitInfo.PWaitDstStageMask = &waitStages;
 
             submitInfo.CommandBufferCount = 1;
-            submitInfo.PCommandBuffers = cmdBufferPtr;
+            submitInfo.PCommandBuffers = commandBufferPtr;
 
             submitInfo.SignalSemaphoreCount = 1;
-            submitInfo.PSignalSemaphores = signalSemaphoresPtr;
+            submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
 
-            if (Vulkan.CreateVulkan.vk.QueueSubmit(graphicsQueue, 1, &submitInfo, inFlightFences[currentFrame]) != Result.Success)
+            if (Vulkan.CreateVulkan.vk.QueueSubmit(Vulkan.LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanManager.fences[currentFrame]) != Result.Success)
             {
                 throw new Exception("Failed to submit command buffer!");
             }
+
+            currentFrame = (currentFrame + 1) % Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT;
 
 
             PresentInfoKHR presentInfo = new()
@@ -178,26 +181,25 @@ public unsafe partial class BrowserWindow
                 SType = StructureType.PresentInfoKhr,
 
                 WaitSemaphoreCount = 1,
-                PWaitSemaphores = signalSemaphoresPtr,
+                PWaitSemaphores = renderCompleteSemaphoresPtr,
 
                 SwapchainCount = 1,
-                PSwapchains = swapChainsPtr,
+                PSwapchains = swapChainPtr,
                 PImageIndices = &imageIndex
             };
 
-            _result = khrSwapChain.QueuePresent(presentQueue, &presentInfo);
+            _result = swapchain.khrSwapChain.QueuePresent(Vulkan.LogicalDevice.presentQueue, &presentInfo);
 
             if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
             {
                 framebufferResized = false;
-                RecreateSwapChain();
+                swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
             }
             else if (_result != Result.Success)
             {
                 throw new Exception("failed to present swap chain image!");
             }
 
-            currentFrame = (currentFrame + 1) % Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT;
         }
 
         _frameCount++;
@@ -209,6 +211,16 @@ public unsafe partial class BrowserWindow
             _frameCount = 0;
             _fpsTimer = 0;
         }
+    }
+
+    Vector2D<int> GetFrameBufferSize()
+    {
+        return window.FramebufferSize;
+    }
+
+    void OnWindowMinimized()
+    {
+        window.DoEvents();
     }
 
     void UpdateUniformBuffer(uint currentImage)

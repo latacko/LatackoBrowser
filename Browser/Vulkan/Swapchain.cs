@@ -4,11 +4,9 @@ using Silk.NET.Vulkan.Extensions.KHR;
 using Units;
 namespace Vulkan;
 
-public unsafe class Swapchain
+public unsafe class Swapchain : IDisposable
 {
     public static Swapchain Instance;
-    KhrSurface khrSurface;
-    SurfaceKHR surface;
     Vector2D<int> framebufferSize;
 
     internal KhrSwapchain? khrSwapChain;
@@ -17,47 +15,53 @@ public unsafe class Swapchain
 
     internal Image[] swapChainImages;
     internal static Format swapChainImageFormat;
-    internal static bool recreatedSwapChain;
+    internal bool recreatedSwapChain;
 
-    ImageView[] swapChainImageViews;
+    internal ImageView[] swapChainImageViews;
     // Framebuffer[] swapChainFrameBuffers;
 
     Depth depth = new();
 
+    KhrSurface khrSurface;
+    SurfaceKHR surface;
 
-    public Swapchain(Vector2D<int> framebufferSize)
+
+    public Swapchain(Vector2D<int> framebufferSize, KhrSurface khrSurface, SurfaceKHR surface)
     {
         Instance = this;
         this.framebufferSize = framebufferSize;
+
+        this.khrSurface = khrSurface;
+        this.surface = surface;
     }
 
-    internal SwapChainSupportDetails QuerySwapChainSupport(Silk.NET.Vulkan.PhysicalDevice physicalDevice)
+    internal static SwapChainSupportDetails QuerySwapChainSupport(Silk.NET.Vulkan.PhysicalDevice physicalDevice)
     {
         SwapChainSupportDetails _details = new();
 
-        khrSurface!.GetPhysicalDeviceSurfaceCapabilities(physicalDevice, surface, out _details.Capabilities);
+        Instance.khrSurface!.GetPhysicalDeviceSurfaceCapabilities(physicalDevice, Instance.surface, out _details.Capabilities);
 
         uint _formatCount = 0;
-        khrSurface!.GetPhysicalDeviceSurfaceFormats(physicalDevice, surface, &_formatCount, null);
+        Instance.khrSurface!.GetPhysicalDeviceSurfaceFormats(physicalDevice, Instance.surface, &_formatCount, null);
 
         if (_formatCount != 0)
         {
             _details.Formats = new SurfaceFormatKHR[_formatCount];
             fixed (SurfaceFormatKHR* formatsPtr = _details.Formats)
             {
-                khrSurface.GetPhysicalDeviceSurfaceFormats(physicalDevice, surface, &_formatCount, formatsPtr);
+                Instance.khrSurface.GetPhysicalDeviceSurfaceFormats(physicalDevice, Instance.surface, &_formatCount, formatsPtr);
             }
         }
 
         uint _presentModeCount = 0;
-        khrSurface!.GetPhysicalDeviceSurfacePresentModes(physicalDevice, surface, &_presentModeCount, null);
+        Instance.khrSurface!.GetPhysicalDeviceSurfacePresentModes(physicalDevice, Instance.surface, &_presentModeCount, null);
 
         if (_presentModeCount != 0)
         {
             _details.PresentModes = new PresentModeKHR[_presentModeCount];
             fixed (PresentModeKHR* modesPtr = _details.PresentModes)
             {
-                khrSurface.GetPhysicalDeviceSurfacePresentModes(physicalDevice, surface, &_presentModeCount, modesPtr);
+                Instance.khrSurface.GetPhysicalDeviceSurfacePresentModes(physicalDevice, Instance.surface, &_presentModeCount, modesPtr);
             }
         }
 
@@ -110,7 +114,7 @@ public unsafe class Swapchain
         }
     }
 
-    void CreateSwapChain()
+    internal void CreateSwapChain(SwapchainKHR oldSwapchain=default)
     {
         SwapChainSupportDetails _swapChainSupport = QuerySwapChainSupport(PhysicalDevice.physicalDevice);
 
@@ -140,7 +144,7 @@ public unsafe class Swapchain
             PresentMode = _presentMode,
             Clipped = Vk.True,
 
-            OldSwapchain = default,
+            OldSwapchain = oldSwapchain,
         };
 
         QueueFamilyIndices indices = PhysicalDevice.Instance.FindQueueFamilies(PhysicalDevice.physicalDevice);
@@ -161,7 +165,7 @@ public unsafe class Swapchain
                 _swapchainCreateInfoKHR.PQueueFamilyIndices = null; // Optional
             }
 
-        if (CreateVulkan.vk!.TryGetDeviceExtension(CreateVulkan.vulkanInstance, LogicalDevice.device, out khrSwapChain))
+        if (!CreateVulkan.vk!.TryGetDeviceExtension(CreateVulkan.vulkanInstance, LogicalDevice.device, out khrSwapChain))
         {
             throw new NotSupportedException("VK_KHR_swapchain extension not found.");
         }
@@ -179,9 +183,11 @@ public unsafe class Swapchain
         swapChainImageFormat = _surfaceFormat.Format;
         swapChainExtent = _extent;
         UnitsConverter.Update(swapChainExtent.Width, swapChainExtent.Height);
+
+        depth.CreateDepthResources(swapChainExtent.Width, swapChainExtent.Height);
     }
 
-    void RecreateSwapChain(Func<Vector2D<int>> GetFrameBufferSize, Action? OnMinimized = null)
+    internal void RecreateSwapChain(Func<Vector2D<int>> GetFrameBufferSize, Action? OnMinimized = null)
     {
         this.framebufferSize = GetFrameBufferSize();
 
@@ -192,19 +198,21 @@ public unsafe class Swapchain
         }
 
         CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
+        var oldSwapchain = swapChain;
 
-        CleanUpSwapChain();
+        CleanUpSwapChain(false);
 
-        CreateSwapChain();
+        CreateSwapChain(oldSwapchain);
+
+        khrSwapChain?.DestroySwapchain(LogicalDevice.device, oldSwapchain, null);
 
         recreatedSwapChain = true;
 
         CreateImageViews();
-        depth.CreateDepthResources(swapChainExtent.Width, swapChainExtent.Height);
         // CreateFrameBuffers();
     }
 
-    void CreateImageViews()
+    internal void CreateImageViews()
     {
         swapChainImageViews = new ImageView[swapChainImages.Length];
 
@@ -212,6 +220,17 @@ public unsafe class Swapchain
         {
             swapChainImageViews[i] = ImageHelper.CreateImageView(swapChainImages[i], swapChainImageFormat);
         }
+    }
+
+    public Image GetDepthImage()
+    {
+        return depth.depthImage;
+    }
+
+
+    public ImageView GetDepthImageView()
+    {
+        return depth.depthImageView;
     }
 
     // void CreateFrameBuffers()
@@ -248,7 +267,7 @@ public unsafe class Swapchain
     //     }
     // }
 
-    void CleanUpSwapChain()
+    void CleanUpSwapChain(bool destroySwapchain = true)
     {
         depth.Dispose();
 
@@ -262,6 +281,26 @@ public unsafe class Swapchain
             LogicalDevice.DestroyImageView(imageView, null);
         }
 
-        khrSwapChain?.DestroySwapchain(LogicalDevice.device, swapChain, null);
+        foreach (var item in VulkanManager.Instance.renderCompleteSemaphores)
+        {
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, item, null);
+        }
+
+        SemaphoreCreateInfo semaphoreCI = new()
+        {
+            SType = StructureType.SemaphoreCreateInfo,
+        };
+
+        for (int i = 0; i < VulkanManager.Instance.renderCompleteSemaphores.Length; i++)
+        {
+            CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, out VulkanManager.Instance.renderCompleteSemaphores[i]);
+        }
+        if (destroySwapchain)
+            khrSwapChain?.DestroySwapchain(LogicalDevice.device, swapChain, null);
+    }
+
+    public void Dispose()
+    {
+        CleanUpSwapChain();
     }
 }

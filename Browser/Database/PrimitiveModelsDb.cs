@@ -4,11 +4,13 @@ using Browser.DataTypes;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsWPF;
 using Silk.NET.Vulkan;
+using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 public class PrimitiveModelsDb : IDisposable
 {
-    Buffer primitiveBuffer;
+    internal static Buffer primitiveBuffer;
+    internal static ulong indicesOffset;
     DeviceMemory primitiveBufferMemory;
 
     readonly Dictionary<PrimitiveUIModel, ModelData<ushort>> uiDb = new()
@@ -38,8 +40,6 @@ public class PrimitiveModelsDb : IDisposable
 
         Vertex[] vertices = new Vertex[_vertexCount];
         ushort[] indices = new ushort[_indexCount];
-        ulong lastVericesOffset = 0;
-        ulong lastIndicesOffset = 0;
 
         int verticesIndex = 0;
         int indicesIndex = 0;
@@ -49,11 +49,8 @@ public class PrimitiveModelsDb : IDisposable
             Array.Copy(primitiveModelInfo.Value.Vertices, 0, vertices, verticesIndex, primitiveModelInfo.Value.Vertices.Length);
             Array.Copy(primitiveModelInfo.Value.Indices, 0, indices, indicesIndex, primitiveModelInfo.Value.Indices.Length);
 
-            primitiveModelInfo.Value.vertexOffset = lastVericesOffset;
-            primitiveModelInfo.Value.indexOffset = lastIndicesOffset;
-
-            lastVericesOffset += (ulong)(sizeof(Vertex) * primitiveModelInfo.Value.Vertices.Length);
-            lastIndicesOffset += (ulong)(sizeof(ushort) * primitiveModelInfo.Value.Indices.Length);
+            primitiveModelInfo.Value.vertexOffset = (uint)verticesIndex;
+            primitiveModelInfo.Value.indexOffset = (uint)indicesIndex;
 
             verticesIndex += primitiveModelInfo.Value.Vertices.Length;
             indicesIndex += primitiveModelInfo.Value.Indices.Length;
@@ -78,12 +75,13 @@ public class PrimitiveModelsDb : IDisposable
         BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit, MemoryPropertyFlags.DeviceLocalBit | MemoryPropertyFlags.HostVisibleBit, ref primitiveBuffer, ref primitiveBufferMemory);
 
         void* data;
-        BrowserWindow.vk.MapMemory(BrowserWindow.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);
+        CreateVulkan.vk.MapMemory(LogicalDevice.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);
         byte* ptr = (byte*)data;
         vertices.CopyTo(new Span<Vertex>(ptr, vertices.Length));
-        ptr += sizeof(Vertex) * vertices.Length;
+        indicesOffset = (ulong)(sizeof(Vertex) * vertices.Length);
+        ptr += indicesOffset;
         indices.CopyTo(new Span<TIndices>(ptr, indices.Length));
-        BrowserWindow.vk.UnmapMemory(BrowserWindow.device, primitiveBufferMemory);
+        CreateVulkan.vk.UnmapMemory(LogicalDevice.device, primitiveBufferMemory);
     }
 
 

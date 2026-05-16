@@ -61,13 +61,15 @@ BrowserWindow/
  BrowserWindow.cs
  BrowserWindow.Input.cs
  BrowserWindow.Vulkan.cs
+ CursorManager.cs
 Database/PrimitiveModelsDb.cs
 DataTypes/
- ObjectData.cs
  PrimitiveModel.cs
  UniformBufferObject.cs
  Vertex.cs
-Helpers/CmdHelper.cs
+Helpers/
+ BoundsHelper.cs
+ ColorTransitionsHelper.cs
 ModelData/
  ModelData.cs
  ModelDataWithTexture.cs
@@ -81,7 +83,6 @@ Program.cs
 QueueFamilyIndices.cs
 ShadersManager/
  BaseShader.cs
- GlobalDescriptorPool.cs
  UIShader.cs
 Styles/
  Properties.cs
@@ -97,11 +98,15 @@ Vulkan/
  Depth.cs
  Helpers/
   BufferHelper.cs
+  CmdHelper.cs
   ImageHelper.cs
  LogicalDevice.cs
  PhysicalDevice.cs
- ShaderDatas/CameraBuffers.cs
+ ShaderDatas/
+  CameraBuffers.cs
+  ObjectsBuffers.cs
  Structs/
+  ObjectData.cs
   ShaderDataBuffer.cs
   UICameraUBO.cs
  Swapchain.cs

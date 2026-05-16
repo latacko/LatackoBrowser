@@ -3,7 +3,7 @@ namespace Vulkan;
 
 public unsafe class Depth : IDisposable
 {
-    Image depthImage;
+    public Image depthImage;
     DeviceMemory depthImageMemory;
     public ImageView depthImageView {get; private set; }
     internal static Format depthFormat;
