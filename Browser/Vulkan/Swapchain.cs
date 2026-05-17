@@ -7,7 +7,7 @@ namespace Vulkan;
 public unsafe class Swapchain : IDisposable
 {
     public static Swapchain Instance;
-    Vector2D<int> framebufferSize;
+    internal Vector2D<int> framebufferSize;
 
     internal KhrSwapchain? khrSwapChain;
     internal SwapchainKHR swapChain;

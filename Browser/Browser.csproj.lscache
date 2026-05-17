@@ -65,12 +65,12 @@ BrowserWindow/
 Database/PrimitiveModelsDb.cs
 DataTypes/
  PrimitiveModel.cs
- UniformBufferObject.cs
  Vertex.cs
 Helpers/
  BoundsHelper.cs
  ColorTransitionsHelper.cs
 ModelData/
+ Bounds.cs
  ModelData.cs
  ModelDataWithTexture.cs
  RuntimeModelData.cs
@@ -80,19 +80,18 @@ obj/Debug/net10.0/
  Browser.GlobalUsings.g.cs
 ObjectsManager.cs
 Program.cs
-QueueFamilyIndices.cs
 ShadersManager/
  BaseShader.cs
  UIShader.cs
 Styles/
+ Layout.cs
  Properties.cs
  Transform.cs
-SwapChainSupportDetails.cs
 Units/
+ SetTypes.cs
+ UIUnit.cs
  UnitsConverter.cs
  UnitType.cs
- Vector2.cs
- Vector3.cs
 Vulkan/
  CreateVulkan.cs
  Depth.cs
@@ -107,7 +106,9 @@ Vulkan/
   ObjectsBuffers.cs
  Structs/
   ObjectData.cs
+  QueueFamilyIndices.cs
   ShaderDataBuffer.cs
+  SwapChainSupportDetails.cs
   UICameraUBO.cs
  Swapchain.cs
  VulkanManager.cs

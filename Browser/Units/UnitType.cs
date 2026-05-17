@@ -4,5 +4,6 @@ public enum UnitType
     px,
     lvw,
     lvh,
-    percentage
+    percentageWidth,
+    percentageHeight,
 }

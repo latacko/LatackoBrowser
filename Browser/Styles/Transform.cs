@@ -2,6 +2,7 @@
 using Silk.NET.Maths;
 using Silk.NET.SDL;
 using Units;
+using Vulkan;
 
 public struct Transform
 {
@@ -14,7 +15,8 @@ public struct Transform
         View,
     }
     public BoxE Box;
-    public Vector2 Translate;
+    public UIUnit TranslateX;
+    public UIUnit TranslateY;
     public Vector3D<float> Rotation;
     public Vector3D<float> Scale;
 
@@ -24,9 +26,10 @@ public struct Transform
         return this;
     }
 
-    public Transform SetTranslate(Vector2 origin)
+    public Transform SetTranslate(UIUnit translateX, UIUnit translateY)
     {
-        Translate = origin;
+        TranslateX = translateX;
+        TranslateY = translateY;
         return this;
     }
 
@@ -87,9 +90,10 @@ public struct Transform
     }
     #endregion
 
-    internal Transform ConvertToPx()
+    internal Transform ConvertToPx(Vector2D<float> parentSize)
     {
-        Translate.ConvertToPx();
+        TranslateX.ConvertToPx(parentSize);
+        TranslateY.ConvertToPx(parentSize);
 
         return this;
     }

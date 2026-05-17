@@ -103,9 +103,13 @@ public unsafe partial class BrowserWindow
 
     float speed = 0.2f;
     float DegToRad(float deg) => deg * (MathF.PI / 180f);
+    float timeFromStart = 0f;
     private void OnUpdate(double deltaTime)
     {
-        // browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
+        timeFromStart += (float)deltaTime;
+        ColorTransitionsHelper.Update((float)deltaTime);
+
+        browserUI.TopBar.SetLayout(browserUI.TopBar.Layout.SetTop(browserUI.TopBar.CreateUnit(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px)));
         // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
         // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);

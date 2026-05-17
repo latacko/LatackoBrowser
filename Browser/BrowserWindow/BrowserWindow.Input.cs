@@ -20,14 +20,89 @@ public partial class BrowserWindow
         Console.WriteLine(button + " pos: " + pos);
     }
 
-    private void OnMouseMove(IMouse mouse, System.Numerics.Vector2 vector)
+    RuntimeModelData? currentElement;
+
+    RuntimeModelData? GetElementUnderCursor(RuntimeModelData? parentElement, List<RuntimeModelData> elements, Vector2 pos)
     {
-        if(BoundsHelper.Contains(browserUI.TopBar.Bounds, vector))
+        int _elementsCount = elements.Count;
+        for (int i = 0; i < _elementsCount; i++)
         {
-            CursorManager.SetHand();
-        } else
+            if (BoundsHelper.Contains(elements[i].Layout.Bounds, pos))
+            {
+                if (elements[i].Children == null)
+                    return elements[i];
+                else
+                    return GetElementUnderCursor(elements[i], elements[i].Children, pos);
+            }
+        }
+        return parentElement;
+    }
+
+    private void OnMouseMove(IMouse mouse, Vector2 pos)
+    {
+        var _focusedElement = GetElementUnderCursor(null, ObjectsManager.ParentElements, pos);
+        if (_focusedElement != null)
         {
+            if (currentElement == _focusedElement) return;
+
+            currentElement = _focusedElement;
+            switch (currentElement.Properties.Cursor)
+            {
+                case Properties.CursorType.defaultCursor:
+                    CursorManager.SetDefault();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.pointer:
+                    CursorManager.SetHand();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.text:
+                    CursorManager.SetText();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.move:
+                    CursorManager.SetMove();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.wait:
+                    CursorManager.SetWait();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.cursorHelp:
+                    CursorManager.SetNotAllowed();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.notAllowed:
+                    CursorManager.SetNotAllowed();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.progress:
+                    CursorManager.SetWait();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.crosshair:
+                    CursorManager.SetCrosshair();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.grab:
+                    CursorManager.SetMove();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.grabbing:
+                    CursorManager.SetMove();
+                    CursorManager.SetVisible(true);
+                    break;
+                case Properties.CursorType.none:
+                    CursorManager.SetDefault();
+                    CursorManager.SetVisible(false);
+                    break;
+            }
+        }
+        else if (currentElement != null)
+        {
+            currentElement = null;
             CursorManager.SetDefault();
+            CursorManager.SetVisible(true);
         }
         // throw new NotImplementedException();
     }

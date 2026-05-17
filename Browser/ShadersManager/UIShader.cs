@@ -24,18 +24,18 @@ public unsafe class UIShader : BaseShader
     };
 
     // // override blend — UI needs alpha
-    // protected override PipelineColorBlendAttachmentState GetColorBlend() => new()
-    // {
-    //     ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
-    //                           ColorComponentFlags.BBit | ColorComponentFlags.ABit,
-    //     BlendEnable = Vk.True,
-    //     SrcColorBlendFactor = BlendFactor.SrcAlpha,
-    //     DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha,
-    //     ColorBlendOp = BlendOp.Add,
-    //     SrcAlphaBlendFactor = BlendFactor.One,
-    //     DstAlphaBlendFactor = BlendFactor.Zero,
-    //     AlphaBlendOp = BlendOp.Add,
-    // };
+    protected override PipelineColorBlendAttachmentState GetColorBlend() => new()
+    {
+        ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
+                        ColorComponentFlags.BBit | ColorComponentFlags.ABit,
+        BlendEnable = Vk.True,
+        SrcColorBlendFactor = BlendFactor.SrcAlpha,
+        DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha,
+        ColorBlendOp = BlendOp.Add,
+        SrcAlphaBlendFactor = BlendFactor.One,
+        DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha,
+        AlphaBlendOp = BlendOp.Add,
+    };
 
     protected override PipelineRasterizationStateCreateInfo GetRasterizer() => new()
     {

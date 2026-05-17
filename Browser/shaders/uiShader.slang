@@ -2,7 +2,8 @@
 module UIShader;
 __include Common;
 
-struct VertexInput {
+struct VertexInput
+{
     float3 Position;
     float2 UV;
 }
@@ -10,15 +11,27 @@ struct VertexInput {
 SamplerState sampler;
 Texture2D textures[];
 
-struct VertexOutput {
+struct VertexOutput
+{
     float4 Pos : SV_POSITION;
     float2 UV;
-    RenderData RenderData;
+
+    nointerpolation float4 color;
+
+    nointerpolation float2 pos;
+    nointerpolation float2 size;
+
+    nointerpolation uint textureIndex;
+    nointerpolation float borderRadiusTopLeft;
+    nointerpolation float borderRadiusTopRight;
+    nointerpolation float borderRadiusBottomRight;
+    nointerpolation float borderRadiusBottomLeft;
 };
 
 // --- Bindings ---
 [shader("vertex")]
-VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uniform ObjectData *objectsData, uint instanceIndex: SV_VulkanInstanceID) {
+VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uniform ObjectData *objectsData, uint instanceIndex: SV_VulkanInstanceID)
+{
     VertexOutput output;
     CameraUBO cameraData = *cameraDataPtr;
     ObjectData objData = objectsData[instanceIndex];
@@ -27,25 +40,61 @@ VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uni
 
     output.Pos = mul(mvp, float4(input.Position, 1));
     output.UV = input.UV;
-    output.RenderData = objData.renderData;
+
+    output.pos = objData.pos;
+    output.size = objData.size;
+
+    output.color = objData.color;
+
+    output.textureIndex = objData.textureIndex;
+    output.borderRadiusTopLeft = objData.borderRadiusTopLeft;
+    output.borderRadiusTopRight = objData.borderRadiusTopRight;
+    output.borderRadiusBottomRight = objData.borderRadiusBottomRight;
+    output.borderRadiusBottomLeft = objData.borderRadiusBottomLeft;
 
     return output;
 }
 
-struct FragmentOutput {
+struct FragmentOutput
+{
     float4 color : SV_Target;
 }
 
 [shader("fragment")]
-FragmentOutput FragmentMain(VertexOutput input) {
+FragmentOutput FragmentMain(VertexOutput input)
+{
     FragmentOutput output;
-    RenderData objData = input.RenderData;
+    // RenderData objData = input;
 
-    if (objData.hasTexture == 1) {
-        output.color = textures[objData.textureIndex].Sample(sampler, input.UV);
-    } else {
-        output.color = objData.color;
+    float4 radii = float4(
+        input.borderRadiusTopLeft,
+        input.borderRadiusTopRight,
+        input.borderRadiusBottomRight,
+        input.borderRadiusBottomLeft);
+
+    float dist = RoundedRectSDF(input.Pos.xy, input.pos, input.size, radii);
+
+    output.color = float4(input.pos.x / 800.0, input.pos.y / 600.0, 0, 1);
+    return output;
+    // Smooth edge — anti-aliased
+    float alpha = 1.0 - smoothstep(-0.5, 0.5, dist);
+
+    if (alpha <= 0.0)
+        discard;
+
+    // float alpha = 1;
+
+    float4 baseColor;
+    if (input.textureIndex > 0)
+    {
+        baseColor = textures[input.textureIndex].Sample(sampler, input.UV);
     }
+    else
+    {
+        baseColor = input.color;
+    }
+
+    output.color = float4(baseColor.rgb, baseColor.a * alpha);
 
     return output;
 }

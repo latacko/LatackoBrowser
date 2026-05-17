@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+using BenchmarkDotNet.Attributes;
 using Browser;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
@@ -17,21 +19,35 @@ public class RuntimeModelData : IDisposable
     public ModelData<ushort> ModelData { get; private set; }
     public uint ObjectIndex;
 
-    Rect2D bounds = new();
-    public Rect2D Bounds => bounds;
-
-    public Vector2 Pos;
-    public Vector2 Size;
     public Transform Transform = new();
-    public Properties Properties = new();
+    public Properties Properties;
+    public Layout Layout;
 
     private DirtyFlags[] dirty = new DirtyFlags[VulkanManager.MAX_FRAMES_IN_FLIGHT];
     private Matrix4X4<float> _cachedModel;
 
-    public RuntimeModelData(ModelData<ushort> modelData, uint objectIndex)
+    public Vector2D<float> ParentSize;
+    internal RuntimeModelData? Parent;
+    public List<RuntimeModelData> Children;
+
+    public RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
     {
         ModelData = modelData;
         ObjectIndex = objectIndex;
+
+        if (parent != null)
+            Parent = parent;
+
+        Properties = new(this);
+        Layout = new(this);
+        UpdateParentSize();
+    }
+
+    public void SetParent(RuntimeModelData? parent = null)
+    {
+        if (parent != null)
+            Parent = parent;
+        UpdateParentSize();
     }
 
     void AddFlag(DirtyFlags flags)
@@ -47,58 +63,110 @@ public class RuntimeModelData : IDisposable
         dirty[frame] &= flags;
     }
 
-    public RuntimeModelData SetPosition(Vector2 pos)
+    public RuntimeModelData SetLayout(Func<Layout, RuntimeModelData, Layout> setLayout)
     {
-        if (Pos == pos) return this;
-        Pos = pos;
-        
-        bounds.Offset = new()
+        return SetLayout(setLayout.Invoke(Layout, this));
+    }
+
+    public RuntimeModelData SetLayout(Layout layout)
+    {
+        Layout = layout;
+        if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position) || Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
         {
-            X = (int)Pos.X,
-            Y = (int)Pos.Y
-        };
+            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
+                UpdateChildrenSizes();
+            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
+                UpdateChildrenPosition();
 
+            Layout.dirty &= Layout.LayoutDirty.Position;
+            Layout.dirty &= Layout.LayoutDirty.Size;
+
+            AddFlag(DirtyFlags.Matrix);
+        }
+        return this;
+    }
+
+    public RuntimeModelData SetTransform(Func<Transform, RuntimeModelData, Transform> setTransform)
+    {
+        return SetTransform(setTransform.Invoke(Transform, this));
+    }
+
+    public RuntimeModelData SetTransform(Transform transform)
+    {
+        Transform = transform;
         AddFlag(DirtyFlags.Matrix);
         return this;
     }
 
-    public RuntimeModelData SetSize(Vector2 size)
+    public RuntimeModelData SetProperties(Func<Properties, RuntimeModelData, Properties> setProperties)
     {
-        if (this.Size == size) return this;
-        Size = size;
-        bounds.Extent = new()
+        return SetProperties(setProperties.Invoke(Properties, this));
+    }
+
+    public RuntimeModelData SetProperties(Properties properties)
+    {
+        Properties = properties;
+        AddFlag(DirtyFlags.Object);
+        return this;
+    }
+
+    public UIUnit CreateUnit(float value, UnitType valueType = UnitType.px)
+    {
+        return new UIUnit(value, valueType).ConvertToPx(ParentSize);
+    }
+
+    void ConvertToPx(Vector2D<float> parentSize)
+    {
+        Layout.ConvertToPx(parentSize);
+        Transform.ConvertToPx(parentSize);
+        Properties.ConvertToPx(parentSize);
+
+        AddFlag(DirtyFlags.Matrix);
+    }
+
+    void UpdateChildrenSizes()
+    {
+        if (Children == null) return;
+
+        foreach (var children in Children)
         {
-            Width = (uint)Size.X,
-            Height = (uint)Size.Y
-        };
-        AddFlag(DirtyFlags.Matrix);
-        return this;
+            children.UpdateParentSize(Layout.GetSize());
+        }
     }
 
-    public RuntimeModelData SetTransform(Func<Transform, Transform> setTransform)
+    void UpdateChildrenPosition()
     {
-        Transform = setTransform.Invoke(Transform);
-        AddFlag(DirtyFlags.Matrix);
-        return this;
+        if (Children == null) return;
+
+        foreach (var child in Children)
+        {
+            child.AddFlag(DirtyFlags.Matrix);
+            child.Layout.UpdateBoundsOffset();
+            child.UpdateChildrenPosition();
+        }
     }
 
-    public RuntimeModelData SetProperties(Func<Properties, Properties> setProperties)
+    internal void UpdateParentSize(Vector2D<float> size = default)
     {
-        Properties = setProperties.Invoke(Properties);
-        AddFlag(DirtyFlags.Matrix);
-        return this;
+        if (size != default)
+        {
+            ParentSize = size;
+        }
+        else
+        {
+            ParentSize = Parent != null ? Parent.Layout.GetSize() : new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
+        }
+        var _prevSize = Layout.GetSize();
+        ConvertToPx(ParentSize);
+        if (_prevSize != Layout.GetSize())
+            UpdateChildrenSizes();
     }
-
 
     public bool TryGetObjectData(out ObjectData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            Pos.ConvertToPx();
-            Size.ConvertToPx();
-
-            Transform.ConvertToPx();
-
+            UpdateParentSize();
             AddFlag(DirtyFlags.Matrix);
         }
 
@@ -112,10 +180,14 @@ public class RuntimeModelData : IDisposable
         if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
             _cachedModel =
-                Matrix4X4.CreateScale(Size.X, Size.Y, 1f) *
-                Matrix4X4.CreateTranslation(-Transform.Translate.X, -Transform.Translate.Y, 0f) *
+                Matrix4X4.CreateScale(Layout.GetSize().X, Layout.GetSize().Y, 1f) *
+                Matrix4X4.CreateTranslation(-Transform.TranslateX.Value, -Transform.TranslateY.Value, 0f) *
                 Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
-                Matrix4X4.CreateTranslation(Pos.X, Pos.Y, 0f);
+                (
+                    Parent == null ?
+                        Matrix4X4.CreateTranslation(Layout.Left.Value, Layout.Top.Value, 0f) :
+                        Matrix4X4.CreateTranslation(Parent.Layout.Left.Value + Layout.LayoutPos.X + Layout.Left.Value, Parent.Layout.Top.Value + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
+                );
             RemoveFlag(DirtyFlags.Matrix, frame);
         }
 
@@ -123,15 +195,23 @@ public class RuntimeModelData : IDisposable
         {
             Model = _cachedModel,
             Color = Properties.BackgroundColor,
+
+            pos = new Vector2D<float>(_cachedModel.M41, _cachedModel.M42),
+            size = Layout.GetSize(),
+
             TextureIndex = 0,
-            hasTexture2 = 0,
+            borderRadiusTopLeft = Properties.borderRadiusTopLeft.Value,
+            borderRadiusTopRight = Properties.borderRadiusTopRight.Value,
+            borderRadiusBottomRight = Properties.borderRadiusBottomRight.Value,
+            borderRadiusBottomLeft = Properties.borderRadiusBottomLeft.Value,
         };
+
         RemoveFlag(DirtyFlags.Object, frame);
 
         return true;
     }
 
-    public unsafe void Dispose()
+    public void Dispose()
     {
     }
 }
