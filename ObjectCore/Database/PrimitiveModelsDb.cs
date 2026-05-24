@@ -1,12 +1,11 @@
 using System.Numerics;
-using Browser;
 using GraphicCore;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.Diagnostics.Tracing.Parsers.MicrosoftWindowsWPF;
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
+
+namespace ObjectCore;
 
 public class PrimitiveModelsDb : IDisposable
 {
@@ -29,7 +28,7 @@ public class PrimitiveModelsDb : IDisposable
     /// <summary>
     /// Creates two buffers for primitives models. Vertex and Indices buffer
     /// </summary>
-    internal unsafe void CreateBuffers()
+    public unsafe void CreateBuffers()
     {
         int _vertexCount = 0;
         int _indexCount = 0;

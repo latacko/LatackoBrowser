@@ -6,7 +6,7 @@ namespace Vulkan;
 
 public unsafe class CreateVulkan : IDisposable
 {
-    internal static Vk vk { get; private set; }
+    public static Vk vk { get; private set; }
     internal static Instance vulkanInstance;
 
     private ExtDebugUtils? debugUtils;

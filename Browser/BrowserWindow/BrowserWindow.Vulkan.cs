@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using Iced.Intel;
+using ObjectCore;
 using Silk.NET.Assimp;
 using Silk.NET.Core;
 using Silk.NET.Core.Native;
@@ -28,7 +29,7 @@ public unsafe partial class BrowserWindow
     SurfaceKHR surface;
 
     internal static GraphicCore.BaseShader[] loadedShaders = [
-        new UIShader()
+        new ObjectShader()
     ];
 
     void CreateVulkan()

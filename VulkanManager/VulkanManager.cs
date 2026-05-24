@@ -14,13 +14,13 @@ public unsafe class VulkanManager : IDisposable
     public const int MAX_FRAMES_IN_FLIGHT = 2;
 
     public CommandBuffer[] commandBuffers = new CommandBuffer[MAX_FRAMES_IN_FLIGHT];
-    internal ObjectsBuffers objectsBuffers = new();
-    internal CameraBuffers cameraBuffers = new();
+    public ObjectsBuffers objectsBuffers = new();
+    public CameraBuffers cameraBuffers = new();
     internal event Action CreateBuffers;
 
     internal static DescriptorPool descriptorPool;
     internal static DescriptorSetLayout descriptorSetLayoutForTextures;
-    internal static DescriptorSet descriptorSetForTextures;
+    public static DescriptorSet descriptorSetForTextures;
 
     Sampler sampler;
 

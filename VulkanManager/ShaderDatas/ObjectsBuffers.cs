@@ -7,7 +7,7 @@ namespace Vulkan;
 public unsafe class ObjectsBuffers
 {
     public const int MAX_OBJECTS = 1000;
-    internal ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    public ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
 
 
     internal void CreateBuffers()

@@ -2,7 +2,7 @@ using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 namespace Vulkan;
 
-unsafe struct ShaderDataBuffer
+public unsafe struct ShaderDataBuffer
 {
     public Buffer Buffer;
     public DeviceMemory Memory; // replaces VMA allocation

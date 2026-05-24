@@ -1,9 +1,10 @@
-using Browser;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
 
-public unsafe class UIShader : GraphicCore.BaseShader
+namespace ObjectCore;
+
+public unsafe class ObjectShader : GraphicCore.BaseShader
 {
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
