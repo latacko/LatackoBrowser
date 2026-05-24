@@ -10,10 +10,10 @@ public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
     public TIndex[] Indices;
 
     public Buffer vertexBuffer;
-    internal uint vertexOffset;
+    public uint vertexOffset;
 
     public Buffer indexBuffer;
-    internal uint indexOffset;
+    public uint indexOffset;
 
     public ModelData(Vertex[] vertices, TIndex[] indices)
     {

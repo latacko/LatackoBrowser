@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Browser.DataTypes;
 using Silk.NET.Core;
 using Silk.NET.Core.Native;
 using Silk.NET.Maths;
@@ -118,7 +117,7 @@ public unsafe partial class BrowserWindow
     private void OnUpdate(double deltaTime)
     {
         timeFromStart += (float)deltaTime;
-        ColorTransitionsHelper.Update((float)deltaTime);
+        GraphicCore.ColorTransitionsHelper.Update((float)deltaTime);
 
         // browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
         //     .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))

@@ -1,4 +1,3 @@
-using Microsoft.Diagnostics.Utilities;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;

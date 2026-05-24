@@ -14,8 +14,8 @@ public unsafe abstract class BaseShader : IDisposable
     public PipelineLayout PipelineLayout;
     public List<RuntimeModelData> elements = new();
 
-    private protected virtual int GetMaxObjectForShader() => 10000;
-    private protected virtual ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
+    protected virtual int GetMaxObjectForShader() => 10000;
+    protected virtual ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
 
     protected abstract string moduleShaderPath { get; }
 

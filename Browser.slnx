@@ -3,6 +3,7 @@
   <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />
+  <Project Path="TextCore/TextCore.csproj" />
   <Project Path="Units/Units.csproj" />
   <Project Path="VulkanManager/VulkanManager.csproj" />
 </Solution>

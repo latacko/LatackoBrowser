@@ -1,5 +1,4 @@
 using System.Runtime.Serialization;
-using Browser.DataTypes;
 using Iced.Intel;
 using Silk.NET.Assimp;
 using Silk.NET.Core;
@@ -28,7 +27,7 @@ public unsafe partial class BrowserWindow
     KhrSurface khrSurface;
     SurfaceKHR surface;
 
-    internal static BaseShader[] loadedShaders = [
+    internal static GraphicCore.BaseShader[] loadedShaders = [
         new UIShader()
     ];
 

@@ -2,7 +2,7 @@ using Silk.NET.Maths;
 
 namespace GraphicCore;
 
-internal static class ColorTransitionsHelper
+public static class ColorTransitionsHelper
 {
 
     class TransitionData

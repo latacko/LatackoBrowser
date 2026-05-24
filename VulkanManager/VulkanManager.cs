@@ -5,6 +5,7 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 [assembly:InternalsVisibleTo("Browser")]
 [assembly:InternalsVisibleTo("GraphicsCore")]
+[assembly:InternalsVisibleTo("TextCore")]
 namespace Vulkan;
 
 public unsafe class VulkanManager : IDisposable

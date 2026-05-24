@@ -3,11 +3,11 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
 
-public unsafe class UIShader : BaseShader
+public unsafe class UIShader : GraphicCore.BaseShader
 {
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
-    private protected override int GetMaxObjectForShader() => 1000;
+    protected override int GetMaxObjectForShader() => 1000;
 
     public override void Init()
     {
