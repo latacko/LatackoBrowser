@@ -12,10 +12,9 @@ public unsafe abstract class BaseShader : IDisposable
 {
     public Pipeline Pipeline;
     public PipelineLayout PipelineLayout;
-    public List<RuntimeModelData> elements = new();
 
     protected virtual int GetMaxObjectForShader() => 10000;
-    protected virtual ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
+    protected abstract ulong GetSizeOfObjectDatas();
 
     protected abstract string moduleShaderPath { get; }
 
@@ -241,11 +240,6 @@ public unsafe abstract class BaseShader : IDisposable
 
     public virtual void Dispose()
     {
-        foreach (var element in elements)
-        {
-            element.Dispose();
-        }
-
         CreateVulkan.vk.DestroyPipeline(LogicalDevice.device, Pipeline, null);
         CreateVulkan.vk.DestroyPipelineLayout(LogicalDevice.device, PipelineLayout, null);
     }

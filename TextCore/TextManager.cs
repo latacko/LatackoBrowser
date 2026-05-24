@@ -5,16 +5,23 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace TextCore;
 
-public class TextBuffers : BufferManager
+public class TextManager : BufferManager
 {
-    BufferInfo<Vertex>[] vertexBuffer = new BufferInfo<Vertex>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
-    BufferInfo<uint>[] indicesBuffer = new BufferInfo<uint>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal static TextManager Instance;
+    internal BufferInfo<Vertex>[] vertexBuffer = new BufferInfo<Vertex>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<uint>[] indicesBuffer = new BufferInfo<uint>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
 
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
     uint vertexHead = 0;
     uint indexHead = 0;
 
-    List<TextObject> activeTexts = new();
+    List<RuntimeText> activeTexts = new();
+
+    public TextManager()
+    {
+        Instance = this;
+    }
 
     public override void RegisterBuffer()
     {
@@ -23,6 +30,8 @@ public class TextBuffers : BufferManager
             vertexBuffer[i] = new(256);
 
             indicesBuffer[i] = new(256);
+
+            dataBuffer[i] = new(256);
         }
     }
 
@@ -62,23 +71,25 @@ public class TextBuffers : BufferManager
         }
     }
 
-    public void Add(TextObject text)
+    public void Add(RuntimeText text)
     {
         text.Slot = Allocate(PickBucket(text.characters));
+        text.ModelData.vertexOffset = text.Slot.VertexOffset;
+        text.ModelData.indexOffset = text.Slot.IndexOffset;
         for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            text.Dirty[i] = true;
+            text.AddFlag(RuntimeModelData.DirtyFlags.Matrix);
         }
         activeTexts.Add(text);
     }
 
-    public void Remove(TextObject text)
+    public void Remove(RuntimeText text)
     {
         Free(text.Slot);
         activeTexts.Remove(text);
     }
 
-    public void Update(TextObject text)
+    public void Update(RuntimeText text)
     {
         BucketSize newBucket = PickBucket(text.characters);
 
@@ -86,29 +97,37 @@ public class TextBuffers : BufferManager
         {
             Free(text.Slot);
             text.Slot = Allocate(newBucket);
+
+            text.ModelData.vertexOffset = text.Slot.VertexOffset;
+            text.ModelData.indexOffset = text.Slot.IndexOffset;
         }
 
         for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            text.Dirty[i] = true;
+            text.AddFlag(RuntimeModelData.DirtyFlags.Model);
         }
+    }
+
+    public unsafe void Update(uint currentFrame, uint objectIndex, TextData objectData)
+    {
+        ((TextData*)dataBuffer[currentFrame].Mapped)[objectIndex] = objectData;
     }
 
     public unsafe void CopyToBuffer(uint currentFrame)
     {
         foreach (var text in activeTexts)
         {
-            if (!text.Dirty[currentFrame]) continue;
+            if (!text.dirty[currentFrame].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
 
-            text.Vertices.CopyTo(
-                new Span<Vertex>(((Vertex*)vertexBuffer[currentFrame].Mapped)+text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
+            text.ModelData.Vertices.CopyTo(
+                new Span<Vertex>(((Vertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
             );
 
-            text.Indices.CopyTo(
-                new Span<uint>((uint*)indicesBuffer[currentFrame].Mapped+text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
+            text.ModelData.Indices.CopyTo(
+                new Span<ushort>((ushort*)indicesBuffer[currentFrame].Mapped + text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
             );
 
-            text.Dirty[currentFrame] = false;
+            text.RemoveFlag(RuntimeModelData.DirtyFlags.Model, currentFrame);
         }
     }
 

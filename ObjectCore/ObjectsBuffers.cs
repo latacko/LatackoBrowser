@@ -1,16 +1,22 @@
 using System.Runtime.CompilerServices;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
-namespace Vulkan;
+namespace ObjectCore;
 
-public unsafe class ObjectsBuffers
+public unsafe class ObjectsManager
 {
+    public static ObjectsManager Instance;
     public const int MAX_OBJECTS = 1000;
     public ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
 
+    public ObjectsManager()
+    {
+        Instance = this;
+    }
 
-    internal void CreateBuffers()
+    public void RegisterBuffers()
     {
         ulong _bufferSize = (ulong)Unsafe.SizeOf<ObjectData>()*MAX_OBJECTS;
         for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)

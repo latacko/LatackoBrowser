@@ -14,7 +14,6 @@ public unsafe class VulkanManager : IDisposable
     public const int MAX_FRAMES_IN_FLIGHT = 2;
 
     public CommandBuffer[] commandBuffers = new CommandBuffer[MAX_FRAMES_IN_FLIGHT];
-    public ObjectsBuffers objectsBuffers = new();
     public CameraBuffers cameraBuffers = new();
     internal event Action CreateBuffers;
 
@@ -56,7 +55,6 @@ public unsafe class VulkanManager : IDisposable
     void CreateShaderDataBuffers()
     {
         cameraBuffers.CreateBuffers();
-        objectsBuffers.CreateBuffers();
         CreateBuffers?.Invoke();
     }
 
@@ -318,6 +316,5 @@ public unsafe class VulkanManager : IDisposable
         CreateVulkan.vk.DestroySampler(LogicalDevice.device, sampler, null);
 
         cameraBuffers.Dispose();
-        objectsBuffers.Dispose();
     }
 }

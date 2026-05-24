@@ -12,6 +12,7 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 using System.Numerics;
 using Silk.NET.Input.Sdl;
 using ObjectCore;
+using TextCore;
 
 namespace Browser;
 
@@ -34,7 +35,8 @@ public unsafe partial class BrowserWindow
 
     public Action OnStart;
 
-    FontManager fontManager = new();
+    CoreManager.CoreManager coreManager = new();
+
 
     public BrowserWindow()
     {
@@ -102,13 +104,14 @@ public unsafe partial class BrowserWindow
 
     private void CreateBuffers()
     {
+        coreManager.InitBuffers();
         primitiveModelsDb.CreateBuffers();
     }
 
     private void Start()
     {
+        coreManager.Start();
         browserUI.Create();
-        fontManager.LoadFont("/usr/share/fonts/open-sans/OpenSans-Regular.ttf");
         Console.WriteLine("Create model on load");
     }
 
@@ -118,7 +121,8 @@ public unsafe partial class BrowserWindow
     private void OnUpdate(double deltaTime)
     {
         timeFromStart += (float)deltaTime;
-        GraphicCore.ColorTransitionsHelper.Update((float)deltaTime);
+
+        coreManager.Update(deltaTime);
 
         // browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
         //     .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
@@ -161,7 +165,7 @@ public unsafe partial class BrowserWindow
 
 
         UpdateUniformBuffer(currentFrame);
-
+        coreManager.Render(currentFrame);
         // UpdateUniformBufferPerspective(currentFrame);
 
         SubmitInfo submitInfo = new()
@@ -278,7 +282,7 @@ public unsafe partial class BrowserWindow
 
     void CleanUp()
     {
-        fontManager.Dispose();
+        coreManager.Dispose();
         primitiveModelsDb.Dispose();
         CleanUpVulcan();
         window.Dispose();

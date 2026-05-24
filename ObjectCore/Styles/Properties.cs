@@ -18,9 +18,9 @@ public struct Properties
     public UIUnit borderRadiusBottomLeft;
     #endregion
 
-    public Properties(RuntimeObject runtimeModelData)
+    public Properties(RuntimeObject runtimeText)
     {
-        this.runtimeObject = runtimeModelData;
+        this.runtimeObject = runtimeText;
     }
 
     public Properties SetCursor(CursorType cursor)

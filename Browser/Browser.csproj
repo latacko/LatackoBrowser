@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../CoreManager/CoreManager.csproj" />
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../HTMLParser/HTMLParser.csproj" />
     <ProjectReference Include="../ObjectCore/ObjectCore.csproj" />

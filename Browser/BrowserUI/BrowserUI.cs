@@ -14,7 +14,7 @@ public class BrowserUI
 
     public void Create()
     {
-        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
+        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
         .SetLayout(
             (layout) => layout
                 .SetLeft(new(0)).SetTop(new(0))
@@ -27,7 +27,7 @@ public class BrowserUI
                 .SetBorderRadius(new(20, UnitType.px))
         );
 
-        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), TopBar)
+        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), TopBar)
         .SetLayout(
             (layout) => layout
                 .SetLeft(new(-10)).SetTop(new(-10))

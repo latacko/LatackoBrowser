@@ -6,11 +6,19 @@ using Remora.MSDFGen.Graphics;
 using SharpFont;
 using Silk.NET.Vulkan;
 
-public class FontManager: IDisposable
+namespace TextCore;
+
+public class FontManager : IDisposable
 {
+    public static FontManager Instance;
     Dictionary<string, FontAtlas> loadedFonts = new();
     static Library library = new();
     const string preload = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+
+    public void Init()
+    {
+        Instance = this;
+    }
     public void LoadFont(string path)
     {
         if (loadedFonts.ContainsKey(path)) return;
@@ -27,6 +35,13 @@ public class FontManager: IDisposable
         loadedFonts[path].Create();
         Fence fence;
         loadedFonts[path].StartRecording(out fence, preload.Length);
+
+        float ascender = face.Size.Metrics.Ascender.ToSingle();
+        float descender = face.Size.Metrics.Descender.ToSingle();
+        float lineHeight = face.Size.Metrics.Height.ToSingle();
+
+        loadedFonts[path].height = ascender + Math.Abs(descender);
+        loadedFonts[path].lineGap = lineHeight - loadedFonts[path].height;
 
         foreach (var character in preload)
         {
@@ -85,6 +100,8 @@ public class FontManager: IDisposable
         }
         loadedFonts[path].EndRecording(fence);
     }
+
+    public FontAtlas GetFontAtlas(string path) => loadedFonts[path];
 
     Shape BuildShape(Face face, char c)
     {
@@ -165,7 +182,7 @@ public class FontManager: IDisposable
     {
         foreach (var item in loadedFonts)
         {
-            Console.WriteLine(item.Key+": ");
+            Console.WriteLine(item.Key + ": ");
             item.Value.Dispose();
         }
     }

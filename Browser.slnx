@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Browser/Browser.csproj" />
+  <Project Path="CoreManager/CoreManager.csproj" />
   <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
   <Project Path="ObjectCore/ObjectCore.csproj" />

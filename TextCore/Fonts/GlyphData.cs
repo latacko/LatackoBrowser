@@ -1,6 +1,8 @@
 using System.Numerics;
 using Silk.NET.Maths;
 
+namespace TextCore;
+
 internal struct GlyphData
 {
     public Vector2D<float> UVMin;

@@ -15,7 +15,8 @@ public abstract class RuntimeModelData : IDisposable
         None = 0,
         Matrix = 1 << 0,
         Object = 1 << 1,
-        All = Matrix | Object
+        Model = 1 << 2,
+        All = Matrix | Object | Model
     }
     public ModelData<ushort> ModelData { get; private set; }
     public uint ObjectIndex;
@@ -86,15 +87,13 @@ public abstract class RuntimeModelData : IDisposable
         }
     }
 
-    public abstract bool TryGetObjectData(out ObjectData data, uint frame);
-
     public void Dispose()
     {
     }
 }
 
-public abstract class RuntimeModelData<TSelf> : RuntimeModelData
-    where TSelf : RuntimeModelData<TSelf>
+public abstract class RuntimeModelData<TSelf, TObjectData> : RuntimeModelData
+    where TSelf : RuntimeModelData<TSelf, TObjectData> where TObjectData : unmanaged
 {
     public new Events<TSelf> Events
     {
@@ -110,4 +109,6 @@ public abstract class RuntimeModelData<TSelf> : RuntimeModelData
 
     protected RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
         : base(modelData, objectIndex, parent) { }
+
+    public abstract bool TryGetObjectData(out TObjectData data, uint frame);
 }

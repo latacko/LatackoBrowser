@@ -3,6 +3,8 @@ using Silk.NET.Vulkan;
 using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
+namespace TextCore;
+
 public class FontAtlas : IDisposable
 {
     public const int GLYPH_SIZE = 48;
@@ -29,6 +31,9 @@ public class FontAtlas : IDisposable
     Buffer stagingBuffer = new();
     DeviceMemory stagingBufferMemory = new();
     nint bufferData;
+
+    internal float height = 0;
+    internal float lineGap = 0;
 
     public void Create()
     {

@@ -5,12 +5,11 @@ using Vulkan;
 
 namespace ObjectCore;
 
-public class RuntimeObject : RuntimeModelData<RuntimeObject>
+public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData>
 {
     public Transform Transform = new();
     public Properties Properties;
     public Layout Layout;
-
 
     public List<RuntimeModelData> Children;
 

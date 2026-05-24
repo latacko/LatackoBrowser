@@ -6,9 +6,12 @@ namespace ObjectCore;
 
 public unsafe class ObjectShader : GraphicCore.BaseShader
 {
+    public List<RuntimeObject> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
     protected override int GetMaxObjectForShader() => 1000;
+
+    protected override ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
 
     public override void Init()
     {
@@ -28,7 +31,7 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         ulong* addresses = stackalloc ulong[2]
         {
             VulkanManager.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
-            VulkanManager.Instance.objectsBuffers.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
+            ObjectsManager.Instance.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
 
@@ -78,7 +81,7 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         {
             if (element.TryGetObjectData(out var data, currentFrame))
             {
-                VulkanManager.Instance.objectsBuffers.Update(currentFrame, element.ObjectIndex, data);
+                ObjectsManager.Instance.Update(currentFrame, element.ObjectIndex, data);
             }
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);
         }
@@ -86,6 +89,10 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
 
     public override void Dispose()
     {
+        foreach (var element in elements)
+        {
+            element.Dispose();
+        }
         base.Dispose();
     }
 }
