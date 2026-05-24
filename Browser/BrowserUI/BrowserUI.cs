@@ -11,31 +11,49 @@ public class BrowserUI
 
     public void Create()
     {
-        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
+        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
         .SetLayout(
-            (layout, self) => layout
-                .SetLeft(self.CreateUnit(0)).SetTop(self.CreateUnit(0))
-                .SetWidth(self.CreateUnit(100, UnitType.lvw)).SetHeight(self.CreateUnit(45, UnitType.px))
+            (layout) => layout
+                .SetLeft(new(0)).SetTop(new(0))
+                .SetWidth(new(100, UnitType.lvw)).SetHeight(new(100, UnitType.px))
         )
         .SetProperties(
-            (properties, self) => properties
+            (properties) => properties
                 .SetBackgroundColor255(41, 44, 48, 255)
                 .SetTransition(.25f)
-                .SetCursor(Properties.CursorType.none)
-                .SetBorderRadius(self.CreateUnit(100))
+                .SetBorderRadius(new(20, UnitType.px))
         );
 
-        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), TopBar)
+        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), TopBar)
         .SetLayout(
-            (layout, self) => layout
-                .SetLeft(self.CreateUnit(0)).SetTop(self.CreateUnit(0))
-                .SetWidth(self.CreateUnit(100, UnitType.px)).SetHeight(self.CreateUnit(100, UnitType.percentageHeight))
+            (layout) => layout
+                .SetLeft(new(-10)).SetTop(new(-10))
+                .SetWidth(new(100, UnitType.px)).SetHeight(new(100, UnitType.percentageHeight))
         )
         .SetProperties(
-            (properties, self)=>properties
+            (properties) => properties
                 .SetCursor(Properties.CursorType.pointer)
                 .SetBackgroundColor255(65, 68, 71, 255)
-                .SetBorderRadius(self.CreateUnit(25))
+                .SetBorderRadius(new(25))
+                .SetTransition(5f)
+        ).SetEvents(
+            events => events
+                .AddOnClick((element) =>
+                {
+                    Console.WriteLine("Klikam element jakiś");
+                })
+                .AddOnMouseOver(element =>
+                {
+                    element.SetProperties(element.Properties
+                        .SetBackgroundColor255(60, 60, 78, 255)
+                    );
+                })
+                .AddOnMouseOut(element =>
+                {
+                    element.SetProperties(element.Properties
+                        .SetBackgroundColor255(65, 68, 71, 255)
+                    );
+                })
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))

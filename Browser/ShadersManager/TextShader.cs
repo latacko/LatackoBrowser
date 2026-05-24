@@ -3,35 +3,15 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
 
-public unsafe class UIShader : BaseShader
+public unsafe class TextShader : BaseShader
 {
-    protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
+    protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
 
     private protected override int GetMaxObjectForShader() => 1000;
 
     public override void Init()
     {
         base.Init();
-    }
-
-    public override unsafe void Render(CommandBuffer commandBuffer, uint currentFrame)
-    {
-        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
-
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanManager.descriptorSetForTextures, 0, null);
-
-        ulong vOffset = 0;
-        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
-        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, PrimitiveModelsDb.primitiveBuffer, PrimitiveModelsDb.indicesOffset, IndexType.Uint16);
-
-        ulong* addresses = stackalloc ulong[2]
-        {
-            VulkanManager.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
-            VulkanManager.Instance.objectsBuffers.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
-        };
-        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
-
-        RenderElements(commandBuffer, currentFrame);
     }
 
     // // override depth — UI has no depth test
@@ -69,7 +49,6 @@ public unsafe class UIShader : BaseShader
         FrontFace = FrontFace.CounterClockwise,
         DepthBiasEnable = Vk.False,
     };
-
 
     protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
     {

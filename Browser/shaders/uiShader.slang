@@ -1,12 +1,6 @@
 #language slang 2026
-module UIShader;
-__include Common;
-
-struct VertexInput
-{
-    float3 Position;
-    float2 UV;
-}
+import Modules.Common;
+import Modules.UIData;
 
 SamplerState sampler;
 Texture2D textures[];
@@ -72,10 +66,7 @@ FragmentOutput FragmentMain(VertexOutput input)
         input.borderRadiusBottomRight,
         input.borderRadiusBottomLeft);
 
-    float dist = RoundedRectSDF(input.Pos.xy, input.pos, input.size, radii);
-
-    output.color = float4(input.pos.x / 800.0, input.pos.y / 600.0, 0, 1);
-    return output;
+    float dist = RoundedRectSDF(input.UV, input.size, radii);
     // Smooth edge — anti-aliased
     float alpha = 1.0 - smoothstep(-0.5, 0.5, dist);
 

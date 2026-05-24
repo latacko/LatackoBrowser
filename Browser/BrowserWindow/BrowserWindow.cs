@@ -21,6 +21,7 @@ public unsafe partial class BrowserWindow
     private static IWindow window;
     private IInputContext inputContext;
 
+    internal PrimitiveModelsDb primitiveModelsDb = new();
     private const int WIDTH = 800;
     private const int HEIGHT = 800;
 
@@ -32,6 +33,8 @@ public unsafe partial class BrowserWindow
     private BrowserUI browserUI = new();
 
     public Action OnStart;
+
+    FontManager fontManager = new();
 
     public BrowserWindow()
     {
@@ -88,6 +91,8 @@ public unsafe partial class BrowserWindow
             throw new Exception("Windowing platform doesn't support Vulkan.");
         }
 
+        Vulkan.VulkanManager.Instance.CreateBuffers += CreateBuffers;
+
         //Assign events.
         OnStart += Start;
         window.Update += OnUpdate;
@@ -95,9 +100,15 @@ public unsafe partial class BrowserWindow
         window.FramebufferResize += OnFramebufferResize;
     }
 
+    private void CreateBuffers()
+    {
+        primitiveModelsDb.CreateBuffers();
+    }
+
     private void Start()
     {
         browserUI.Create();
+        fontManager.LoadFont("/usr/share/fonts/open-sans/OpenSans-Regular.ttf");
         Console.WriteLine("Create model on load");
     }
 
@@ -109,7 +120,11 @@ public unsafe partial class BrowserWindow
         timeFromStart += (float)deltaTime;
         ColorTransitionsHelper.Update((float)deltaTime);
 
-        browserUI.TopBar.SetLayout(browserUI.TopBar.Layout.SetTop(browserUI.TopBar.CreateUnit(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px)));
+        // browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
+        //     .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+        //     .SetWidth(new(800 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+        //     .SetHeight(new(300 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+        //     );
         // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
         // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
@@ -263,6 +278,8 @@ public unsafe partial class BrowserWindow
 
     void CleanUp()
     {
+        fontManager.Dispose();
+        primitiveModelsDb.Dispose();
         CleanUpVulcan();
         window.Dispose();
     }

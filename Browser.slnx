@@ -1,5 +1,8 @@
 <Solution>
   <Project Path="Browser/Browser.csproj" />
+  <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />
+  <Project Path="Units/Units.csproj" />
+  <Project Path="VulkanManager/VulkanManager.csproj" />
 </Solution>

@@ -17,7 +17,8 @@ public partial class BrowserWindow
 
     private void OnMouseClick(IMouse mouse, MouseButton button, System.Numerics.Vector2 pos)
     {
-        Console.WriteLine(button + " pos: " + pos);
+        if (currentElement == null) return;
+        currentElement.Events.ExecuteOnClick();
     }
 
     RuntimeModelData? currentElement;
@@ -25,14 +26,11 @@ public partial class BrowserWindow
     RuntimeModelData? GetElementUnderCursor(RuntimeModelData? parentElement, List<RuntimeModelData> elements, Vector2 pos)
     {
         int _elementsCount = elements.Count;
-        for (int i = 0; i < _elementsCount; i++)
+        for (int i = _elementsCount - 1; i >= 0; i--)
         {
             if (BoundsHelper.Contains(elements[i].Layout.Bounds, pos))
             {
-                if (elements[i].Children == null)
-                    return elements[i];
-                else
-                    return GetElementUnderCursor(elements[i], elements[i].Children, pos);
+                return elements[i];
             }
         }
         return parentElement;
@@ -40,12 +38,18 @@ public partial class BrowserWindow
 
     private void OnMouseMove(IMouse mouse, Vector2 pos)
     {
-        var _focusedElement = GetElementUnderCursor(null, ObjectsManager.ParentElements, pos);
+        var _focusedElement = GetElementUnderCursor(null, ObjectsManager.Elements, pos);
         if (_focusedElement != null)
         {
             if (currentElement == _focusedElement) return;
 
+            if (currentElement != null)
+            {
+                ElementMouseOut();
+            }
+
             currentElement = _focusedElement;
+            currentElement.Events.ExecuteOnMouseOver();
             switch (currentElement.Properties.Cursor)
             {
                 case Properties.CursorType.defaultCursor:
@@ -100,6 +104,7 @@ public partial class BrowserWindow
         }
         else if (currentElement != null)
         {
+            ElementMouseOut();
             currentElement = null;
             CursorManager.SetDefault();
             CursorManager.SetVisible(true);
@@ -107,6 +112,10 @@ public partial class BrowserWindow
         // throw new NotImplementedException();
     }
 
+    private void ElementMouseOut()
+    {
+        currentElement.Events.ExecuteOnMouseOut();
+    }
     private void OnMouseScroll(IMouse mouse, ScrollWheel wheel)
     {
         // throw new NotImplementedException();

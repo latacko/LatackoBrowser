@@ -1,7 +1,43 @@
 <!DOCTYPE html>
-<html>
-<body style="display: flex;">
-    <div style=" background-color:red; font-size:20px; width: 100px; height: 20px;">Hello <div2>test</div2> world</div>
-    <div style=" background-color:red; font-size:20px; width: 100px; height: 20px;">Hello <div2>test</div2> world</div>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        #test {
+            background-color: lime;
+            width: 90lvw;
+        }
+
+        #test2 {
+            background-color: red;
+            height: 100%;
+            border-radius: 5% / 20%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="test">
+        <div id="test2">
+
+        </div>
+    </div>
+    <script>
+        const test = document.getElementById("test")
+        const test2 = document.getElementById("test2")
+
+        let timePassed = 0
+        const speed = 0.01;
+        setInterval(() => {
+            timePassed += 1;
+
+            test.style.height = 400 + 100 * Math.sin(timePassed * speed) + "px"
+            test2.style.width = 1200 + 200 * Math.sin(timePassed * speed) + "px"
+        }, 1)
+    </script>
 </body>
+
 </html>

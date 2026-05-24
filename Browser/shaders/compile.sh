@@ -4,4 +4,5 @@
 SLANGC=/opt/slang/bin/slangc
 FLAGS="-target spirv"
 
-$SLANGC uiShader.slang $FLAGS -o uiShader.spv && echo "✅ shader compiled" || echo "❌ shader failed"
+$SLANGC uiShader.slang $FLAGS -o Compiled/uiShader.spv && echo "✅ shader compiled" || echo "❌ shader failed"
+$SLANGC textShader.slang $FLAGS -o Compiled/textShader.spv && echo "✅ shader compiled" || echo "❌ shader failed"

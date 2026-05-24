@@ -12,11 +12,15 @@
   <ItemGroup>
     <ProjectReference Include="../HTMLParser/HTMLParser.csproj" />
     <ProjectReference Include="../SvgLoader/SvgLoader.csproj" />
+    <ProjectReference Include="../Units/Units.csproj" />
+    <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AngleSharp" Version="1.4.0" />
     <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Remora.MSDFGen" Version="1.0.0" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Input.Sdl" Version="2.23.0" />
@@ -27,13 +31,13 @@
     <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Windowing.Sdl" Version="2.23.0" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="Slangc.NET" Version="2026.7.0" />
+    <PackageReference Include="SpaceWizards.SharpFont" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="BrowserWindow/" />
-    <None Update="shaders/*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="shaders/Compiled/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="models/*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
