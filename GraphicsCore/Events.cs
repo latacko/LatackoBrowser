@@ -1,110 +1,111 @@
 namespace GraphicCore;
 
-public struct Events
+public class Events<T>: EventsBase where T : RuntimeModelData
 {
-    RuntimeModelData element;
-    public delegate void ElementEvent(RuntimeModelData element);
+    T element;
+    public delegate void ElementEvent(T element);
     event ElementEvent OnClick;
     event ElementEvent OnMouseDown;
     event ElementEvent OnMouseUp;
     event ElementEvent OnMouseOut;
     event ElementEvent OnMouseOver;
 
-    public Events(RuntimeModelData element)
+    public Events(T element)
     {
         this.element = element;
     }
 
     #region OnClick
-    public Events AddOnClick(ElementEvent elementEvent)
+    public Events<T> AddOnClick(ElementEvent elementEvent)
     {
         OnClick += elementEvent;
         return this;
     }
 
-    public Events RemoveOnClick(ElementEvent elementEvent)
+    public Events<T> RemoveOnClick(ElementEvent elementEvent)
     {
         OnClick -= elementEvent;
         return this;
     }
 
-    public readonly void ExecuteOnClick()
+    public override void ExecuteOnClick()
     {
         OnClick?.Invoke(element);
     }
     #endregion
 
     #region OnMouseDown
-    public Events AddOnMouseDown(ElementEvent elementEvent)
+    public Events<T> AddOnMouseDown(ElementEvent elementEvent)
     {
         OnMouseDown += elementEvent;
         return this;
     }
 
-    public Events RemoveOnMouseDown(ElementEvent elementEvent)
+    public Events<T> RemoveOnMouseDown(ElementEvent elementEvent)
     {
         OnMouseDown -= elementEvent;
         return this;
     }
 
-    public readonly void ExecuteOnMouseDown()
+
+    public override void ExecuteOnMouseDown()
     {
         OnMouseDown?.Invoke(element);
     }
     #endregion
 
     #region OnMouseUp
-    public Events AddOnMouseUp(ElementEvent elementEvent)
+    public Events<T> AddOnMouseUp(ElementEvent elementEvent)
     {
         OnMouseUp += elementEvent;
         return this;
     }
 
-    public Events RemoveOnMouseUp(ElementEvent elementEvent)
+    public Events<T> RemoveOnMouseUp(ElementEvent elementEvent)
     {
         OnMouseUp -= elementEvent;
         return this;
     }
 
-    public readonly void ExecuteOnMouseUp()
+    public override void ExecuteOnMouseUp()
     {
         OnMouseUp?.Invoke(element);
     }
     #endregion
 
     #region OnMouseOut
-    public Events AddOnMouseOut(ElementEvent elementEvent)
+    public Events<T> AddOnMouseOut(ElementEvent elementEvent)
     {
         OnMouseOut += elementEvent;
         return this;
     }
 
-    public Events RemoveOnMouseOut(ElementEvent elementEvent)
+    public Events<T> RemoveOnMouseOut(ElementEvent elementEvent)
     {
         OnMouseOut -= elementEvent;
         return this;
     }
 
-    public readonly void ExecuteOnMouseOut()
+    public override void ExecuteOnMouseOut()
     {
         OnMouseOut?.Invoke(element);
     }
     #endregion
 
     #region OnMouseOver
-    public Events AddOnMouseOver(ElementEvent elementEvent)
+    public Events<T> AddOnMouseOver(ElementEvent elementEvent)
     {
         OnMouseOver += elementEvent;
         return this;
     }
 
-    public Events RemoveOnMouseOver(ElementEvent elementEvent)
+    public Events<T> RemoveOnMouseOver(ElementEvent elementEvent)
     {
         OnMouseOver -= elementEvent;
         return this;
     }
 
-    public readonly void ExecuteOnMouseOver()
+    public override void ExecuteOnMouseOver()
     {
         OnMouseOver?.Invoke(element);
     }

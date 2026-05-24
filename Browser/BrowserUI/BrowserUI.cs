@@ -1,5 +1,6 @@
 using Browser;
 using GraphicCore;
+using GraphicsCore;
 using Units;
 using Vulkan;
 
@@ -33,7 +34,7 @@ public class BrowserUI
         )
         .SetProperties(
             (properties) => properties
-                .SetCursor(Properties.CursorType.pointer)
+                .SetCursor(CursorType.pointer)
                 .SetBackgroundColor255(65, 68, 71, 255)
                 .SetBorderRadius(new(25))
                 .SetTransition(5f)

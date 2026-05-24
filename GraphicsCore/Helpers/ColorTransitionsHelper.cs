@@ -11,10 +11,11 @@ public static class ColorTransitionsHelper
         public Vector4D<float> OriginalColor;
         public Vector4D<float> TargetColor;
         public float Elapsed;
+        public required Action<Vector4D<float>> UpdateColor;
     }
     static Dictionary<RuntimeModelData, TransitionData> elements = new();
 
-    public static void StartTransition(RuntimeModelData element, Vector4D<float> originalColor, Vector4D<float> targetColor, float duration)
+    public static void StartTransition(RuntimeModelData element, Vector4D<float> originalColor, Vector4D<float> targetColor, float duration, Action<Vector4D<float>> updateColor = null)
     {
         if (elements.TryGetValue(element, out var value))
         {
@@ -30,6 +31,7 @@ public static class ColorTransitionsHelper
                 OriginalColor = originalColor,
                 TargetColor = targetColor,
                 Duration = duration,
+                UpdateColor = updateColor,
             });
         }
     }
@@ -45,13 +47,13 @@ public static class ColorTransitionsHelper
 
             if (t >= 0.998f)
             {
-                item.Key.SetProperties(item.Key.Properties.SetBackgroundColorWithoutTransitionInLinear(item.Value.TargetColor.X, item.Value.TargetColor.Y, item.Value.TargetColor.Z, item.Value.TargetColor.W));
+                item.Value.UpdateColor.Invoke(item.Value.TargetColor);
                 elements.Remove(item.Key);
             }
             else
             {
                 var _currentColor = Vector4D.Lerp(item.Value.OriginalColor, item.Value.TargetColor, t);
-                item.Key.SetProperties(item.Key.Properties.SetBackgroundColorWithoutTransitionInLinear(_currentColor.X, _currentColor.Y, _currentColor.Z, _currentColor.W));
+                item.Value.UpdateColor.Invoke(_currentColor);
             }
         }
     }

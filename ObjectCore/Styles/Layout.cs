@@ -1,7 +1,8 @@
+using GraphicCore;
 using Silk.NET.Maths;
 using Units;
 
-namespace GraphicCore;
+namespace ObjectCore;
 public struct Layout
 {
     [Flags]
@@ -37,12 +38,12 @@ public struct Layout
     #endregion
 
     #region Size
-    Vector2D<float> BaseSize;
+    internal Vector2D<float> BaseSize;
     internal UIUnit Width;
     internal UIUnit Height;
     #endregion
 
-    RuntimeModelData runtimeModelData;
+    RuntimeObject runtimeObject;
     public enum DisplayType
     {
         inline,
@@ -70,9 +71,9 @@ public struct Layout
     public UIUnit MarginBottom;
     #endregion
 
-    public Layout(RuntimeModelData runtimeModelData)
+    public Layout(RuntimeObject runtimeObject)
     {
-        this.runtimeModelData = runtimeModelData;
+        this.runtimeObject = runtimeObject;
     }
 
 
@@ -87,21 +88,21 @@ public struct Layout
 
     public void UpdateBoundsOffset()
     {
-        if (runtimeModelData.Parent == null)
+        if (runtimeObject.Parent == null)
         {
             bounds.OffsetX = Left.Value;
             bounds.OffsetY = Top.Value;
         }
         else
         {
-            bounds.OffsetX = runtimeModelData.Parent.Layout.Left.Value + LayoutPos.X + Left.Value;
-            bounds.OffsetY = runtimeModelData.Parent.Layout.Top.Value + LayoutPos.Y + Top.Value;
+            bounds.OffsetX = runtimeObject.Parent.GetLayoutLeft() + LayoutPos.X + Left.Value;
+            bounds.OffsetY = runtimeObject.Parent.GetLayoutTop() + LayoutPos.Y + Top.Value;
         }
     }
 
     public Layout SetLeft(UIUnit left, Align align = Align.Left)
     {
-        left.ConvertToPx(runtimeModelData.ParentSize);
+        left.ConvertToPx(runtimeObject.ParentSize);
         if (Left == left) return this;
         Left = left;
         LeftAlign = align;
@@ -112,7 +113,7 @@ public struct Layout
 
     public Layout SetTop(UIUnit top, Align align = Align.Top)
     {
-        top.ConvertToPx(runtimeModelData.ParentSize);
+        top.ConvertToPx(runtimeObject.ParentSize);
         if (Top == top) return this;
         Top = top;
         TopAlign = align;
@@ -123,7 +124,7 @@ public struct Layout
 
     public Layout SetWidth(UIUnit width)
     {
-        width.ConvertToPx(runtimeModelData.ParentSize);
+        width.ConvertToPx(runtimeObject.ParentSize);
         if (Width == width) return this;
         Width = width;
         dirty |= LayoutDirty.Size;
@@ -134,7 +135,7 @@ public struct Layout
 
     public Layout SetHeight(UIUnit height)
     {
-        height.ConvertToPx(runtimeModelData.ParentSize);
+        height.ConvertToPx(runtimeObject.ParentSize);
         if (Height == height) return this;
         Height = height;
         dirty |= LayoutDirty.Size;
@@ -167,37 +168,17 @@ public struct Layout
 
     public void UpdateChildrenLayout()
     {
-        if (runtimeModelData.Children == null) return;
+        if (runtimeObject.Children == null) return;
         float sizeOfLine = 0;
 
         float innerWidth = Width.Value - PaddingLeft.Value - PaddingRight.Value;
         float cursorX = PaddingLeft.Value;
         float cursorY = PaddingTop.Value;
 
-        foreach (var child in runtimeModelData.Children)
+        foreach (var child in runtimeObject.Children)
         {
-            switch (child.Layout.Display)
-            {
-                case DisplayType.inline:
-                    if (cursorX + child.Layout.Width.Value > Width.Value - PaddingRight.Value && cursorX > PaddingLeft.Value)
-                    {
-                        cursorX = PaddingLeft.Value;
-                        cursorY += sizeOfLine;
-                    }
-
-                    child.Layout.LayoutPos = new(cursorX, cursorY);
-                    cursorX += child.Layout.Width.Value;
-
-                    sizeOfLine = Math.Max(sizeOfLine, child.Layout.Height.Value);
-                    break;
-                case DisplayType.block:
-                    cursorX = PaddingLeft.Value;
-                    cursorY += sizeOfLine > 0 ? sizeOfLine : 0;
-                    child.Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
-                    child.Layout.BaseSize = new(innerWidth, 0);
-                    break;
-            }
-            child.Layout.UpdateChildrenLayout();
+            child.UpdateLayout(ref cursorX, ref cursorY, ref sizeOfLine, ref innerWidth);
+            // child.Layout.UpdateChildrenLayout();
         }
     }
 }

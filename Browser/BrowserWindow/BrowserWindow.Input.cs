@@ -29,7 +29,7 @@ public partial class BrowserWindow
         int _elementsCount = elements.Count;
         for (int i = _elementsCount - 1; i >= 0; i--)
         {
-            if (BoundsHelper.Contains(elements[i].Layout.Bounds, pos))
+            if (BoundsHelper.Contains(elements[i].GetBounds(), pos))
             {
                 return elements[i];
             }
@@ -51,53 +51,53 @@ public partial class BrowserWindow
 
             currentElement = _focusedElement;
             currentElement.Events.ExecuteOnMouseOver();
-            switch (currentElement.Properties.Cursor)
+            switch (currentElement.GetCursorType())
             {
-                case Properties.CursorType.defaultCursor:
+                case GraphicsCore.CursorType.defaultCursor:
                     CursorManager.SetDefault();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.pointer:
+                case GraphicsCore.CursorType.pointer:
                     CursorManager.SetHand();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.text:
+                case GraphicsCore.CursorType.text:
                     CursorManager.SetText();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.move:
+                case GraphicsCore.CursorType.move:
                     CursorManager.SetMove();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.wait:
+                case GraphicsCore.CursorType.wait:
                     CursorManager.SetWait();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.cursorHelp:
+                case GraphicsCore.CursorType.cursorHelp:
                     CursorManager.SetNotAllowed();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.notAllowed:
+                case GraphicsCore.CursorType.notAllowed:
                     CursorManager.SetNotAllowed();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.progress:
+                case GraphicsCore.CursorType.progress:
                     CursorManager.SetWait();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.crosshair:
+                case GraphicsCore.CursorType.crosshair:
                     CursorManager.SetCrosshair();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.grab:
+                case GraphicsCore.CursorType.grab:
                     CursorManager.SetMove();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.grabbing:
+                case GraphicsCore.CursorType.grabbing:
                     CursorManager.SetMove();
                     CursorManager.SetVisible(true);
                     break;
-                case Properties.CursorType.none:
+                case GraphicsCore.CursorType.none:
                     CursorManager.SetDefault();
                     CursorManager.SetVisible(false);
                     break;

@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../HTMLParser/HTMLParser.csproj" />
+    <ProjectReference Include="../ObjectCore/ObjectCore.csproj" />
     <ProjectReference Include="../SvgLoader/SvgLoader.csproj" />
     <ProjectReference Include="../TextCore/TextCore.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />

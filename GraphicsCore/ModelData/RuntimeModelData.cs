@@ -1,12 +1,16 @@
+using System.Runtime.CompilerServices;
+using GraphicsCore;
 using Silk.NET.Maths;
 using Vulkan;
 
+[assembly: InternalsVisibleTo("ObjectCore")]
+[assembly: InternalsVisibleTo("TextCore")]
 namespace GraphicCore;
 
-public class RuntimeModelData : IDisposable
+public abstract class RuntimeModelData : IDisposable
 {
     [Flags]
-    private enum DirtyFlags : byte
+    internal protected enum DirtyFlags : byte
     {
         None = 0,
         Matrix = 1 << 0,
@@ -16,17 +20,13 @@ public class RuntimeModelData : IDisposable
     public ModelData<ushort> ModelData { get; private set; }
     public uint ObjectIndex;
 
-    public Transform Transform = new();
-    public Properties Properties;
-    public Layout Layout;
-    public Events Events;
+    public EventsBase Events;
 
-    private DirtyFlags[] dirty = new DirtyFlags[VulkanManager.MAX_FRAMES_IN_FLIGHT];
-    private Matrix4X4<float> _cachedModel;
+    internal protected DirtyFlags[] dirty = new DirtyFlags[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal protected Matrix4X4<float> _cachedModel;
 
     public Vector2D<float> ParentSize;
-    internal RuntimeModelData? Parent;
-    public List<RuntimeModelData> Children;
+    public RuntimeModelData? Parent;
 
     public RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
     {
@@ -36,9 +36,6 @@ public class RuntimeModelData : IDisposable
         if (parent != null)
             Parent = parent;
 
-        Properties = new(this);
-        Layout = new(this);
-        Events = new(this);
         UpdateParentSize();
     }
 
@@ -49,7 +46,7 @@ public class RuntimeModelData : IDisposable
         UpdateParentSize();
     }
 
-    void AddFlag(DirtyFlags flags)
+    protected internal void AddFlag(DirtyFlags flags)
     {
         for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
         {
@@ -57,104 +54,27 @@ public class RuntimeModelData : IDisposable
         }
     }
 
-    void RemoveFlag(DirtyFlags flags, uint frame)
+    protected internal void RemoveFlag(DirtyFlags flags, uint frame)
     {
         dirty[frame] &= flags;
     }
 
-    public RuntimeModelData SetLayout(Func<Layout, Layout> setLayout)
-    {
-        return SetLayout(setLayout.Invoke(Layout));
-    }
+    protected internal abstract void ConvertToPx(Vector2D<float> parentSize);
 
-    public RuntimeModelData SetLayout(Layout layout)
-    {
-        Layout = layout;
-        if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position) || Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
-        {
-            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
-            {
-                ConvertToPx(ParentSize);
-                UpdateChildrenSizes();
-            }
-            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
-                UpdateChildrenPosition();
+    protected internal abstract void UpdatePosition();
 
-            Layout.dirty &= Layout.LayoutDirty.Position;
-            Layout.dirty &= Layout.LayoutDirty.Size;
+    protected internal abstract float GetLayoutLeft();
+    protected internal abstract float GetLayoutTop();
+    protected internal abstract Vector2D<float> GetLayoutSize();
+    protected internal abstract void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width);
+    public abstract void AddChild(RuntimeModelData runtimeModelData);
 
-            AddFlag(DirtyFlags.Matrix);
-        }
-        return this;
-    }
+    public abstract CursorType GetCursorType();
+    public abstract Bounds GetBounds();
 
-    public RuntimeModelData SetTransform(Func<Transform, Transform> setTransform)
-    {
-        return SetTransform(setTransform.Invoke(Transform));
-    }
 
-    public RuntimeModelData SetTransform(Transform transform)
-    {
-        Transform = transform;
-        AddFlag(DirtyFlags.Matrix);
-        return this;
-    }
 
-    public RuntimeModelData SetProperties(Func<Properties, Properties> setProperties)
-    {
-        return SetProperties(setProperties.Invoke(Properties));
-    }
-
-    public RuntimeModelData SetProperties(Properties properties)
-    {
-        Properties = properties;
-        AddFlag(DirtyFlags.Object);
-        return this;
-    }
-
-    public RuntimeModelData SetEvents(Func<Events, Events> setEvents)
-    {
-        return SetEvents(setEvents.Invoke(Events));
-    }
-
-    public RuntimeModelData SetEvents(Events events)
-    {
-        Events = events;
-        return this;
-    }
-
-    void ConvertToPx(Vector2D<float> parentSize)
-    {
-        Layout.ConvertToPx(parentSize);
-        Transform.ConvertToPx(parentSize);
-        Properties.ConvertToPx(Layout.GetSize());
-
-        AddFlag(DirtyFlags.Matrix);
-    }
-
-    void UpdateChildrenSizes()
-    {
-        if (Children == null) return;
-
-        foreach (var children in Children)
-        {
-            children.UpdateParentSize(Layout.GetSize());
-        }
-    }
-
-    void UpdateChildrenPosition()
-    {
-        if (Children == null) return;
-
-        foreach (var child in Children)
-        {
-            child.AddFlag(DirtyFlags.Matrix);
-            child.Layout.UpdateBoundsOffset();
-            child.UpdateChildrenPosition();
-        }
-    }
-
-    internal void UpdateParentSize(Vector2D<float> size = default)
+    protected internal virtual void UpdateParentSize(Vector2D<float> size = default)
     {
         if (size != default)
         {
@@ -162,64 +82,32 @@ public class RuntimeModelData : IDisposable
         }
         else
         {
-            ParentSize = Parent != null ? Parent.Layout.GetSize() : new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
+            ParentSize = Parent != null ? Parent.GetLayoutSize() : new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
         }
-        var _prevSize = Layout.GetSize();
-        ConvertToPx(ParentSize);
-        if (_prevSize != Layout.GetSize())
-            UpdateChildrenSizes();
     }
 
-    public bool TryGetObjectData(out ObjectData data, uint frame)
-    {
-        if (Swapchain.Instance.recreatedSwapChain)
-        {
-            UpdateParentSize();
-            AddFlag(DirtyFlags.Matrix);
-        }
-
-        if (dirty[frame] == DirtyFlags.None)
-        {
-            data = default;
-            return false;
-        }
-
-
-        if (dirty[frame].HasFlag(DirtyFlags.Matrix))
-        {
-            _cachedModel =
-                Matrix4X4.CreateScale(Layout.GetSize().X, Layout.GetSize().Y, 1f) *
-                Matrix4X4.CreateTranslation(-Transform.TranslateX.Value, -Transform.TranslateY.Value, 0f) *
-                Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
-                (
-                    Parent == null ?
-                        Matrix4X4.CreateTranslation(Layout.Left.Value, Layout.Top.Value, 0f) :
-                        Matrix4X4.CreateTranslation(Parent.Layout.Left.Value + Layout.LayoutPos.X + Layout.Left.Value, Parent.Layout.Top.Value + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
-                );
-            RemoveFlag(DirtyFlags.Matrix, frame);
-        }
-
-        data = new ObjectData
-        {
-            Model = _cachedModel,
-            Color = Properties.BackgroundColor,
-
-            pos = new Vector2D<float>(_cachedModel.M41, _cachedModel.M42),
-            size = Layout.GetSize(),
-
-            TextureIndex = 0,
-            borderRadiusTopLeft = Properties.borderRadiusTopLeft.Value,
-            borderRadiusTopRight = Properties.borderRadiusTopRight.Value,
-            borderRadiusBottomRight = Properties.borderRadiusBottomRight.Value,
-            borderRadiusBottomLeft = Properties.borderRadiusBottomLeft.Value,
-        };
-
-        RemoveFlag(DirtyFlags.Object, frame);
-
-        return true;
-    }
+    public abstract bool TryGetObjectData(out ObjectData data, uint frame);
 
     public void Dispose()
     {
     }
+}
+
+public abstract class RuntimeModelData<TSelf> : RuntimeModelData
+    where TSelf : RuntimeModelData<TSelf>
+{
+    public new Events<TSelf> Events
+    {
+        get => (Events<TSelf>)base.Events;
+        protected set => base.Events = value;
+    }
+
+    public TSelf SetEvents(Func<Events<TSelf>, Events<TSelf>> setEvents)
+    {
+        Events = setEvents.Invoke(Events);
+        return (TSelf)this;
+    }
+
+    protected RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
+        : base(modelData, objectIndex, parent) { }
 }

@@ -1,25 +1,12 @@
+using GraphicsCore;
 using Silk.NET.Maths;
 using Units;
 
-namespace GraphicCore;
+namespace ObjectCore;
+
 public struct Properties
 {
-    public enum CursorType : byte
-    {
-        defaultCursor,
-        pointer,
-        text,
-        move,
-        wait,
-        cursorHelp,
-        notAllowed,
-        progress,
-        crosshair,
-        grab,
-        grabbing,
-        none,
-    }
-    public RuntimeModelData runtimeModelData;
+    public RuntimeObject runtimeObject;
     public CursorType Cursor;
     public Vector4D<float> BackgroundColor = new(1, 1, 1, 1);
     public float Transition;
@@ -31,9 +18,9 @@ public struct Properties
     public UIUnit borderRadiusBottomLeft;
     #endregion
 
-    public Properties(RuntimeModelData runtimeModelData)
+    public Properties(RuntimeObject runtimeModelData)
     {
-        this.runtimeModelData = runtimeModelData;
+        this.runtimeObject = runtimeModelData;
     }
 
     public Properties SetCursor(CursorType cursor)
@@ -52,11 +39,16 @@ public struct Properties
     {
         if (Transition > 0)
         {
-            ColorTransitionsHelper.StartTransition(runtimeModelData, BackgroundColor, new(SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b), a), Transition);
+            GraphicCore.ColorTransitionsHelper.StartTransition(runtimeObject, BackgroundColor, new(SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b), a), Transition, UpdateColorTransitionHelper);
         }
         else
             SetBackgroundColorWithoutTransition(r, g, b, a);
         return this;
+    }
+
+    public readonly void UpdateColorTransitionHelper(Vector4D<float> targetColor)
+    {
+        runtimeObject.SetProperties(runtimeObject.Properties.SetBackgroundColorWithoutTransitionInLinear(targetColor.X, targetColor.Y, targetColor.Z, targetColor.W));
     }
 
     public Properties SetBackgroundColorWithoutTransition(float r, float g, float b, float a)
@@ -87,7 +79,7 @@ public struct Properties
     #region Set Border
     public Properties SetBorderRadius(UIUnit borderRadius)
     {
-        borderRadius.ConvertToPx(runtimeModelData.Layout.GetSize());
+        borderRadius.ConvertToPx(runtimeObject.Layout.GetSize());
 
         borderRadiusTopLeft = borderRadius;
         borderRadiusTopRight = borderRadius;
@@ -99,10 +91,10 @@ public struct Properties
 
     public Properties SetBorderRadius(UIUnit topLeft, UIUnit topRight, UIUnit bottomRight, UIUnit bottomLeft)
     {
-        topLeft.ConvertToPx(runtimeModelData.Layout.GetSize());
-        topRight.ConvertToPx(runtimeModelData.Layout.GetSize());
-        bottomRight.ConvertToPx(runtimeModelData.Layout.GetSize());
-        bottomLeft.ConvertToPx(runtimeModelData.Layout.GetSize());
+        topLeft.ConvertToPx(runtimeObject.Layout.GetSize());
+        topRight.ConvertToPx(runtimeObject.Layout.GetSize());
+        bottomRight.ConvertToPx(runtimeObject.Layout.GetSize());
+        bottomLeft.ConvertToPx(runtimeObject.Layout.GetSize());
 
 
         borderRadiusTopLeft = topLeft;
@@ -114,7 +106,7 @@ public struct Properties
     }
     #endregion
 
-    internal Properties ConvertToPx(Vector2D<float> selfSize)
+    public Properties ConvertToPx(Vector2D<float> selfSize)
     {
         borderRadiusTopLeft.ConvertToPx(selfSize);
         borderRadiusTopRight.ConvertToPx(selfSize);

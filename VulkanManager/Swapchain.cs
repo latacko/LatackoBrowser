@@ -15,7 +15,7 @@ public unsafe class Swapchain : IDisposable
 
     internal Image[] swapChainImages;
     internal static Format swapChainImageFormat;
-    internal bool recreatedSwapChain;
+    public bool recreatedSwapChain {get; internal set;}
 
     internal ImageView[] swapChainImageViews;
     // Framebuffer[] swapChainFrameBuffers;
