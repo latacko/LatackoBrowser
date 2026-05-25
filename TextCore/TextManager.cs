@@ -8,9 +8,9 @@ namespace TextCore;
 public class TextManager : BufferManager
 {
     internal static TextManager Instance;
-    internal BufferInfo<Vertex>[] vertexBuffer = new BufferInfo<Vertex>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<uint>[] indicesBuffer = new BufferInfo<uint>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<Vertex>[] vertexBuffer = new BufferInfo<Vertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<uint>[] indicesBuffer = new BufferInfo<uint>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
     uint vertexHead = 0;
@@ -25,13 +25,13 @@ public class TextManager : BufferManager
 
     public override void RegisterBuffer()
     {
-        for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            vertexBuffer[i] = new(256);
+            vertexBuffer[i] = new(256, BufferUsageFlags.VertexBufferBit);
 
-            indicesBuffer[i] = new(256);
+            indicesBuffer[i] = new(256, BufferUsageFlags.IndexBufferBit);
 
-            dataBuffer[i] = new(256);
+            dataBuffer[i] = new(256, 0);
         }
     }
 
@@ -76,7 +76,7 @@ public class TextManager : BufferManager
         text.Slot = Allocate(PickBucket(text.characters));
         text.ModelData.vertexOffset = text.Slot.VertexOffset;
         text.ModelData.indexOffset = text.Slot.IndexOffset;
-        for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             text.AddFlag(RuntimeModelData.DirtyFlags.Matrix);
         }
@@ -102,7 +102,7 @@ public class TextManager : BufferManager
             text.ModelData.indexOffset = text.Slot.IndexOffset;
         }
 
-        for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             text.AddFlag(RuntimeModelData.DirtyFlags.Model);
         }
@@ -133,7 +133,7 @@ public class TextManager : BufferManager
 
     public override void Dispose()
     {
-        for (int i = 0; i < Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             vertexBuffer[i].Dispose();
 

@@ -15,16 +15,19 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
     public ulong DeviceAddress; // VkDeviceAddress
     int size;
 
-    public BufferInfo(int initSize)
+    BufferUsageFlags usage;
+
+    public BufferInfo(int initSize, BufferUsageFlags usage)
     {
         size = initSize;
+        this.usage = usage;
         CreateBuffer(ref Buffer, ref Memory, ref Mapped, ref DeviceAddress);
     }
 
     void CreateBuffer(ref Buffer buffer, ref DeviceMemory memory, ref nint mapped, ref ulong deviceAddress)
     {
         ulong _bufferSize = (ulong)sizeof(T) * (ulong)size;
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref buffer, ref memory);
+        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit | usage, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref buffer, ref memory);
         nint data;
         CreateVulkan.vk.MapMemory(LogicalDevice.device, memory, 0, _bufferSize, 0, (void**)&data);
         mapped = data;

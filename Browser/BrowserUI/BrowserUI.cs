@@ -2,15 +2,18 @@ using Browser;
 using GraphicCore;
 using GraphicsCore;
 using ObjectCore;
+using TextCore;
 using Units;
 using Vulkan;
 
 public class BrowserUI
 {
-    public RuntimeModelData TopBar;
-    public RuntimeModelData Karta;
-    public RuntimeModelData LeftBar;
+    public RuntimeObject TopBar;
+    public RuntimeObject Karta;
+    public RuntimeModelData TextTest;
     public RuntimeModelData BottomBar;
+
+
 
     public void Create()
     {
@@ -38,7 +41,7 @@ public class BrowserUI
                 .SetCursor(CursorType.pointer)
                 .SetBackgroundColor255(65, 68, 71, 255)
                 .SetBorderRadius(new(25))
-                .SetTransition(5f)
+                .SetTransition(2f)
         ).SetEvents(
             events => events
                 .AddOnClick((element) =>
@@ -54,9 +57,16 @@ public class BrowserUI
                 .AddOnMouseOut(element =>
                 {
                     element.SetProperties(element.Properties
-                        .SetBackgroundColor255(65, 68, 71, 255)
+                        .SetBackgroundColor255(255, 68, 71, 255)
                     );
                 })
+        );
+
+        TextTest = Browser.TextManager.AddObject(BrowserWindow.loadedShaders[1] as TextShader, null)
+        .SetProperties(properties=> properties
+            .SetFontSize(new (24))
+            .SetCursor(CursorType.text)
+            .SetFont("/usr/share/fonts/open-sans/OpenSans-Regular.ttf")
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))

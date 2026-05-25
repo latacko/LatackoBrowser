@@ -72,6 +72,12 @@ public struct Properties
         return this;
     }
 
+    public Properties SetFont(string font)
+    {
+        this.font = font;
+        return this;
+    }
+
     public Properties SetFontSize(UIUnit fontSize)
     {
         this.fontSize = fontSize;

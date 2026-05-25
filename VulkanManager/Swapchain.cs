@@ -281,7 +281,7 @@ public unsafe class Swapchain : IDisposable
             LogicalDevice.DestroyImageView(imageView, null);
         }
 
-        foreach (var item in VulkanManager.Instance.renderCompleteSemaphores)
+        foreach (var item in VulkanEngine.Instance.renderCompleteSemaphores)
         {
             CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, item, null);
         }
@@ -291,9 +291,9 @@ public unsafe class Swapchain : IDisposable
             SType = StructureType.SemaphoreCreateInfo,
         };
 
-        for (int i = 0; i < VulkanManager.Instance.renderCompleteSemaphores.Length; i++)
+        for (int i = 0; i < VulkanEngine.Instance.renderCompleteSemaphores.Length; i++)
         {
-            CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, out VulkanManager.Instance.renderCompleteSemaphores[i]);
+            CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, out VulkanEngine.Instance.renderCompleteSemaphores[i]);
         }
         if (destroySwapchain)
             khrSwapChain?.DestroySwapchain(LogicalDevice.device, swapChain, null);

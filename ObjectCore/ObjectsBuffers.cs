@@ -9,7 +9,7 @@ public unsafe class ObjectsManager
 {
     public static ObjectsManager Instance;
     public const int MAX_OBJECTS = 1000;
-    public ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    public ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     public ObjectsManager()
     {
@@ -19,7 +19,7 @@ public unsafe class ObjectsManager
     public void RegisterBuffers()
     {
         ulong _bufferSize = (ulong)Unsafe.SizeOf<ObjectData>()*MAX_OBJECTS;
-        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffersForObjects[i].Buffer, ref shaderDataBuffersForObjects[i].Memory);
             void* data;
@@ -43,7 +43,7 @@ public unsafe class ObjectsManager
 
     public void Dispose()
     {
-        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             CreateVulkan.vk.UnmapMemory(LogicalDevice.device, shaderDataBuffersForObjects[i].Memory);
             BufferHelper.DestroyBuffer(shaderDataBuffersForObjects[i].Buffer, shaderDataBuffersForObjects[i].Memory);

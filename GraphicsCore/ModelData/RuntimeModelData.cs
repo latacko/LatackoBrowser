@@ -23,7 +23,7 @@ public abstract class RuntimeModelData : IDisposable
 
     public EventsBase Events;
 
-    internal protected DirtyFlags[] dirty = new DirtyFlags[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    internal protected DirtyFlags[] dirty = new DirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal protected Matrix4X4<float> _cachedModel;
 
     public Vector2D<float> ParentSize;
@@ -49,7 +49,7 @@ public abstract class RuntimeModelData : IDisposable
 
     protected internal void AddFlag(DirtyFlags flags)
     {
-        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             dirty[i] |= flags;
         }

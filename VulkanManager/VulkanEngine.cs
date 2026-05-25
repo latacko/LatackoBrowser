@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using VulkanManager.Helpers;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 [assembly:InternalsVisibleTo("Browser")]
@@ -8,9 +9,9 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 [assembly:InternalsVisibleTo("TextCore")]
 namespace Vulkan;
 
-public unsafe class VulkanManager : IDisposable
+public unsafe class VulkanEngine : IDisposable
 {
-    public static VulkanManager Instance;
+    public static VulkanEngine Instance;
     public const int MAX_FRAMES_IN_FLIGHT = 2;
 
     public CommandBuffer[] commandBuffers = new CommandBuffer[MAX_FRAMES_IN_FLIGHT];
@@ -20,6 +21,10 @@ public unsafe class VulkanManager : IDisposable
     internal static DescriptorPool descriptorPool;
     internal static DescriptorSetLayout descriptorSetLayoutForTextures;
     public static DescriptorSet descriptorSetForTextures;
+
+    public DescriptorAllocator GlobalDescriptorAllocator = new();
+    DescriptorSet DrawImageDescriptors;
+    DescriptorSetLayout DrawImageDescriptorLayout;
 
     Sampler sampler;
 
@@ -31,7 +36,7 @@ public unsafe class VulkanManager : IDisposable
 
     internal static CommandPool commandPool;
 
-    public VulkanManager()
+    public VulkanEngine()
     {
         Instance = this;
     }
@@ -45,6 +50,10 @@ public unsafe class VulkanManager : IDisposable
         CreateCommandBuffers();
 
         CreateImageSampler();
+
+        CreateDescriptors();
+
+
         CreateDescriptorPool();
 
         CreateDescriptorSetLayoutForTextures();
@@ -136,6 +145,19 @@ public unsafe class VulkanManager : IDisposable
         fixed (Sampler* samplerPtr = &sampler)
             CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
     }
+
+    void CreateDescriptors()
+    {
+        DescriptorAllocator.PoolSizeRatio[] _sizes = [
+            new(){
+                Type = DescriptorType.SampledImage,
+                Ratio = 1,
+            }
+        ];
+
+        GlobalDescriptorAllocator.InitPool(10, _sizes);
+    }
+
 
     void CreateDescriptorSetLayoutForTextures()
     {

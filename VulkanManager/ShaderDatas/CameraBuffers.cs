@@ -6,12 +6,12 @@ namespace Vulkan;
 
 public unsafe class CameraBuffers
 {
-    public ShaderDataBuffer[] shaderDataBuffersForCamera = new ShaderDataBuffer[VulkanManager.MAX_FRAMES_IN_FLIGHT];
+    public ShaderDataBuffer[] shaderDataBuffersForCamera = new ShaderDataBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
 
     internal void CreateBuffers()
     {
-        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             BufferHelper.CreateBuffer((ulong)Unsafe.SizeOf<UICameraUBO>(), BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffersForCamera[i].Buffer, ref shaderDataBuffersForCamera[i].Memory);
             void* data;
@@ -37,7 +37,7 @@ public unsafe class CameraBuffers
 
     public void Dispose()
     {
-        for (int i = 0; i < VulkanManager.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             CreateVulkan.vk.UnmapMemory(LogicalDevice.device, shaderDataBuffersForCamera[i].Memory);
             BufferHelper.DestroyBuffer(shaderDataBuffersForCamera[i].Buffer, shaderDataBuffersForCamera[i].Memory);

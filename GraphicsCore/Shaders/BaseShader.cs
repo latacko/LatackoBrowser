@@ -31,7 +31,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     public virtual DescriptorSetLayout[] GetLayouts()
     {
-        return [VulkanManager.descriptorSetLayoutForTextures];
+        return [VulkanEngine.descriptorSetLayoutForTextures];
     }
 
     public abstract unsafe void Render(CommandBuffer commandBuffer, uint currentFrame);

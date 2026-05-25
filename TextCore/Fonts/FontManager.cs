@@ -15,10 +15,11 @@ public class FontManager : IDisposable
     static Library library = new();
     const string preload = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
 
-    public void Init()
+    public FontManager()
     {
         Instance = this;
     }
+    
     public void LoadFont(string path)
     {
         if (loadedFonts.ContainsKey(path)) return;

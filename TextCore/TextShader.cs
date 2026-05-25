@@ -70,7 +70,7 @@ public unsafe class TextShader : BaseShader
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanManager.descriptorSetForTextures, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanEngine.descriptorSetForTextures, 0, null);
 
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
@@ -78,7 +78,7 @@ public unsafe class TextShader : BaseShader
 
         ulong* addresses = stackalloc ulong[2]
         {
-            VulkanManager.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
+            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
             TextManager.Instance.dataBuffer[currentFrame].DeviceAddress,
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);

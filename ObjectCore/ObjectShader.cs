@@ -22,7 +22,7 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanManager.descriptorSetForTextures, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanEngine.descriptorSetForTextures, 0, null);
 
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
@@ -30,7 +30,7 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
 
         ulong* addresses = stackalloc ulong[2]
         {
-            VulkanManager.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
+            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
             ObjectsManager.Instance.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);

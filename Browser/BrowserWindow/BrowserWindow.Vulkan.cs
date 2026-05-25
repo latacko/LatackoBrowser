@@ -8,6 +8,7 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.EXT;
 using Silk.NET.Vulkan.Extensions.KHR;
+using TextCore;
 using Units;
 using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
@@ -19,7 +20,7 @@ public unsafe partial class BrowserWindow
 {
     bool framebufferResized;
     Vulkan.CreateVulkan createVulkan = new();
-    Vulkan.VulkanManager vulkanManager = new();
+    Vulkan.VulkanEngine vulkanManager = new();
     Vulkan.Swapchain swapchain;
     Vulkan.PhysicalDevice physicalDevice;
     Vulkan.LogicalDevice logicalDevice = new();
@@ -29,7 +30,8 @@ public unsafe partial class BrowserWindow
     SurfaceKHR surface;
 
     internal static GraphicCore.BaseShader[] loadedShaders = [
-        new ObjectShader()
+        new ObjectShader(),
+        new TextShader(),
     ];
 
     void CreateVulkan()

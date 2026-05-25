@@ -36,19 +36,21 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         int _j = 0;
 
         int _textLength = Text.Length;
+
+
         for (int i = 0; i < _textLength; i++)
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
             float _nextX = glyphData.Width / glyphData.Height;
-            GenerateQuad(_vertices, _indices, _nextX - _lastX, glyphData.UVMin, glyphData.UVMax, ref _j);
+            GenerateQuad(_vertices, _indices, _nextX - _lastX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
 
-            _lastX = _nextX;
+            _lastX += _nextX;
 
-            _nextX = glyphData.BearingY / glyphData.Height;
+            _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
 
-            GenerateQuad(_vertices, _indices, _nextX - _lastX, new(0, 0), new(0, 0), ref _j);
+            GenerateQuad(_vertices, _indices, _nextX - _lastX, new(0, 0), new(0, 0), _lastX, ref _j);
 
-            _lastX = _nextX;
+            _lastX += _nextX;
         }
 
         ModelData.Vertices = _vertices;
@@ -64,22 +66,22 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         bounds.Height = Properties.fontSize.Value;
     }
 
-    public void GenerateQuad(Vertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, ref int i)
+    public void GenerateQuad(Vertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, ref int i)
     {
         int _vericesIndex = i * 4;
         int _indicesIndex = i * 6;
 
-        vertices[_vericesIndex + 0] = new Vertex(new(0, 0, 0), new(UVMin.X, UVMin.Y));
-        vertices[_vericesIndex + 1] = new Vertex(new(0, 1, 0), new(UVMin.X, UVMax.Y));
-        vertices[_vericesIndex + 2] = new Vertex(new(width, 1, 0), new(UVMax.X, UVMax.Y));
-        vertices[_vericesIndex + 3] = new Vertex(new(width, 0, 0), new(UVMax.X, UVMin.Y));
+        vertices[_vericesIndex + 0] = new Vertex(new(x, 0, 0), new(UVMin.X, UVMin.Y));
+        vertices[_vericesIndex + 1] = new Vertex(new(x, 1, 0), new(UVMin.X, UVMax.Y));
+        vertices[_vericesIndex + 2] = new Vertex(new(x + width, 1, 0), new(UVMax.X, UVMax.Y));
+        vertices[_vericesIndex + 3] = new Vertex(new(x + width, 0, 0), new(UVMax.X, UVMin.Y));
 
-        indices[_indicesIndex + 0] = 0;
-        indices[_indicesIndex + 1] = 1;
-        indices[_indicesIndex + 2] = 2;
-        indices[_indicesIndex + 3] = 2;
-        indices[_indicesIndex + 4] = 3;
-        indices[_indicesIndex + 5] = 0;
+        indices[_indicesIndex + 0] = (ushort)(_vericesIndex + 0);
+        indices[_indicesIndex + 1] = (ushort)(_vericesIndex + 1);
+        indices[_indicesIndex + 2] = (ushort)(_vericesIndex + 2);
+        indices[_indicesIndex + 3] = (ushort)(_vericesIndex + 2);
+        indices[_indicesIndex + 4] = (ushort)(_vericesIndex + 3);
+        indices[_indicesIndex + 5] = (ushort)(_vericesIndex + 0);
 
         i++;
     }

@@ -93,7 +93,7 @@ public unsafe partial class BrowserWindow
             throw new Exception("Windowing platform doesn't support Vulkan.");
         }
 
-        Vulkan.VulkanManager.Instance.CreateBuffers += CreateBuffers;
+        Vulkan.VulkanEngine.Instance.CreateBuffers += CreateBuffers;
 
         //Assign events.
         OnStart += Start;
@@ -124,11 +124,11 @@ public unsafe partial class BrowserWindow
 
         coreManager.Update(deltaTime);
 
-        // browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
-        //     .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
-        //     .SetWidth(new(800 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
-        //     .SetHeight(new(300 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
-        //     );
+        browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
+            .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+            .SetWidth(new(800 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+            .SetHeight(new(300 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+            );
         // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
         // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
@@ -196,7 +196,7 @@ public unsafe partial class BrowserWindow
                 throw new Exception("Failed to submit command buffer!");
             }
 
-            currentFrame = (currentFrame + 1) % Vulkan.VulkanManager.MAX_FRAMES_IN_FLIGHT;
+            currentFrame = (currentFrame + 1) % Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT;
 
 
             PresentInfoKHR presentInfo = new()
