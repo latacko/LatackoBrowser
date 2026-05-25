@@ -1,12 +1,29 @@
+using System.Net.Http.Headers;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
+using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace TextCore;
 
 public class FontAtlas : IDisposable
 {
+    uint id = 0;
+    struct UploadRegion
+    {
+        internal ulong startOffset => endOffset - size;
+        internal ulong endOffset;
+        internal ulong size;
+        internal ulong timelineValue;
+    }
+
+    public struct WaitingCharacter
+    {
+        public char character;
+        public byte[] pixels;
+    }
+    #region CONSTS
     public const int GLYPH_SIZE = 48;
     public const int PADDING = 6;
     public const int RANGE = 6;
@@ -16,75 +33,158 @@ public class FontAtlas : IDisposable
     public const int ATLAS_HEIGHT = 1024;
     public const ulong ATLAS_SIZE = ATLAS_WIDTH * ATLAS_HEIGHT * 4;
 
+    public const uint STAGING_BUFFER_GLYPH_COUNT = 10;
+
+    const int BUFFER_GLYPH_SIZE = GLYPH_SIZE * GLYPH_SIZE * 4;
+    const ulong BUFFER_SIZE = STAGING_BUFFER_GLYPH_COUNT * BUFFER_GLYPH_SIZE;
+    #endregion
+
     internal readonly Dictionary<char, GlyphData> Glyphs = new();
 
     public Vector2D<float> Size;
     ushort createdGlyphs;
-    ushort recordedGlyphs;
 
     Image atlasImage = default;
     DeviceMemory atlasMemory = default;
     ImageView imageView;
+    bool _atlasInitialized = false;
+
 
     CommandBuffer actualCommandBuffer;
+
+    Semaphore timelineSemaphore;
+    ulong timelineValue = 0;
+
 
     Buffer stagingBuffer = new();
     DeviceMemory stagingBufferMemory = new();
     nint bufferData;
 
+    ulong ringOffset = 0;
+    ulong gpuSafeOffset = 0;
+
+    List<UploadRegion> inFlight = new();
+
+
     internal float height = 0;
     internal float lineGap = 0;
 
-    public void Create()
+    List<BufferImageCopy> uploadList = new();
+
+    public Queue<WaitingCharacter> WaitingCharacters = new();
+
+    public unsafe void Create(uint id)
     {
+        this.id = id;
         ImageHelper.CreateImage(ATLAS_WIDTH, ATLAS_HEIGHT, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, ref atlasImage, ref atlasMemory);
         imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit);
-    }
 
-
-    public unsafe void StartRecording(out Fence oneTimeFence, int glyphCount)
-    {
-        recordedGlyphs = 0;
-        ulong _bufferSize = (ulong)(glyphCount * GLYPH_SIZE * GLYPH_SIZE * 4);
-
-        FenceCreateInfo _fenceOneTimeCI = new()
+        SemaphoreTypeCreateInfo _typeInfo = new()
         {
-            SType = StructureType.FenceCreateInfo,
+            SType = StructureType.SemaphoreTypeCreateInfo,
+            SemaphoreType = SemaphoreType.Timeline,
+            InitialValue = 0,
         };
-        CreateVulkan.vk.CreateFence(LogicalDevice.device, ref _fenceOneTimeCI, null, out oneTimeFence);
 
-        actualCommandBuffer = CmdHelper.BeginSingleTimeCommands();
+        SemaphoreCreateInfo _semCI = new()
+        {
+            SType = StructureType.SemaphoreCreateInfo,
+            PNext = &_typeInfo,
+        };
 
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref stagingBuffer, ref stagingBufferMemory);
+        CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &_semCI, null, out timelineSemaphore);
+
+        BufferHelper.CreateBuffer(BUFFER_SIZE, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref stagingBuffer, ref stagingBufferMemory);
         nint _data;
-        CreateVulkan.vk!.MapMemory(LogicalDevice.device, stagingBufferMemory, 0, _bufferSize, 0, (void**)&_data);
+        CreateVulkan.vk!.MapMemory(LogicalDevice.device, stagingBufferMemory, 0, BUFFER_SIZE, 0, (void**)&_data);
         bufferData = _data;
 
-        var srcLayout = createdGlyphs == 0
-            ? ImageLayout.Undefined
-            : ImageLayout.ShaderReadOnlyOptimal;
-        var _barrierTexImage = ImageHelper.TransitionImageLayout(atlasImage, srcLayout, ImageLayout.TransferDstOptimal);
-        DependencyInfo _barrierTexInfo = new()
-        {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = 1,
-            PImageMemoryBarriers = &_barrierTexImage
-        };
-        CreateVulkan.vk.CmdPipelineBarrier2(actualCommandBuffer, &_barrierTexInfo);
+        TextManager.Instance.RegisterTexture(imageView, id);
     }
 
-    internal unsafe void AddGlyph(char character, byte[] pixels, ref GlyphData glyph)
+    public void Tick()
     {
+        CreateVulkan.vk.GetSemaphoreCounterValue(LogicalDevice.device, timelineSemaphore, out var _currentValue);
+        int _removed = inFlight.RemoveAll(r => r.timelineValue <= _currentValue);
+
+        if (WaitingCharacters.Count > 0 && _removed > 0)
+        {
+            int _remaining = WaitingCharacters.Count > 10 ? 10 : WaitingCharacters.Count;
+            StartRecording(_remaining);
+            for (int i = 0; i < _remaining; i++)
+            {
+                var waiting = WaitingCharacters.Peek();
+
+                GlyphData glyph = Glyphs[waiting.character];
+                if (AddGlyph(waiting.character, waiting.pixels, ref glyph))
+                {
+                    WaitingCharacters.Dequeue();
+                    Glyphs[waiting.character] = glyph;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            EndRecording();
+        }
+    }
+
+    ulong Allocate()
+    {
+        ulong aligned = (ringOffset + 15) & ~15UL; // optional alignment
+
+        if (aligned + BUFFER_GLYPH_SIZE > BUFFER_SIZE)
+            aligned = 0; // wrap
+
+        return aligned;
+    }
+
+    public unsafe void StartRecording(int glyphCount)
+    {
+        if (glyphCount > STAGING_BUFFER_GLYPH_COUNT)
+            throw new Exception("Max glyph count in one recording is 10");
+
+        uploadList.Clear();
+    }
+
+    internal unsafe bool AddGlyph(char character, byte[] pixels, ref GlyphData glyph)
+    {
+        ulong _offset = Allocate();
+        bool _isBlocked = inFlight.Any(r => _offset >= r.startOffset && _offset < r.endOffset);
+
+        if (_isBlocked)
+        {
+            WaitingCharacters.Enqueue(new()
+            {
+                character = character,
+                pixels = pixels,
+            });
+            return false;
+        }
+
         int imageX = createdGlyphs % GLYPHD_IN_LINE;
         int imageY = createdGlyphs / GLYPHD_IN_LINE;
 
-        ulong glyphOffset = (ulong)(recordedGlyphs * GLYPH_SIZE * GLYPH_SIZE * 4);
+        ringOffset = _offset + BUFFER_GLYPH_SIZE;
 
-        pixels.AsSpan().CopyTo(new Span<byte>((void*)(bufferData + (nint)glyphOffset), GLYPH_SIZE * GLYPH_SIZE * 4));
+        pixels.AsSpan().CopyTo(new Span<byte>((void*)(bufferData + (nint)_offset), BUFFER_GLYPH_SIZE));
 
-        BufferImageCopy region = new()
+        Console.WriteLine($"First 12 bytes of '{character}': " + 
+        string.Join(",", pixels.Take(12)));
+
+        // byte* ptr = (byte*)(bufferData + (nint)_offset);
+        // for (int i = 0; i < BUFFER_GLYPH_SIZE; i += 4)
+        // {
+        //     ptr[i + 0] = 0;   // R
+        //     ptr[i + 1] = 255; // G
+        //     ptr[i + 2] = 0;   // B
+        //     ptr[i + 3] = 255; // A
+        // }
+
+        uploadList.Add(new()
         {
-            BufferOffset = glyphOffset,
+            BufferOffset = _offset,
             BufferRowLength = GLYPH_SIZE,
             BufferImageHeight = GLYPH_SIZE,
 
@@ -102,9 +202,8 @@ public class FontAtlas : IDisposable
                 Height = GLYPH_SIZE,
                 Depth = 1,
             },
-        };
+        });
 
-        CreateVulkan.vk.CmdCopyBufferToImage(actualCommandBuffer, stagingBuffer, atlasImage, ImageLayout.TransferDstOptimal, 1, &region);
 
         int visualSize = GLYPH_SIZE - PADDING * 2;
         glyph.UVMin = new Vector2D<float>(
@@ -116,34 +215,93 @@ public class FontAtlas : IDisposable
             (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
         );
 
-        Glyphs[character] = glyph;
-        recordedGlyphs++;
         createdGlyphs++;
+
+        return true;
     }
 
-    public unsafe void EndRecording(Fence fence)
+    public unsafe void EndRecording()
     {
+        if (uploadList.Count == 0)
+            return;
+
+        actualCommandBuffer = CmdHelper.BeginSingleTimeCommands();
+
+        var srcLayout = !_atlasInitialized
+            ? ImageLayout.Undefined
+            : ImageLayout.ShaderReadOnlyOptimal;
+        var _barrierTexImage = ImageHelper.TransitionImageLayout(atlasImage, srcLayout, ImageLayout.TransferDstOptimal);
+        DependencyInfo _barrierTexInfo = new()
+        {
+            SType = StructureType.DependencyInfo,
+            ImageMemoryBarrierCount = 1,
+            PImageMemoryBarriers = &_barrierTexImage
+        };
+        CreateVulkan.vk.CmdPipelineBarrier2(actualCommandBuffer, &_barrierTexInfo);
+
+
+        fixed (BufferImageCopy* uploadPtr = uploadList.ToArray())
+            CreateVulkan.vk.CmdCopyBufferToImage(actualCommandBuffer, stagingBuffer, atlasImage, ImageLayout.TransferDstOptimal, (uint)uploadList.Count, uploadPtr);
 
         var _barrierTexRead = ImageHelper.TransitionImageLayout(atlasImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
-        DependencyInfo _barrierTexInfo = new()
+
+        _barrierTexInfo = new()
         {
             SType = StructureType.DependencyInfo,
             ImageMemoryBarrierCount = 1,
             PImageMemoryBarriers = &_barrierTexRead
         };
+
         CreateVulkan.vk.CmdPipelineBarrier2(actualCommandBuffer, &_barrierTexInfo);
-        CmdHelper.EndSingleTimeCommands(actualCommandBuffer, fence);
+        CreateVulkan.vk.EndCommandBuffer(actualCommandBuffer);
 
-        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, &fence, Vk.True, ulong.MaxValue);
-        Console.WriteLine("Ended recording " + recordedGlyphs + " glyphs");
+        timelineValue++; // e.g. 1 after first upload, 2 after second...
+        ulong _signalValue = timelineValue;
 
-        CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
-        CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, stagingBuffer, null);
-        CreateVulkan.vk.FreeMemory(LogicalDevice.device, stagingBufferMemory, null);
+        inFlight.Add(new UploadRegion
+        {
+            endOffset = ringOffset,
+            size = (ulong)(BUFFER_GLYPH_SIZE * uploadList.Count),
+            timelineValue = timelineValue
+        });
+
+        var _cb = actualCommandBuffer;
+        var _timelineSemaphore = timelineSemaphore;
+
+        TimelineSemaphoreSubmitInfo _timelineSubmit = new()
+        {
+            SType = StructureType.TimelineSemaphoreSubmitInfo,
+            SignalSemaphoreValueCount = 1,
+            PSignalSemaphoreValues = &_signalValue,
+        };
+
+        SubmitInfo _submitInfo = new()
+        {
+            SType = StructureType.SubmitInfo,
+            PNext = &_timelineSubmit,
+            CommandBufferCount = 1,
+            PCommandBuffers = &_cb,
+            SignalSemaphoreCount = 1,
+            PSignalSemaphores = &_timelineSemaphore,
+        };
+
+        uploadList.Clear();
+
+        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, default);
+
+        _atlasInitialized = true;
+
+        // CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, &fence, Vk.True, ulong.MaxValue);
+        // Console.WriteLine("Ended recording " + recordedGlyphs + " glyphs");
+
     }
 
     public unsafe void Dispose()
     {
+        CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
+        CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, stagingBuffer, null);
+        CreateVulkan.vk.FreeMemory(LogicalDevice.device, stagingBufferMemory, null);
+
         if (imageView.Handle != 0)
         {
             Console.WriteLine("Disposiing view");

@@ -10,7 +10,6 @@ namespace TextCore;
 
 public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 {
-    public ushort characters;
     public Slot Slot;
     public Properties Properties;
     FontAtlas fontAtlas;
@@ -30,8 +29,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     public void GenerateMesh()
     {
-        Vertex[] _vertices = new Vertex[(Text.Length + 1) * 4];
-        ushort[] _indices = new ushort[(Text.Length + 1) * 6];
+        Vertex[] _vertices = new Vertex[(Text.Length * 2) * 4];
+        ushort[] _indices = new ushort[(Text.Length * 2) * 6];
         float _lastX = 0;
         int _j = 0;
 
@@ -42,13 +41,15 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
             float _nextX = glyphData.Width / glyphData.Height;
-            GenerateQuad(_vertices, _indices, _nextX - _lastX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
-
+            GenerateQuad(_vertices, _indices, _nextX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
+            Console.WriteLine(i + " quad starts at " + _lastX + " width: " + _nextX);
             _lastX += _nextX;
 
-            _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
+            _nextX = glyphData.Advance / glyphData.Height;
+            // _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
 
-            GenerateQuad(_vertices, _indices, _nextX - _lastX, new(0, 0), new(0, 0), _lastX, ref _j);
+            GenerateQuad(_vertices, _indices, _nextX, new(0, 0), new(0, 0), _lastX, ref _j);
+            Console.WriteLine(i + " quad starts at " + _lastX + " width: " + _nextX);
 
             _lastX += _nextX;
         }
@@ -58,6 +59,20 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
         widthWithoutScale = _lastX;
         UpdateBounds();
+        AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
+
+        for (int i = 0; i < _indices.Length; i += 6)
+        {
+            Console.WriteLine($"quad {i / 6}: {_indices[i]},{_indices[i + 1]},{_indices[i + 2]} | {_indices[i + 3]},{_indices[i + 4]},{_indices[i + 5]}");
+        }
+
+        // log all vertices
+        for (int i = 0; i < _vertices.Length; i++)
+        {
+            Console.WriteLine($"v{i}: pos={_vertices[i].Pos} uv={_vertices[i].TextCoord}");
+        }
+
+        TextManager.Instance.Update(this);
     }
 
     void UpdateBounds()
@@ -76,6 +91,11 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         vertices[_vericesIndex + 2] = new Vertex(new(x + width, 1, 0), new(UVMax.X, UVMax.Y));
         vertices[_vericesIndex + 3] = new Vertex(new(x + width, 0, 0), new(UVMax.X, UVMin.Y));
 
+        // vertices[_vericesIndex + 0] = new Vertex(new(x, 0, 0), new(0, 0));
+        // vertices[_vericesIndex + 1] = new Vertex(new(x, 1, 0), new(0, 1));
+        // vertices[_vericesIndex + 2] = new Vertex(new(x + width, 1, 0), new(1, 1));
+        // vertices[_vericesIndex + 3] = new Vertex(new(x + width, 0, 0), new(1, 0));
+
         indices[_indicesIndex + 0] = (ushort)(_vericesIndex + 0);
         indices[_indicesIndex + 1] = (ushort)(_vericesIndex + 1);
         indices[_indicesIndex + 2] = (ushort)(_vericesIndex + 2);
@@ -84,6 +104,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         indices[_indicesIndex + 5] = (ushort)(_vericesIndex + 0);
 
         i++;
+
+        Console.WriteLine("I: " + i);
     }
 
     public RuntimeText SetProperties(Func<Properties, Properties> setProperties)
@@ -96,7 +118,10 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         Properties = properties;
         fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
         UpdateBounds();
-        AddFlag(DirtyFlags.Object);
+        AddFlag(DirtyFlags.Data);
+        ConvertToPx(new());
+        GenerateMesh();
+
         return this;
     }
 
@@ -113,11 +138,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
+            Console.WriteLine("Recreated");
             UpdateParentSize();
             AddFlag(DirtyFlags.Matrix);
         }
 
-        if (dirty[frame] == DirtyFlags.None)
+        if (dirty[frame] == DirtyFlags.None || dirty[frame] == DirtyFlags.Model)
         {
             data = default;
             return false;
@@ -147,7 +173,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
             TextureIndex = 0,
         };
 
-        RemoveFlag(DirtyFlags.Object, frame);
+
+
+        // Console.WriteLine(dirty[frame] + "frame: " + frame);
+        Console.WriteLine(data);
+
+        RemoveFlag(DirtyFlags.Data, frame);
 
         return true;
     }

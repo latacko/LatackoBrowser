@@ -6,18 +6,22 @@ namespace VulkanManager.Helpers;
 
 public struct DescriptorLayoutBuilder
 {
-    List<DescriptorSetLayoutBinding> bindings;
+    List<DescriptorSetLayoutBinding> bindings = new();
 
-    void AddBinding(DescriptorSetLayoutBinding binding)
+    public DescriptorLayoutBuilder()
+    {
+    }
+
+    public void AddBinding(DescriptorSetLayoutBinding binding)
     {
         bindings.Add(binding);
     }
-    void Clear()
+    public void Clear()
     {
         bindings.Clear();
     }
 
-    unsafe DescriptorSetLayout Build(nint pNext, DescriptorSetLayoutCreateFlags flags)
+    public unsafe DescriptorSetLayout Build(nint pNext, DescriptorSetLayoutCreateFlags flags)
     {
         var _bindingsArr = bindings.ToArray();
         DescriptorSetLayout _layout;

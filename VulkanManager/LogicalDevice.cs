@@ -3,7 +3,7 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 namespace Vulkan;
 
-public unsafe class LogicalDevice: IDisposable
+public unsafe class LogicalDevice : IDisposable
 {
     public static Device device;
 
@@ -44,8 +44,11 @@ public unsafe class LogicalDevice: IDisposable
             DescriptorIndexing = true,
             ShaderSampledImageArrayNonUniformIndexing = true,
             DescriptorBindingVariableDescriptorCount = true,
+            DescriptorBindingPartiallyBound = true,
+            DescriptorBindingSampledImageUpdateAfterBind = true,
             RuntimeDescriptorArray = true,
             BufferDeviceAddress = true,
+            TimelineSemaphore = true,
         };
 
         PhysicalDeviceVulkan13Features enabledVk13Features = new()

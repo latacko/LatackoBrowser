@@ -12,10 +12,14 @@ public unsafe struct DescriptorAllocatorGrowable
         public float Ratio;
     }
 
-    List<PoolSizeRatio> ratios;
-    List<DescriptorPool> fullPools;
-    List<DescriptorPool> readyPools;
+    List<PoolSizeRatio> ratios = new();
+    List<DescriptorPool> fullPools = new();
+    List<DescriptorPool> readyPools = new();
     uint setsPerPool;
+
+    public DescriptorAllocatorGrowable()
+    {
+    }
 
     public void Init(uint maxSets, PoolSizeRatio[] ratios)
     {
@@ -28,7 +32,7 @@ public unsafe struct DescriptorAllocatorGrowable
 
         DescriptorPool _newPool = CreatePool(maxSets, ratios);
 
-        setsPerPool = (uint)(maxSets * 1.5);
+        setsPerPool = (uint)(maxSets * 2);
 
         readyPools.Add(_newPool);
     }
@@ -137,7 +141,7 @@ public unsafe struct DescriptorAllocatorGrowable
             DescriptorPoolCreateInfo _poolInfo = new()
             {
                 SType = StructureType.DescriptorPoolCreateInfo,
-                Flags = 0,
+                Flags =  DescriptorPoolCreateFlags.UpdateAfterBindBit,
                 MaxSets = setCount,
                 PoolSizeCount = (uint)_poolSizes.Length,
                 PPoolSizes = _poolsPtr,

@@ -24,12 +24,13 @@ public class CoreManager : IDisposable
 
     public void Start()
     {
-        fontManager.LoadFont("/usr/share/fonts/open-sans/OpenSans-Regular.ttf");
+        fontManager.LoadFont("open-sans/OpenSans-Regular");
     }
 
     public void Update(double deltaTime)
     {
         GraphicCore.ColorTransitionsHelper.Update((float)deltaTime);
+        fontManager.Tick();
     }
 
     public void Render(uint currentFrame)

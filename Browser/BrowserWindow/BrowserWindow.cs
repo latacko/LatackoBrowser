@@ -161,11 +161,12 @@ public unsafe partial class BrowserWindow
 
         Vulkan.CreateVulkan.vk.ResetCommandBuffer(vulkanManager.commandBuffers[currentFrame], 0);
 
-        RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
 
 
         UpdateUniformBuffer(currentFrame);
         coreManager.Render(currentFrame);
+        
+        RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
         // UpdateUniformBufferPerspective(currentFrame);
 
         SubmitInfo submitInfo = new()

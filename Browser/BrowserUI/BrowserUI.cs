@@ -66,7 +66,7 @@ public class BrowserUI
         .SetProperties(properties=> properties
             .SetFontSize(new (24))
             .SetCursor(CursorType.text)
-            .SetFont("/usr/share/fonts/open-sans/OpenSans-Regular.ttf")
+            .SetFont("open-sans/OpenSans-Regular")
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))

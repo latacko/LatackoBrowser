@@ -66,7 +66,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData>
     public RuntimeObject SetProperties(Properties properties)
     {
         Properties = properties;
-        AddFlag(DirtyFlags.Object);
+        AddFlag(DirtyFlags.Data);
         return this;
     }
 
@@ -192,7 +192,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData>
             borderRadiusBottomLeft = Properties.borderRadiusBottomLeft.Value,
         };
 
-        RemoveFlag(DirtyFlags.Object, frame);
+        RemoveFlag(DirtyFlags.Data, frame);
 
         return true;
     }

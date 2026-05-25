@@ -18,6 +18,11 @@ public unsafe class TextShader : BaseShader
         base.Init();
     }
 
+    public override DescriptorSetLayout[] GetLayouts()
+    {
+        return [TextManager.Instance.textDescriptorLayout];
+    }
+
     // // override depth — UI has no depth test
     protected override PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
     {
@@ -62,6 +67,7 @@ public unsafe class TextShader : BaseShader
             {
                 TextManager.Instance.Update(currentFrame, element.ObjectIndex, data);
             }
+
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);
         }
     }
@@ -70,7 +76,7 @@ public unsafe class TextShader : BaseShader
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanEngine.descriptorSetForTextures, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
 
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);

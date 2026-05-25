@@ -1,6 +1,7 @@
 
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Remora.MSDFGen;
 using Remora.MSDFGen.Graphics;
 using SharpFont;
@@ -11,19 +12,37 @@ namespace TextCore;
 public class FontManager : IDisposable
 {
     public static FontManager Instance;
+    uint lastId = 0;
     Dictionary<string, FontAtlas> loadedFonts = new();
     static Library library = new();
     const string preload = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+
 
     public FontManager()
     {
         Instance = this;
     }
-    
-    public void LoadFont(string path)
+
+    public void Tick()
     {
-        if (loadedFonts.ContainsKey(path)) return;
-        loadedFonts.Add(path, new());
+        foreach (var item in loadedFonts)
+        {
+            item.Value.Tick();
+        }
+    }
+
+    public void LoadFont(string name)
+    {
+        string path = "";
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            path = "/usr/share/fonts/";
+        }
+
+        path += name + ".ttf";
+        if (loadedFonts.ContainsKey(name)) return;
+        loadedFonts.Add(name, new());
+        Console.WriteLine(path);
         var face = new Face(library, path);
 
         uint renderSize = 64 * 4;
@@ -33,73 +52,85 @@ public class FontManager : IDisposable
         int padding = FontAtlas.PADDING;
         double _range = FontAtlas.RANGE;
 
-        loadedFonts[path].Create();
-        Fence fence;
-        loadedFonts[path].StartRecording(out fence, preload.Length);
+        loadedFonts[name].Create(lastId++);
 
         float ascender = face.Size.Metrics.Ascender.ToSingle();
         float descender = face.Size.Metrics.Descender.ToSingle();
         float lineHeight = face.Size.Metrics.Height.ToSingle();
 
-        loadedFonts[path].height = ascender + Math.Abs(descender);
-        loadedFonts[path].lineGap = lineHeight - loadedFonts[path].height;
+        loadedFonts[name].height = ascender + Math.Abs(descender);
+        loadedFonts[name].lineGap = lineHeight - loadedFonts[name].height;
 
-        foreach (var character in preload)
+
+        for (int i = 0; i < preload.Length; i += 10)
         {
-            face.LoadChar(character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
-            Console.WriteLine("Info for char |" + character + "|");
-            Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
-            Console.WriteLine(" >Bearing X: " + face.Glyph.Metrics.HorizontalBearingX);
-            Console.WriteLine(" >Bearing Y: " + face.Glyph.Metrics.HorizontalBearingY);
-            Console.WriteLine(" >Advance: " + face.Glyph.Advance.X);
+            int _length = i + 10 > preload.Length ? preload.Length - i : 10;
 
-            if (face.Glyph.Metrics.Width != 0)
+            loadedFonts[name].StartRecording(_length);
+
+
+            for (int j = i; j < _length + i; j++)
             {
-                var _characterShape = BuildShape(face, character);
+                var _character = preload[j];
+                face.LoadChar(_character, LoadFlags.NoBitmap, LoadTarget.Normal);
+                // Console.WriteLine("Info for char |" + _character + "|");
+                // Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
+                // Console.WriteLine(" >Bearing X: " + face.Glyph.Metrics.HorizontalBearingX);
+                // Console.WriteLine(" >Bearing Y: " + face.Glyph.Metrics.HorizontalBearingY);
+                // Console.WriteLine(" >Advance: " + face.Glyph.Advance.X);
 
-                _characterShape.Normalize();
-                MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
-                var _pixmap = new Pixmap<Color3b>(glyphSize, glyphSize);
-                var _scale = new Vector2(
-                    glyphSize / ((float)face.Glyph.Metrics.Width / 64f),
-                    glyphSize / ((float)face.Glyph.Metrics.Height / 64f)
-                );
-                var _translate = new Vector2(padding, padding);
-                MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
-
-                byte[] _pixels = new byte[glyphSize * glyphSize * 4];
-                for (int i = 0; i < glyphSize * glyphSize; i++)
+                if (face.Glyph.Metrics.Width != 0)
                 {
-                    var c = _pixmap[i % glyphSize, i / glyphSize];
-                    _pixels[i * 4 + 0] = c.R;
-                    _pixels[i * 4 + 1] = c.G;
-                    _pixels[i * 4 + 2] = c.B;
-                    _pixels[i * 4 + 3] = 255;
+                    var _characterShape = BuildShape(face, _character);
+
+                    _characterShape.Normalize();
+                    MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
+                    var _pixmap = new Pixmap<Color3b>(glyphSize, glyphSize);
+
+                    var _scale = new Vector2(
+                        glyphSize / ((float)face.Glyph.Metrics.Width / 64f),
+                        glyphSize / ((float)face.Glyph.Metrics.Height / 64f)
+                    );
+                    var _translate = new Vector2(padding, padding);
+                    MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
+
+                    byte[] _pixels = new byte[glyphSize * glyphSize * 4];
+                    for (int k = 0; k < glyphSize * glyphSize; k++)
+                    {
+                        var c = _pixmap[k % glyphSize, k / glyphSize];
+                        _pixels[k * 4 + 0] = c.R;
+                        _pixels[k * 4 + 1] = c.G;
+                        _pixels[k * 4 + 2] = c.B;
+                        _pixels[k * 4 + 3] = 255;
+                    }
+
+                    GlyphData glyphData = new()
+                    {
+                        Advance = face.Glyph.Advance.X.ToSingle(),
+                        BearingX = face.Glyph.Metrics.HorizontalBearingX.ToSingle(),
+                        BearingY = face.Glyph.Metrics.HorizontalBearingY.ToSingle(),
+                        Width = glyphSize - padding * 2,
+                        Height = glyphSize - padding * 2,
+                    };
+
+                    loadedFonts[name].AddGlyph(_character, _pixels, ref glyphData);
+                    loadedFonts[name].Glyphs[_character] = glyphData;
+
                 }
-
-                GlyphData glyphData = new()
+                else
                 {
-                    Advance = face.Glyph.Advance.X.ToSingle(),
-                    BearingX = face.Glyph.Metrics.HorizontalBearingX.ToSingle(),
-                    BearingY = face.Glyph.Metrics.HorizontalBearingY.ToSingle(),
-                    Width = glyphSize - padding * 2,
-                    Height = glyphSize - padding * 2,
-                };
+                    GlyphData _glyphData = new()
+                    {
+                        Advance = face.Glyph.Advance.X.ToSingle(),
+                        BearingX = face.Glyph.Metrics.HorizontalBearingX.ToSingle(),
+                        BearingY = face.Glyph.Metrics.HorizontalBearingY.ToSingle(),
+                    };
+                    loadedFonts[name].Glyphs[_character] = _glyphData;
+                }
+            }
 
-                loadedFonts[path].AddGlyph(character, _pixels, ref glyphData);
-            }
-            else
-            {
-                GlyphData _glyphData = new()
-                {
-                    Advance = face.Glyph.Advance.X.ToSingle(),
-                    BearingX = face.Glyph.Metrics.HorizontalBearingX.ToSingle(),
-                    BearingY = face.Glyph.Metrics.HorizontalBearingY.ToSingle(),
-                };
-                loadedFonts[path].Glyphs[character] = _glyphData;
-            }
+            loadedFonts[name].EndRecording();
         }
-        loadedFonts[path].EndRecording(fence);
     }
 
     public FontAtlas GetFontAtlas(string path) => loadedFonts[path];
@@ -124,14 +155,24 @@ public class FontManager : IDisposable
             for (int j = contourStart; j <= contourEnd; j++)
             {
                 var p = outline.Points[j];
+                Console.WriteLine($"Point {j}: ({p.X}, {p.Y}) tag={outline.Tags[j]}");
                 // FreeType uses 26.6 fixed point — divide by 64
                 points.Add(new Vector2((float)p.X / 64f, (float)p.Y / 64f));
                 tags.Add(outline.Tags[j]);
             }
 
+            int _safetyCounter = 0;
+
             int k = 0;
             while (k < pointCount)
             {
+
+                _safetyCounter++;
+                if (_safetyCounter > pointCount * 3)
+                {
+                    Console.WriteLine($"Infinite loop detected at k={k} pointCount={pointCount}");
+                    break;
+                }
                 var curr = points[k];
                 byte tag = tags[k];
 

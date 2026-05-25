@@ -14,9 +14,9 @@ public abstract class RuntimeModelData : IDisposable
     {
         None = 0,
         Matrix = 1 << 0,
-        Object = 1 << 1,
+        Data = 1 << 1,
         Model = 1 << 2,
-        All = Matrix | Object | Model
+        All = Matrix | Data | Model
     }
     public ModelData<ushort> ModelData { get; private set; }
     public uint ObjectIndex;
@@ -57,7 +57,7 @@ public abstract class RuntimeModelData : IDisposable
 
     protected internal void RemoveFlag(DirtyFlags flags, uint frame)
     {
-        dirty[frame] &= flags;
+        dirty[frame] &= ~flags;
     }
 
     protected internal abstract void ConvertToPx(Vector2D<float> parentSize);

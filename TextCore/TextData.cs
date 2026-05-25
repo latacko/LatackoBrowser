@@ -5,7 +5,7 @@ using Silk.NET.Maths;
 namespace TextCore;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct TextData
+public record struct TextData
 {
     public Matrix4X4<float> Model; //64
     public Vector4D<float> Color; //16

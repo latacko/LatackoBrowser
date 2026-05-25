@@ -4,9 +4,9 @@ using Silk.NET.Vulkan;
 using VulkanManager.Helpers;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
-[assembly:InternalsVisibleTo("Browser")]
-[assembly:InternalsVisibleTo("GraphicsCore")]
-[assembly:InternalsVisibleTo("TextCore")]
+[assembly: InternalsVisibleTo("Browser")]
+[assembly: InternalsVisibleTo("GraphicsCore")]
+[assembly: InternalsVisibleTo("TextCore")]
 namespace Vulkan;
 
 public unsafe class VulkanEngine : IDisposable
@@ -22,11 +22,7 @@ public unsafe class VulkanEngine : IDisposable
     internal static DescriptorSetLayout descriptorSetLayoutForTextures;
     public static DescriptorSet descriptorSetForTextures;
 
-    public DescriptorAllocator GlobalDescriptorAllocator = new();
-    DescriptorSet DrawImageDescriptors;
-    DescriptorSetLayout DrawImageDescriptorLayout;
-
-    Sampler sampler;
+    public Sampler sampler;
 
     #region Syncing
     public Semaphore[] renderCompleteSemaphores;
@@ -43,7 +39,6 @@ public unsafe class VulkanEngine : IDisposable
 
     internal void Init()
     {
-        CreateShaderDataBuffers();
         CreateSynchronizationObjects();
 
         CreateCommandPool();
@@ -51,8 +46,7 @@ public unsafe class VulkanEngine : IDisposable
 
         CreateImageSampler();
 
-        CreateDescriptors();
-
+        CreateShaderDataBuffers();
 
         CreateDescriptorPool();
 
@@ -136,27 +130,36 @@ public unsafe class VulkanEngine : IDisposable
             MinFilter = Filter.Linear,
             MipmapMode = SamplerMipmapMode.Linear,
             AnisotropyEnable = Vk.True,
-            MaxLod = 0,
+            MinLod = 0,
+            MaxLod = Vk.LodClampNone, // = 1000.0f, allows all mip levels
+            AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
+            AddressModeV = SamplerAddressMode.ClampToEdge,
+            AddressModeW = SamplerAddressMode.ClampToEdge,
         };
 
         CreateVulkan.vk.GetPhysicalDeviceProperties(PhysicalDevice.physicalDevice, out var properties);
         _samplerCI.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
 
+        Console.WriteLine("Creating sampler");
         fixed (Sampler* samplerPtr = &sampler)
             CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
     }
 
-    void CreateDescriptors()
-    {
-        DescriptorAllocator.PoolSizeRatio[] _sizes = [
-            new(){
-                Type = DescriptorType.SampledImage,
-                Ratio = 1,
-            }
-        ];
+    // void CreateDescriptors()
+    // {
+    //     DescriptorAllocatorGrowable.PoolSizeRatio[] _sizes = [
+    //         new(){
+    //             Type = DescriptorType.Sampler,
+    //             Ratio = 1,
+    //         },
+    //         new(){
+    //             Type = DescriptorType.SampledImage,
+    //             Ratio = 256,
+    //         }
+    //     ];
 
-        GlobalDescriptorAllocator.InitPool(10, _sizes);
-    }
+    //     GlobalDescriptorAllocatorGrowable.Init(1, _sizes);
+    // }
 
 
     void CreateDescriptorSetLayoutForTextures()
