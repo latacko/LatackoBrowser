@@ -42,14 +42,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
             float _nextX = glyphData.Width / glyphData.Height;
             GenerateQuad(_vertices, _indices, _nextX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
-            Console.WriteLine(i + " quad starts at " + _lastX + " width: " + _nextX);
             _lastX += _nextX;
 
             _nextX = glyphData.Advance / glyphData.Height;
             // _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
 
             GenerateQuad(_vertices, _indices, _nextX, new(0, 0), new(0, 0), _lastX, ref _j);
-            Console.WriteLine(i + " quad starts at " + _lastX + " width: " + _nextX);
 
             _lastX += _nextX;
         }
@@ -60,17 +58,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         widthWithoutScale = _lastX;
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
-
-        for (int i = 0; i < _indices.Length; i += 6)
-        {
-            Console.WriteLine($"quad {i / 6}: {_indices[i]},{_indices[i + 1]},{_indices[i + 2]} | {_indices[i + 3]},{_indices[i + 4]},{_indices[i + 5]}");
-        }
-
-        // log all vertices
-        for (int i = 0; i < _vertices.Length; i++)
-        {
-            Console.WriteLine($"v{i}: pos={_vertices[i].Pos} uv={_vertices[i].TextCoord}");
-        }
 
         TextManager.Instance.Update(this);
     }
@@ -104,8 +91,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         indices[_indicesIndex + 5] = (ushort)(_vericesIndex + 0);
 
         i++;
-
-        Console.WriteLine("I: " + i);
     }
 
     public RuntimeText SetProperties(Func<Properties, Properties> setProperties)

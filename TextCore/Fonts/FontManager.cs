@@ -15,7 +15,8 @@ public class FontManager : IDisposable
     uint lastId = 0;
     Dictionary<string, FontAtlas> loadedFonts = new();
     static Library library = new();
-    const string preload = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+    const string preload = "A";
+    // const string preload = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
 
 
     public FontManager()
@@ -155,7 +156,7 @@ public class FontManager : IDisposable
             for (int j = contourStart; j <= contourEnd; j++)
             {
                 var p = outline.Points[j];
-                Console.WriteLine($"Point {j}: ({p.X}, {p.Y}) tag={outline.Tags[j]}");
+                Console.WriteLine($"Point {j}: ({p.X}, {p.Y}) tag={Convert.ToString(outline.Tags[j], 2).PadLeft(8, '0')}");
                 // FreeType uses 26.6 fixed point — divide by 64
                 points.Add(new Vector2((float)p.X / 64f, (float)p.Y / 64f));
                 tags.Add(outline.Tags[j]);
