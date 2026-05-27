@@ -8,10 +8,10 @@ public class TextManager
 {
     public static readonly List<RuntimeText> Elements = [];
     public static uint LastCreatedIndex = 0;
-    public static RuntimeText AddObject(TextShader textShader, RuntimeModelData? parent = null)
+    public static RuntimeText AddObject(string text, TextShader textShader, RuntimeModelData? parent = null)
     {
         uint objectIndex = LastCreatedIndex++;
-        RuntimeText runtimeModelData = new("Test", objectIndex, parent);
+        RuntimeText runtimeModelData = new(text, objectIndex, parent);
         if (parent != null)
         {
             parent.AddChild(runtimeModelData);

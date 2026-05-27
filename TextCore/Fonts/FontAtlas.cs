@@ -170,8 +170,8 @@ public class FontAtlas : IDisposable
 
         pixels.AsSpan().CopyTo(new Span<byte>((void*)(bufferData + (nint)_offset), BUFFER_GLYPH_SIZE));
 
-        // Console.WriteLine($"First 12 bytes of '{character}': " + 
-        // string.Join(",", pixels.Take(12)));
+        Console.WriteLine($"First 12 bytes of '{character}': " + 
+        string.Join(",", pixels.Take(12)));
 
         // byte* ptr = (byte*)(bufferData + (nint)_offset);
         // for (int i = 0; i < BUFFER_GLYPH_SIZE; i += 4)

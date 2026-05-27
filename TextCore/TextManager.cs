@@ -202,9 +202,7 @@ public class TextManager : BufferManager
 
     public void Update(RuntimeText text)
     {
-        if (!activeTexts.Contains(text))
-            activeTexts.Add(text);
-        BucketSize newBucket = PickBucket((uint)text.Text.Length);
+        BucketSize newBucket = PickBucket((uint)text.Text.Length*2);
 
         if (newBucket != text.Slot.Bucket) // outgrew bucket — reallocate
         {
@@ -216,6 +214,9 @@ public class TextManager : BufferManager
 
             text.ModelData.vertexOffset = text.Slot.VertexOffset;
             text.ModelData.indexOffset = text.Slot.IndexOffset;
+
+            if (!activeTexts.Contains(text))
+                activeTexts.Add(text);
         }
 
         text.AddFlag(RuntimeModelData.DirtyFlags.Model);

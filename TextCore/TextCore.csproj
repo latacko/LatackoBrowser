@@ -11,11 +11,11 @@
 
   <ItemGroup>
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
+    <ProjectReference Include="../Remora.MSDFGen/Remora.MSDFGen.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Remora.MSDFGen" Version="1.0.0" />
     <PackageReference Include="Silk.NET.Vulkan" Version="2.23.0" />
     <PackageReference Include="SpaceWizards.SharpFont" Version="1.1.0" />
   </ItemGroup>

@@ -13,6 +13,6 @@ internal struct GlyphData
 
     public float Advance;
 
-    public int Width; // visual size
-    public int Height; // visual size
+    public float Width; // visual size
+    public float Height; // visual size
 }

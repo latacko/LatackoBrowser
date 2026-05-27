@@ -40,16 +40,23 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         for (int i = 0; i < _textLength; i++)
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
-            float _nextX = glyphData.Width / glyphData.Height;
+            // float _nextX = glyphData.Width / glyphData.Height;
+            float _nextX = 0.5f;
+            if (_nextX > 9)
+                throw new Exception("For char: " + Text[i] + " width is too big");
             GenerateQuad(_vertices, _indices, _nextX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
             _lastX += _nextX;
+            Console.WriteLine("Adding to width: " + _nextX + " for char: " + Text[i] + " is bigger than 9: " + (_nextX > 9).ToString());
 
-            _nextX = glyphData.Advance / glyphData.Height;
+            // _nextX = glyphData.Advance / glyphData.Height;
+            _nextX = 0.1f;
             // _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
 
             GenerateQuad(_vertices, _indices, _nextX, new(0, 0), new(0, 0), _lastX, ref _j);
 
             _lastX += _nextX;
+
+            Console.WriteLine("Adding to width: " + _nextX);
         }
 
         ModelData.Vertices = _vertices;
@@ -58,6 +65,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         widthWithoutScale = _lastX;
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
+
+        Console.Write("Width without scale: " + widthWithoutScale);
 
         TextManager.Instance.Update(this);
     }
@@ -178,7 +187,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value, fontAtlas.height);
+        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value, fontAtlas.height*Properties.fontSize.Value);
     }
 
 

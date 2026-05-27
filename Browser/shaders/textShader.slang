@@ -63,13 +63,15 @@ FragmentOutput FragmentMain(VertexOutput input)
     float screenPxDistance = 3 * (sd - 0.5);
     float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 
+    output.color = float4(input.color.xyz, opacity);
+
     // if (msd.r > 0.0 || msd.g > 0.0 || msd.b > 0.0)
     //     output.color = float4(0, 1, 0, 1); // green = texture has data
     // else
     //     output.color = float4(1, 0, 0, 1); // red = texture is black/missing
 
     // output.color = float4(opacity, 0, 0, 1);
-    output.color = float4(msd, 1);
+    // output.color = float4(msd, 1);
 
     // output.color = float4(1,1,1,1);
 
