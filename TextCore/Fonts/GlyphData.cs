@@ -3,7 +3,7 @@ using Silk.NET.Maths;
 
 namespace TextCore;
 
-internal struct GlyphData
+internal record struct GlyphData
 {
     public Vector2D<float> UVMin;
     public Vector2D<float> UVMax;

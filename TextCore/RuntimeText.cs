@@ -29,9 +29,9 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     public void GenerateMesh()
     {
-        Vertex[] _vertices = new Vertex[(Text.Length * 2) * 4];
-        ushort[] _indices = new ushort[(Text.Length * 2) * 6];
-        float _lastX = 0;
+        Vertex[] _vertices = new Vertex[(Text.Length*2) * 4];
+        ushort[] _indices = new ushort[(Text.Length*2) * 6];
+        float _cursorX = 0;
         int _j = 0;
 
         int _textLength = Text.Length;
@@ -40,33 +40,46 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         for (int i = 0; i < _textLength; i++)
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
-            // float _nextX = glyphData.Width / glyphData.Height;
-            float _nextX = 0.5f;
-            if (_nextX > 9)
-                throw new Exception("For char: " + Text[i] + " width is too big");
-            GenerateQuad(_vertices, _indices, _nextX, glyphData.UVMin, glyphData.UVMax, _lastX, ref _j);
-            _lastX += _nextX;
-            Console.WriteLine("Adding to width: " + _nextX + " for char: " + Text[i] + " is bigger than 9: " + (_nextX > 9).ToString());
+            Console.WriteLine("Char: " + Text[i] + " glyph data: " + glyphData);
 
-            // _nextX = glyphData.Advance / glyphData.Height;
-            _nextX = 0.1f;
-            // _nextX = glyphData.Advance + (i>0 ? fontAtlas.Glyphs[Text[i-1]].BearingX : 0) / glyphData.Height;
+            float _width = glyphData.Width;
 
-            GenerateQuad(_vertices, _indices, _nextX, new(0, 0), new(0, 0), _lastX, ref _j);
+            if (_width != 0)
+            {
+                _width /= fontAtlas.height;
+                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, ref _j);
+                _cursorX += _width;
+                Console.WriteLine("Char width: " + _width);
+            }
 
-            _lastX += _nextX;
+            _width = glyphData.Advance-glyphData.Width-glyphData.BearingX + (i+1<_textLength ? fontAtlas.Glyphs[Text[i+1]].BearingX : 0);
 
-            Console.WriteLine("Adding to width: " + _nextX);
+            if (_width != 0)
+            {
+                _width /= fontAtlas.height;
+                GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, ref _j);
+                _cursorX += _width;
+                Console.WriteLine("Char width: " + _width);
+            }
+
+            // _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
+
+            // Console.WriteLine("Space width: " + _width);
+
+            // GenerateQuad(_vertices, _indices, _width, new(0, 0), new(0, 0), _cursorX, ref _j);
+
+            // _cursorX += _width;
         }
 
         ModelData.Vertices = _vertices;
         ModelData.Indices = _indices;
 
-        widthWithoutScale = _lastX;
+        widthWithoutScale = _cursorX;
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
 
         Console.Write("Width without scale: " + widthWithoutScale);
+        Console.WriteLine($"widthWithoutScale={widthWithoutScale} fontSize={Properties.fontSize.Value} layoutSize={GetLayoutSize()}");
 
         TextManager.Instance.Update(this);
     }
@@ -128,6 +141,13 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     public override CursorType GetCursorType() => Properties.Cursor;
 
+    bool isWireFrameRendering = false;
+
+    public void SetWireframe(bool wireframe)
+    {
+        isWireFrameRendering = wireframe;
+    }
+
     public override bool TryGetObjectData(out TextData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
@@ -187,7 +207,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value, fontAtlas.height*Properties.fontSize.Value);
+        return new Vector2D<float>(widthWithoutScale / fontAtlas.height * Properties.fontSize.Value, Properties.fontSize.Value);
     }
 
 

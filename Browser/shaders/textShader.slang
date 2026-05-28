@@ -55,25 +55,35 @@ float median(float r, float g, float b)
 FragmentOutput FragmentMain(VertexOutput input)
 // FragmentOutput FragmentMain(VertexOutput input, uniform float screenPixelRange)
 {
+
     FragmentOutput output;
-    // RenderData objData = input;
 
     float3 msd = textures[input.fontIndex].Sample(sampler, input.UV).rgb;
     float sd = median(msd.x, msd.y, msd.z);
-    float screenPxDistance = 3 * (sd - 0.5);
-    float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+
+    float w = fwidth(sd);
+
+    // SHARPEN: Scale down 'w' to make the transition edge much tighter
+    float sharpness = 0.5; // Lower values = sharper. 0.0 = completely aliased.
+    float width = w * sharpness;
+
+    // Apply the tighter smoothing window
+    float opacity = smoothstep(0.5 - width, 0.5 + width, sd);
 
     output.color = float4(input.color.xyz, opacity);
 
-    // if (msd.r > 0.0 || msd.g > 0.0 || msd.b > 0.0)
-    //     output.color = float4(0, 1, 0, 1); // green = texture has data
-    // else
-    //     output.color = float4(1, 0, 0, 1); // red = texture is black/missing
+    // float2 dx = ddx(input.UV);
+    // float2 dy = ddy(input.UV);
 
-    // output.color = float4(opacity, 0, 0, 1);
-    // output.color = float4(msd, 1);
+    // float2 fw = abs(dx) + abs(dy);
 
-    // output.color = float4(1,1,1,1);
+    // float2 screenTexSize = 48;
+
+    // float screenPxRange = max(dot(unitRange, screenTexSize * 0.5), 2.0);
+    // float screenPxDistance = screenPxRange * (sd - 0.5);
+
+    // float opacity = smoothstep(0.0, 1.0, screenPxDistance + 0.5);
+    // output.color = float4(input.color.xyz, opacity);
 
     return output;
 }

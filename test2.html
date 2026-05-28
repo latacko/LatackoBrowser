@@ -8,7 +8,7 @@
     <style>
         #test {
             background-color: lime;
-            width: 90lvw;
+            text-size: 25px;
         }
 
         #test2 {
@@ -21,23 +21,8 @@
 
 <body>
     <div id="test">
-        <div id="test2">
-
-        </div>
+        W
     </div>
-    <script>
-        const test = document.getElementById("test")
-        const test2 = document.getElementById("test2")
-
-        let timePassed = 0
-        const speed = 0.01;
-        setInterval(() => {
-            timePassed += 1;
-
-            test.style.height = 400 + 100 * Math.sin(timePassed * speed) + "px"
-            test2.style.width = 1200 + 200 * Math.sin(timePassed * speed) + "px"
-        }, 1)
-    </script>
 </body>
 
 </html>

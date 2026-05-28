@@ -6,9 +6,15 @@ namespace Browser;
 
 public partial class BrowserWindow
 {
+    bool wireFrameRendering = false;
     private void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
     {
         Console.WriteLine("Key down: " + key);
+
+        if (key == Key.W)
+        {
+            wireFrameRendering = !wireFrameRendering;
+        }
     }
 
     private void OnKeyUp(IKeyboard keyboard, Key key, int arg3)

@@ -206,7 +206,7 @@ public unsafe partial class BrowserWindow
 
         foreach (var shader in loadedShaders)
         {
-            shader.Render(commandBuffer, currentFrame);
+            shader.Render(commandBuffer, currentFrame, wireFrameRendering);
         }
 
         if (swapchain.recreatedSwapChain)

@@ -11,6 +11,7 @@ namespace GraphicCore;
 public unsafe abstract class BaseShader : IDisposable
 {
     public Pipeline Pipeline;
+    public Pipeline PipelineWireframe;
     public PipelineLayout PipelineLayout;
 
     protected virtual int GetMaxObjectForShader() => 10000;
@@ -23,6 +24,10 @@ public unsafe abstract class BaseShader : IDisposable
     public virtual void Init()
     {
         CreatePipeline();
+
+#if DEBUG
+        CreatePipeline(true);
+#endif
     }
 
 
@@ -34,7 +39,7 @@ public unsafe abstract class BaseShader : IDisposable
         return [VulkanEngine.descriptorSetLayoutForTextures];
     }
 
-    public abstract unsafe void Render(CommandBuffer commandBuffer, uint currentFrame);
+    public abstract unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
 
     protected abstract void RenderElements(CommandBuffer commandBuffer, uint currentFrame);
 
@@ -56,12 +61,12 @@ public unsafe abstract class BaseShader : IDisposable
         BlendEnable = Vk.False,
     };
 
-    protected virtual PipelineRasterizationStateCreateInfo GetRasterizer() => new()
+    protected virtual PipelineRasterizationStateCreateInfo GetRasterizer(bool wireFrame) => new()
     {
         SType = StructureType.PipelineRasterizationStateCreateInfo,
         DepthClampEnable = Vk.False,
         RasterizerDiscardEnable = Vk.False,
-        PolygonMode = PolygonMode.Fill,
+        PolygonMode = wireFrame ? PolygonMode.Line : PolygonMode.Fill,
         LineWidth = 1f,
         CullMode = CullModeFlags.BackBit,
         // CullMode = CullModeFlags.None,
@@ -78,7 +83,7 @@ public unsafe abstract class BaseShader : IDisposable
         },
     ];
 
-    public virtual void CreatePipeline()
+    public virtual void CreatePipeline(bool wireFrameRendering = false)
     {
         #region Pipeline layout
         var pushRanges = GetPushConstantRanges();
@@ -105,6 +110,8 @@ public unsafe abstract class BaseShader : IDisposable
 
         var vertCode = System.IO.File.ReadAllBytes(moduleShaderPath);
 
+
+
         var shaderModule = CreateShaderModule(vertCode);
 
         PipelineShaderStageCreateInfo vertStage = new()
@@ -119,9 +126,20 @@ public unsafe abstract class BaseShader : IDisposable
         {
             SType = StructureType.PipelineShaderStageCreateInfo,
             Stage = ShaderStageFlags.FragmentBit,
-            Module = shaderModule,
-            PName = (byte*)SilkMarshal.StringToPtr("FragmentMain")
         };
+
+        var wireframeCode = System.IO.File.ReadAllBytes(Path.GetDirectoryName(moduleShaderPath) + "/wireFrameShader.spv");
+        var wireframeShaderModule = CreateShaderModule(wireframeCode);
+        if (wireFrameRendering)
+        {
+            fragStage.PName = (byte*)SilkMarshal.StringToPtr("main");
+            fragStage.Module = wireframeShaderModule;
+        }
+        else
+        {
+            fragStage.PName = (byte*)SilkMarshal.StringToPtr("FragmentMain");
+            fragStage.Module = shaderModule;
+        }
 
         PipelineShaderStageCreateInfo[] stages = [vertStage, fragStage];
 
@@ -130,7 +148,7 @@ public unsafe abstract class BaseShader : IDisposable
 
         var depthStencil = GetDepthStencil();
         var colorBlend = GetColorBlend();
-        var rasterizer = GetRasterizer();
+        var rasterizer = GetRasterizer(wireFrameRendering);
 
         DynamicState[] dynamicStates = [DynamicState.Viewport, DynamicState.Scissor];
 
@@ -212,8 +230,14 @@ public unsafe abstract class BaseShader : IDisposable
                 Layout = PipelineLayout,
             };
 
-            if (CreateVulkan.vk.CreateGraphicsPipelines(LogicalDevice.device, default, 1, &pipelineCI, null, out Pipeline) != Result.Success)
+            Pipeline _pipeline;
+            if (CreateVulkan.vk.CreateGraphicsPipelines(LogicalDevice.device, default, 1, &pipelineCI, null, out _pipeline) != Result.Success)
                 throw new Exception("Failed to create graphics pipeline!");
+
+            if (wireFrameRendering)
+                PipelineWireframe = _pipeline;
+            else
+                Pipeline = _pipeline;
         }
 
         SilkMarshal.FreeString((nint)vertStage.PName);

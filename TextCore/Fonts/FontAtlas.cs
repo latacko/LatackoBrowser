@@ -24,11 +24,11 @@ public class FontAtlas : IDisposable
         public byte[] pixels;
     }
     #region CONSTS
-    public const int GLYPH_SIZE = 48;
-    public const int PADDING = 6;
+    public const int GLYPH_SIZE = 64;
+    public const int PADDING = 8;
     public const int RANGE = 6;
 
-    public const int GLYPHD_IN_LINE = 21;
+    public const int GLYPHD_IN_LINE = 16;
     public const int ATLAS_WIDTH = 1024;
     public const int ATLAS_HEIGHT = 1024;
     public const ulong ATLAS_SIZE = ATLAS_WIDTH * ATLAS_HEIGHT * 4;
@@ -170,17 +170,19 @@ public class FontAtlas : IDisposable
 
         pixels.AsSpan().CopyTo(new Span<byte>((void*)(bufferData + (nint)_offset), BUFFER_GLYPH_SIZE));
 
-        Console.WriteLine($"First 12 bytes of '{character}': " + 
-        string.Join(",", pixels.Take(12)));
+        // Console.WriteLine($"First 12 bytes of '{character}': " + 
+        // string.Join(",", pixels.Take(12)));
 
-        // byte* ptr = (byte*)(bufferData + (nint)_offset);
+        byte* ptr = (byte*)(bufferData + (nint)_offset);
         // for (int i = 0; i < BUFFER_GLYPH_SIZE; i += 4)
         // {
-        //     ptr[i + 0] = 0;   // R
+        //     ptr[i + 0] = 255;   // R
         //     ptr[i + 1] = 255; // G
-        //     ptr[i + 2] = 0;   // B
+        //     ptr[i + 2] = 255;   // B
         //     ptr[i + 3] = 255; // A
         // }
+
+        
 
         uploadList.Add(new()
         {
@@ -215,7 +217,7 @@ public class FontAtlas : IDisposable
             (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
         );
 
-        createdGlyphs++;
+        createdGlyphs+=1;
 
         return true;
     }

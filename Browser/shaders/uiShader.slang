@@ -58,6 +58,7 @@ struct FragmentOutput
 FragmentOutput FragmentMain(VertexOutput input)
 {
     FragmentOutput output;
+
     // RenderData objData = input;
 
     float4 radii = float4(

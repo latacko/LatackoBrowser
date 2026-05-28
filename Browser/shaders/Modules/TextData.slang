@@ -10,7 +10,7 @@ public struct TextData
     public float2 size;
 
     public uint fontIndex;
-    public uint pad0;
-    public uint pad1;
-    public uint pad2;
+    public float pad0;
+    public float pad1;
+    public float pad2;
 };

@@ -62,7 +62,7 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("AAMIE-WITA", BrowserWindow.loadedShaders[1] as TextShader, null)
+        TextTest = Browser.TextManager.AddObject("ADAMIE WITAJ", BrowserWindow.loadedShaders[1] as TextShader, null)
         .SetProperties(properties=> properties
             .SetFontSize(new (24))
             .SetCursor(CursorType.text)

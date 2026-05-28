@@ -46,18 +46,20 @@ public unsafe class TextShader : BaseShader
         AlphaBlendOp = BlendOp.Add,
     };
 
-    protected override PipelineRasterizationStateCreateInfo GetRasterizer() => new()
+    protected override PipelineRasterizationStateCreateInfo GetRasterizer(bool wireframe) => new()
     {
         SType = StructureType.PipelineRasterizationStateCreateInfo,
         DepthClampEnable = Vk.False,
         RasterizerDiscardEnable = Vk.False,
-        PolygonMode = PolygonMode.Fill,
+        PolygonMode = wireframe ? PolygonMode.Line : PolygonMode.Fill,
         LineWidth = 1f,
         // CullMode = CullModeFlags.BackBit,
         CullMode = CullModeFlags.None,
         FrontFace = FrontFace.CounterClockwise,
         DepthBiasEnable = Vk.False,
     };
+
+    bool isWireFrameRendering = false;
 
     protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
     {
@@ -72,9 +74,10 @@ public unsafe class TextShader : BaseShader
         }
     }
 
-    public override void Render(CommandBuffer commandBuffer, uint currentFrame)
+    public override void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
     {
-        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, Pipeline);
+        this.isWireFrameRendering = wireFrameRendering;
+        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
         CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
 
