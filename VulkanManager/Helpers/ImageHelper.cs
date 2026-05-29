@@ -1,5 +1,6 @@
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
+using Semaphore = Silk.NET.Vulkan.Semaphore;
 namespace Vulkan;
 
 public unsafe class ImageHelper
@@ -93,7 +94,7 @@ public unsafe class ImageHelper
         return imageView;
     }
 
-    public void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory)
+    public static void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory, ulong id, Semaphore timelineSemaphore)
     {
         using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(path);
 
@@ -114,17 +115,12 @@ public unsafe class ImageHelper
         img.CopyPixelDataTo(new Span<byte>(data, (int)_imageSize));
         CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, _stagingBufferMemory);
 
-        FenceCreateInfo _fenceOneTimeCI = new()
-        {
-            SType = StructureType.FenceCreateInfo,
-        };
-
-        CreateVulkan.vk.CreateFence(LogicalDevice.device, ref _fenceOneTimeCI, null, out Fence _fenceOneTime);
         CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
 
         CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref textureImage, ref textureImageMemory);
 
         var _barrierTexImage = TransitionImageLayout(textureImage, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
+
         DependencyInfo _barrierTexInfo = new()
         {
             SType = StructureType.DependencyInfo,
@@ -133,18 +129,57 @@ public unsafe class ImageHelper
         };
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfo);
 
-        CopyBufferToImage(_stagingBuffer, textureImage, (uint)img.Width, (uint)img.Height);
+        BufferImageCopy _bufferImageCopy = new()
+        {
+            BufferOffset = 0,
+            BufferRowLength = 0,
+            BufferImageHeight = 0,
+
+            ImageSubresource = new()
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                MipLevel = 0,
+                BaseArrayLayer = 0,
+                LayerCount = 1,
+            },
+            ImageOffset = new(0, 0),
+            ImageExtent = new()
+            {
+                Width = (uint)img.Width,
+                Height = (uint)img.Height,
+                Depth = 1,
+            },
+        };
+
+        CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, _stagingBuffer, textureImage, ImageLayout.TransferDstOptimal, 1, &_bufferImageCopy);
 
         var _barrierTexRead = TransitionImageLayout(textureImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
         _barrierTexInfo.PImageMemoryBarriers = &_barrierTexRead;
+
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfo);
+        CreateVulkan.vk.EndCommandBuffer(commandBuffer);
 
-        CmdHelper.EndSingleTimeCommands(commandBuffer, _fenceOneTime);
-        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, &_fenceOneTime, Vk.True, ulong.MaxValue);
+        ulong _newId = id+1;
+        TimelineSemaphoreSubmitInfo _timelineSubmit = new()
+        {
+            SType = StructureType.TimelineSemaphoreSubmitInfo,
+            SignalSemaphoreValueCount = 1,
+            PSignalSemaphoreValues = &_newId,
+        };
 
+        SubmitInfo _submitInfo = new()
+        {
+            SType = StructureType.SubmitInfo,
+            PNext = &_timelineSubmit,
+            CommandBufferCount = 1,
+            PCommandBuffers = &commandBuffer,
+            SignalSemaphoreCount = 1,
+            PSignalSemaphores = &timelineSemaphore,
+        };
+        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, default);
 
-        CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, _stagingBuffer, null);
-        CreateVulkan.vk.FreeMemory(LogicalDevice.device, _stagingBufferMemory, null);
+        // CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, _stagingBuffer, null);
+        // CreateVulkan.vk.FreeMemory(LogicalDevice.device, _stagingBufferMemory, null);
     }
 
     public static ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout)
@@ -223,5 +258,12 @@ public unsafe class ImageHelper
         };
 
         CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, buffer, image, ImageLayout.TransferDstOptimal, 1, &region);
+    }
+
+    public static void DestroyTexture(Image image, DeviceMemory imageMemory, ImageView imageView)
+    {
+        CreateVulkan.vk.DestroyImageView(LogicalDevice.device, imageView, null);
+        CreateVulkan.vk.DestroyImage(LogicalDevice.device, image, null);
+        CreateVulkan.vk.FreeMemory(LogicalDevice.device, imageMemory, null);
     }
 }

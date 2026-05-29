@@ -77,7 +77,7 @@ FragmentOutput FragmentMain(VertexOutput input)
     // float alpha = 1;
 
     float4 baseColor;
-    if (input.textureIndex > 0)
+    if (input.textureIndex != uint.maxValue)
     {
         baseColor = textures[input.textureIndex].Sample(sampler, input.UV);
     }

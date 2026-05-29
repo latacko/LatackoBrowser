@@ -63,6 +63,7 @@ public unsafe class LogicalDevice : IDisposable
         PhysicalDeviceFeatures _deviceFeatures = new()
         {
             SamplerAnisotropy = Vk.True,
+            FillModeNonSolid = true,
         };
 
         fixed (DeviceQueueCreateInfo* queueCreateInfoPtr = _queueCreateInfos)

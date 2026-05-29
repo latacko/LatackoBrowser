@@ -68,17 +68,18 @@ public class FontAtlas : IDisposable
 
     internal float height = 0;
     internal float lineGap = 0;
+    internal float baseline = 0;
 
     List<BufferImageCopy> uploadList = new();
 
     public Queue<WaitingCharacter> WaitingCharacters = new();
 
-    internal BufferInfo<CharacterDataGPU> charactersBiffer;
+    internal BufferInfo<CharacterDataGPU> charactersBuffer;
     public unsafe void Create(uint id)
     {
         this.id = id;
 
-        charactersBiffer = new(256, 0);
+        charactersBuffer = new(1114111, 0);
         ImageHelper.CreateImage(ATLAS_WIDTH, ATLAS_HEIGHT, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, ref atlasImage, ref atlasMemory);
         imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit);
 
@@ -222,15 +223,17 @@ public class FontAtlas : IDisposable
         );
 
 
-        ((CharacterDataGPU*)charactersBiffer.Mapped)[(uint)character] = new()
+        Console.WriteLine("Attempting to write on: " + (uint)character + " char: " + character);
+        ((CharacterDataGPU*)charactersBuffer.Mapped)[(uint)character] = new()
         {
             UV = new Vector2D<float>(glyph.UVMin.Y, glyph.UVMax.Y),
             Scale = height/glyph.Height,
-            BearingY = (glyph.Height-glyph.BearingY)/height
+            BearingY = (baseline - glyph.BearingY)/height
         };
 
-        Console.WriteLine("Scale for " +character + " ascii " + (uint)character +" is: " + height/glyph.Height);
-        Console.WriteLine("BearingY for " +character+" is: " + (glyph.Height-glyph.BearingY)/height);
+        // Console.WriteLine("Glyph for " +character + " ascii " + (uint)character +" is: " + glyph + " baseline: " + baseline);
+        // Console.WriteLine("Scale for " +character + " ascii " + (uint)character +" is: " + height/glyph.Height);
+        // Console.WriteLine("BearingY for " +character+" is: " + (glyph.Height-glyph.BearingY)/height);
 
         createdGlyphs+=1;
 
@@ -315,28 +318,17 @@ public class FontAtlas : IDisposable
 
     public unsafe void Dispose()
     {
-        charactersBiffer.Dispose();
+        CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, timelineSemaphore, null);
+        charactersBuffer.Dispose();
 
         CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
-        CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, stagingBuffer, null);
-        CreateVulkan.vk.FreeMemory(LogicalDevice.device, stagingBufferMemory, null);
+        BufferHelper.DestroyBuffer(stagingBuffer, stagingBufferMemory);
 
         if (imageView.Handle != 0)
-        {
-            Console.WriteLine("Disposiing view");
             CreateVulkan.vk.DestroyImageView(LogicalDevice.device, imageView, null);
-        }
         if (atlasImage.Handle != 0)
-        {
-
-            Console.WriteLine("Disposiing image");
             CreateVulkan.vk.DestroyImage(LogicalDevice.device, atlasImage, null);
-        }
         if (atlasMemory.Handle != 0)
-        {
-
-            Console.WriteLine("Disposiing memory");
             CreateVulkan.vk.FreeMemory(LogicalDevice.device, atlasMemory, null);
-        }
     }
 }

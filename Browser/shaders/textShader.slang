@@ -64,9 +64,18 @@ FragmentOutput FragmentMain(VertexOutput input, uniform uint64_t _pad0, uniform 
 
     FragmentOutput output;
 
-    CharacterData characterData = characterDataPtr[65];
+    CharacterData characterData = characterDataPtr[input.char];
 
     float2 scaledUV = input.UV;
+
+    float t = (input.UV.y - characterData.UV.x) / (characterData.UV.y - characterData.UV.x);
+    t -= characterData.BearingY;
+    t *= characterData.Scale;
+
+    scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
+
+    // output.color = float4(t / 1, 0, 0, 1);
+    // return output;
 
     // output.color = float4(characterData.Scale/2, 0, 0, 1);
     // return output;
@@ -74,14 +83,14 @@ FragmentOutput FragmentMain(VertexOutput input, uniform uint64_t _pad0, uniform 
     // scaledUV.y += characterData.BearingY;
     // scaledUV.y = (input.UV.y - characterData.BearingY) * characterData.Scale + characterData.UV.x;
 
-    float glyphStart = characterData.BearingY;                 // where glyph starts in 0..1 quad space
-    float glyphEnd = glyphStart + (1.0 / characterData.Scale); // where glyph ends
+    // float glyphStart = characterData.BearingY;                 // where glyph starts in 0..1 quad space
+    // float glyphEnd = glyphStart + (1.0 / characterData.Scale); // where glyph ends
 
     // remap so glyph portion maps to full atlas UV range
-    float t = (input.UV.y - glyphStart) * characterData.Scale;
+    // float t = (input.UV.y - glyphStart) * characterData.Scale;
 
     // then map t (0..1) to atlas UV range
-    scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
+    // scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
 
     // float glyphStart = characterData.BearingY;
     // float glyphEnd = glyphStart + (1.0 / characterData.Scale);

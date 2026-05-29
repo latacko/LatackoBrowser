@@ -43,6 +43,7 @@
     <None Update="shaders/Compiled/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="models/*" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Target Name="CompileShaders" BeforeTargets="Build">

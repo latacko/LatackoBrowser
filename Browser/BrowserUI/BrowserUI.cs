@@ -2,6 +2,8 @@ using Browser;
 using GraphicCore;
 using GraphicsCore;
 using ObjectCore;
+using ObjectCore.Textures;
+using Silk.NET.Vulkan;
 using TextCore;
 using Units;
 using Vulkan;
@@ -14,10 +16,12 @@ public class BrowserUI
     public RuntimeText BottomBar;
 
 
-
     public void Create()
     {
-        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
+        var _texture = TexturesManager.LoadTexture("textures/everythingIsFine.png");
+
+
+        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture)
         .SetLayout(
             (layout) => layout
                 .SetLeft(new(0)).SetTop(new(0))
@@ -30,7 +34,7 @@ public class BrowserUI
                 .SetBorderRadius(new(20, UnitType.px))
         );
 
-        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), TopBar)
+        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null, TopBar)
         .SetLayout(
             (layout) => layout
                 .SetLeft(new(-10)).SetTop(new(-10))
@@ -62,9 +66,9 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("ADAMIE WITJ", BrowserWindow.loadedShaders[1] as TextShader, null)
+        TextTest = Browser.TextManager.AddObject("ELO oli", BrowserWindow.loadedShaders[1] as TextShader, null)
         .SetProperties(properties=> properties
-            .SetFontSize(new (24))
+            .SetFontSize(new (50))
             .SetCursor(CursorType.text)
             .SetFont("open-sans/OpenSans-Regular.ttf")
         );

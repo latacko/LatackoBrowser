@@ -1,16 +1,19 @@
 ﻿using ObjectCore;
+using ObjectCore.Textures;
 using TextCore;
 
 namespace CoreManager;
 
 public class CoreManager : IDisposable
 {
-    internal static CoreManager Instance;
+    public static CoreManager Instance;
     BufferManager bufferManager = new();
 
     internal FontManager fontManager = new();
     internal TextManager textManager = new();
     internal ObjectsManager objectsManager = new();
+    public ObjectManager objectManager = new();
+    public TexturesManager texturesManager = new();
 
     public CoreManager()
     {
@@ -19,6 +22,7 @@ public class CoreManager : IDisposable
 
     public void InitBuffers()
     {
+        texturesManager.Init();
         bufferManager.Init();
     }
 
@@ -43,5 +47,6 @@ public class CoreManager : IDisposable
     {
         fontManager.Dispose();
         bufferManager.Dispose();
+        texturesManager.Dispose();
     }
 }

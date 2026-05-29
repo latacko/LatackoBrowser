@@ -18,11 +18,16 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         base.Init();
     }
 
+    public override DescriptorSetLayout[] GetLayouts()
+    {
+        return [ObjectManager.Instance.objectDescriptorLayout];
+    }
+
     public override unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref VulkanEngine.descriptorSetForTextures, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref ObjectManager.Instance.objectDescriptorSet, 0, null);
 
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
@@ -73,7 +78,6 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         FrontFace = FrontFace.CounterClockwise,
         DepthBiasEnable = Vk.False,
     };
-
 
     protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
     {

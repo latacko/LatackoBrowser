@@ -11,8 +11,8 @@ namespace GraphicCore;
 public unsafe abstract class BaseShader : IDisposable
 {
     public Pipeline Pipeline;
-    public Pipeline PipelineWireframe;
     public PipelineLayout PipelineLayout;
+    public Pipeline PipelineWireframe;
 
     protected virtual int GetMaxObjectForShader() => 10000;
     protected abstract ulong GetSizeOfObjectDatas();
@@ -34,10 +34,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     #endregion
 
-    public virtual DescriptorSetLayout[] GetLayouts()
-    {
-        return [VulkanEngine.descriptorSetLayoutForTextures];
-    }
+    public abstract DescriptorSetLayout[] GetLayouts();
 
     public abstract unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
 
@@ -93,22 +90,26 @@ public unsafe abstract class BaseShader : IDisposable
         var layouts = GetLayouts();
 
 
-        fixed (PushConstantRange* pushRangesPtr = pushRanges)
-        fixed (DescriptorSetLayout* layoutsPtr = layouts)
+        if (!wireFrameRendering)
         {
-            PipelineLayoutCreateInfo layoutInfo = new()
+            fixed (PushConstantRange* pushRangesPtr = pushRanges)
+            fixed (DescriptorSetLayout* layoutsPtr = layouts)
             {
-                SType = StructureType.PipelineLayoutCreateInfo,
-                SetLayoutCount = (uint)layouts.Length,
-                PSetLayouts = layoutsPtr,
-                PushConstantRangeCount = (uint)pushRanges.Length,
-                PPushConstantRanges = pushRangesPtr,
-            };
+                PipelineLayoutCreateInfo layoutInfo = new()
+                {
+                    SType = StructureType.PipelineLayoutCreateInfo,
+                    SetLayoutCount = (uint)layouts.Length,
+                    PSetLayouts = layoutsPtr,
+                    PushConstantRangeCount = (uint)pushRanges.Length,
+                    PPushConstantRanges = pushRangesPtr,
+                };
 
+                if (CreateVulkan.vk.CreatePipelineLayout(LogicalDevice.device, &layoutInfo, null, out PipelineLayout) != Result.Success)
+                    throw new Exception("Failed to create pipeline layout!");
 
-            if (CreateVulkan.vk.CreatePipelineLayout(LogicalDevice.device, &layoutInfo, null, out PipelineLayout) != Result.Success)
-                throw new Exception("Failed to create pipeline layout!");
+            }
         }
+
         #endregion
 
         var vertCode = System.IO.File.ReadAllBytes(moduleShaderPath);
@@ -246,6 +247,7 @@ public unsafe abstract class BaseShader : IDisposable
         SilkMarshal.FreeString((nint)vertStage.PName);
         SilkMarshal.FreeString((nint)fragStage.PName);
         CreateVulkan.vk.DestroyShaderModule(LogicalDevice.device, shaderModule, null);
+        CreateVulkan.vk.DestroyShaderModule(LogicalDevice.device, wireframeShaderModule, null);
     }
 
     ShaderModule CreateShaderModule(byte[] code)
@@ -268,6 +270,7 @@ public unsafe abstract class BaseShader : IDisposable
     public virtual void Dispose()
     {
         CreateVulkan.vk.DestroyPipeline(LogicalDevice.device, Pipeline, null);
+        CreateVulkan.vk.DestroyPipeline(LogicalDevice.device, PipelineWireframe, null);
         CreateVulkan.vk.DestroyPipelineLayout(LogicalDevice.device, PipelineLayout, null);
     }
 }

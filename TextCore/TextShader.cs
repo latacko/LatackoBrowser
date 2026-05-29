@@ -82,10 +82,10 @@ public unsafe class TextShader : BaseShader
             if (element.TryGetObjectData(out var data, currentFrame))
             {
                 TextManager.Instance.Update(currentFrame, element.ObjectIndex, data);
-                Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBiffer.DeviceAddress}");
+                Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
             }
 
-            fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBiffer.DeviceAddress)
+            fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.FragmentBit, sizeof(ulong)*2, sizeof(ulong), deviceAddressPtr);
 
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);

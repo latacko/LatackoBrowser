@@ -1,5 +1,6 @@
 ﻿using GraphicCore;
 using GraphicsCore;
+using ObjectCore.Textures;
 using Silk.NET.Maths;
 using Vulkan;
 
@@ -12,12 +13,15 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public Layout Layout;
 
     public List<RuntimeModelData> Children;
+    public Texture texture;
 
-    public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
+    public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
     {
         Properties = new(this);
         Layout = new(this);
         Events = new(this);
+
+        this.texture = texture;
     }
 
     public RuntimeObject SetLayout(Func<Layout, Layout> setLayout)
@@ -185,7 +189,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
             pos = new Vector2D<float>(_cachedModel.M41, _cachedModel.M42),
             size = Layout.GetSize(),
 
-            TextureIndex = 0,
+            TextureIndex = texture == null ? uint.MaxValue : texture.GetID(),
             borderRadiusTopLeft = Properties.borderRadiusTopLeft.Value,
             borderRadiusTopRight = Properties.borderRadiusTopRight.Value,
             borderRadiusBottomRight = Properties.borderRadiusBottomRight.Value,

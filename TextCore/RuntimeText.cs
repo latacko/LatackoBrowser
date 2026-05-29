@@ -29,8 +29,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     public void GenerateMesh()
     {
-        TextVertex[] _vertices = new TextVertex[(Text.Length*2) * 4];
-        ushort[] _indices = new ushort[(Text.Length*2) * 6];
+        TextVertex[] _vertices = new TextVertex[(Text.Length * 2) * 4];
+        ushort[] _indices = new ushort[(Text.Length * 2) * 6];
         float _cursorX = 0;
         int _j = 0;
 
@@ -52,7 +52,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
                 // Console.WriteLine("Char width: " + _width);
             }
 
-            _width = glyphData.Advance-glyphData.Width-glyphData.BearingX + (i+1<_textLength ? fontAtlas.Glyphs[Text[i+1]].BearingX : 0);
+            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? fontAtlas.Glyphs[Text[i + 1]].BearingX : 0);
 
             if (_width != 0)
             {
@@ -115,6 +115,11 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         i++;
     }
 
+    protected internal override Vector2D<float> GetLayoutSize()
+    {
+        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value/2, fontAtlas.height * Properties.fontSize.Value);
+    }
+
     public RuntimeText SetProperties(Func<Properties, Properties> setProperties)
     {
         return SetProperties(setProperties.Invoke(Properties));
@@ -152,7 +157,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            Console.WriteLine("Recreated");
+            // Console.WriteLine("Recreated");
             UpdateParentSize();
             AddFlag(DirtyFlags.Matrix);
         }
@@ -190,7 +195,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
 
         // Console.WriteLine(dirty[frame] + "frame: " + frame);
-        Console.WriteLine(data);
+        // Console.WriteLine(data);
 
         RemoveFlag(DirtyFlags.Data, frame);
 
@@ -204,11 +209,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     protected internal override float GetLayoutLeft() => 0;
     protected internal override float GetLayoutTop() => 0;
-
-    protected internal override Vector2D<float> GetLayoutSize()
-    {
-        return new Vector2D<float>(widthWithoutScale  * Properties.fontSize.Value, fontAtlas.height * Properties.fontSize.Value);
-    }
 
 
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)

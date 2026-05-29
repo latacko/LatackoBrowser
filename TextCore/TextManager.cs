@@ -34,9 +34,9 @@ public class TextManager : BufferManager
     {
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            vertexBuffer[i] = new(256, BufferUsageFlags.VertexBufferBit);
+            vertexBuffer[i] = new(1000, BufferUsageFlags.VertexBufferBit);
 
-            indicesBuffer[i] = new(256, BufferUsageFlags.IndexBufferBit);
+            indicesBuffer[i] = new(5000, BufferUsageFlags.IndexBufferBit);
 
             dataBuffer[i] = new(256, 0);
         }
@@ -247,13 +247,17 @@ public class TextManager : BufferManager
         }
     }
 
-    public override void Dispose()
+    public override unsafe void Dispose()
     {
+        TextDescriptorAllocatorGrowable.DestroyPools();
+        CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, textDescriptorLayout, null);
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             vertexBuffer[i].Dispose();
 
             indicesBuffer[i].Dispose();
+
+            dataBuffer[i].Dispose();
         }
     }
 }

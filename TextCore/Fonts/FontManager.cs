@@ -15,8 +15,9 @@ public class FontManager : IDisposable
     Dictionary<string, FontAtlas> loadedFonts = new();
     static Library library = new();
     // const string preload = "A";
-    const string preload = "AMIE WTJDa";
-    // const string preload = "AĄBCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+    // const string preload = "WITAJ DME";
+    const string preload = "ELO oli";
+    // const string preload = "AĄBCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklłmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
 
 
     public FontManager()
@@ -84,6 +85,7 @@ public class FontManager : IDisposable
 
         loadedFonts[name].height = (face.Ascender - face.Descender) / (float)unitsPerEm;
         loadedFonts[name].lineGap = face.Height / (float)unitsPerEm - loadedFonts[name].height;
+        loadedFonts[name].baseline = face.Ascender / (float)face.UnitsPerEM;
 
         Console.WriteLine($"face.Ascender={face.Ascender} face.Descender={face.Descender} face.Height={face.Height} UnitsPerEM={face.UnitsPerEM}");
 
@@ -192,7 +194,7 @@ public class FontManager : IDisposable
                         BearingY = face.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
                         // Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
                         Width = (float)_right / unitsPerEm,
-                        Height = face.Glyph.Metrics.Height.Value / unitsPerEm,
+                        Height = (float)_top / unitsPerEm,
                     };
 
 
@@ -227,9 +229,6 @@ public class FontManager : IDisposable
         public byte Tag;
     }
 
-    //For char: A bounding box is: MIN(0, 0) MAX(1296,-1468)
-    //For char: A bounding box is: MIN(0, 1468) MAX(1296,0)
-    //GlyphData { UVMin = <0,005859375  0,005859375>, UVMax = <0,041015625  0,041015625>, BearingX = 0, BearingY = 0,7167969, Advance = 0,6328125, Width = 0,6328125, Height = 0,7167969 }
     Shape BuildShape(Face face, char c, float leftPadding, float topPadding)
     {
         Vector2 GetPointCoords(FTVector pos)
@@ -345,9 +344,9 @@ public class FontManager : IDisposable
 
     public void Dispose()
     {
+        library.Dispose();
         foreach (var item in loadedFonts)
         {
-            Console.WriteLine(item.Key + ": ");
             item.Value.Dispose();
         }
     }
