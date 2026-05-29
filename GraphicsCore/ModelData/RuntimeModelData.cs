@@ -25,7 +25,9 @@ public abstract class RuntimeModelData : IDisposable
     public EventsBase Events;
 
     internal protected DirtyFlags[] dirty = new DirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    internal protected Matrix4X4<float> _cachedModel;
+    internal protected Matrix4X4<float> cachedModel;
+    internal protected Vector3D<float> relativePos;
+    internal protected Vector3D<float> relativeRot;
 
     public Vector2D<float> ParentSize;
     public RuntimeModelData? Parent;

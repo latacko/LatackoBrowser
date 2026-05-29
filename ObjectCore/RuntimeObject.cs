@@ -86,6 +86,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     protected void UpdateChildrenSizes()
     {
+        relativePos = (Parent != null ? Parent.relativePos: new Vector3D<float>()) + new Vector3D<float>(GetLayoutLeft(), GetLayoutTop(), 0);
+        relativeRot = (Parent != null ? Parent.relativeRot: new Vector3D<float>()) + Transform.Rotation;
         if (Children == null) return;
 
         foreach (var children in Children)
@@ -118,8 +120,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     protected internal override float GetLayoutLeft() => Layout.Left.Value;
     protected internal override float GetLayoutTop() => Layout.Top.Value;
     protected internal override Vector2D<float> GetLayoutSize() => Layout.GetSize();
-    public override Bounds GetBounds()=> Layout.Bounds;
-    public override CursorType GetCursorType()=>Properties.Cursor;
+    public override Bounds GetBounds() => Layout.Bounds;
+    public override CursorType GetCursorType() => Properties.Cursor;
 
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)
     {
@@ -169,24 +171,27 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
         if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
-            _cachedModel =
+            cachedModel =
                 Matrix4X4.CreateScale(Layout.GetSize().X, Layout.GetSize().Y, 1f) *
                 Matrix4X4.CreateTranslation(-Transform.TranslateX.Value, -Transform.TranslateY.Value, 0f) *
                 Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
-                (
-                    Parent == null ?
-                        Matrix4X4.CreateTranslation(Layout.Left.Value, Layout.Top.Value, 0f) :
-                        Matrix4X4.CreateTranslation(Parent.GetLayoutLeft() + Layout.LayoutPos.X + Layout.Left.Value, Parent.GetLayoutTop() + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
-                );
+                Matrix4X4.CreateTranslation(Layout.Left.Value, Layout.Top.Value, 0f);
+
+            if (Parent != null)
+            {
+                cachedModel *=
+                    Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
+                    Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
+            }
             RemoveFlag(DirtyFlags.Matrix, frame);
         }
 
         data = new ObjectData
         {
-            Model = _cachedModel,
+            Model = cachedModel,
             Color = Properties.BackgroundColor,
 
-            pos = new Vector2D<float>(_cachedModel.M41, _cachedModel.M42),
+            pos = new Vector2D<float>(cachedModel.M41, cachedModel.M42),
             size = Layout.GetSize(),
 
             TextureIndex = texture == null ? uint.MaxValue : texture.GetID(),

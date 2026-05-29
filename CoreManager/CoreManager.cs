@@ -29,13 +29,20 @@ public class CoreManager : IDisposable
     public void Start()
     {
         fontManager.LoadFont("open-sans/OpenSans-Regular.ttf");
-        // fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
+        fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
     }
-
+    uint _ticksToReset = 0;
     public void Update(double deltaTime)
     {
         GraphicCore.ColorTransitionsHelper.Update((float)deltaTime);
+        _ticksToReset++;
+
         fontManager.Tick();
+        if (_ticksToReset == 1000)
+        {
+            TexturesManager.Tick();
+            _ticksToReset = 0;
+        }
     }
 
     public void Render(uint currentFrame)

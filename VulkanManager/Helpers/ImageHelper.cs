@@ -94,7 +94,7 @@ public unsafe class ImageHelper
         return imageView;
     }
 
-    public static void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory, ulong id, Semaphore timelineSemaphore)
+    public static void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory, ulong id, Semaphore timelineSemaphore, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory)
     {
         using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(path);
 
@@ -105,15 +105,15 @@ public unsafe class ImageHelper
 
         ulong _imageSize = (ulong)(img.Width * img.Height * img.PixelType.BitsPerPixel / 8);
 
-        Buffer _stagingBuffer = new();
-        DeviceMemory _stagingBufferMemory = new();
+        stagingBuffer = new();
+        stagingBufferMemory = new();
 
-        BufferHelper.CreateBuffer(_imageSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _stagingBuffer, ref _stagingBufferMemory);
+        BufferHelper.CreateBuffer(_imageSize, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref stagingBuffer, ref stagingBufferMemory);
 
         void* data;
-        CreateVulkan.vk!.MapMemory(LogicalDevice.device, _stagingBufferMemory, 0, _imageSize, 0, &data);
+        CreateVulkan.vk!.MapMemory(LogicalDevice.device, stagingBufferMemory, 0, _imageSize, 0, &data);
         img.CopyPixelDataTo(new Span<byte>(data, (int)_imageSize));
-        CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, _stagingBufferMemory);
+        CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
 
         CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
 
@@ -151,7 +151,7 @@ public unsafe class ImageHelper
             },
         };
 
-        CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, _stagingBuffer, textureImage, ImageLayout.TransferDstOptimal, 1, &_bufferImageCopy);
+        CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, stagingBuffer, textureImage, ImageLayout.TransferDstOptimal, 1, &_bufferImageCopy);
 
         var _barrierTexRead = TransitionImageLayout(textureImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
         _barrierTexInfo.PImageMemoryBarriers = &_barrierTexRead;

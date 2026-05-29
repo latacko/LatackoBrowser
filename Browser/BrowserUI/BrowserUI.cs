@@ -66,11 +66,11 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("ELO oli", BrowserWindow.loadedShaders[1] as TextShader, null)
+        TextTest = Browser.TextManager.AddObject("OLIIIIIIIII tekst naprawiony w koncu!!!", BrowserWindow.loadedShaders[1] as TextShader, null)
         .SetProperties(properties=> properties
             .SetFontSize(new (50))
             .SetCursor(CursorType.text)
-            .SetFont("open-sans/OpenSans-Regular.ttf")
+            .SetFont("stix-fonts/STIXTwoText-Regular.otf")
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))

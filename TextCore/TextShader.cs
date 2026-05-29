@@ -82,7 +82,7 @@ public unsafe class TextShader : BaseShader
             if (element.TryGetObjectData(out var data, currentFrame))
             {
                 TextManager.Instance.Update(currentFrame, element.ObjectIndex, data);
-                Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
+                // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
             }
 
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)

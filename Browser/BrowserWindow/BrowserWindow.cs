@@ -129,7 +129,10 @@ public unsafe partial class BrowserWindow
             .SetWidth(new(800 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
             .SetHeight(new(300 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
             );
-        // browserUI.LeftBar?.SetTransform(browserUI.LeftBar.Transform.SetRotationZ(browserUI.LeftBar.Transform.Rotation.Z + (float)deltaTime));
+
+        // browserUI.TopBar.SetTransform(browserUI.TopBar.Transform
+        //     .SetRotationZ());
+        browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
         // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
 

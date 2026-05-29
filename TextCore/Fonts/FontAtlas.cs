@@ -9,7 +9,7 @@ namespace TextCore;
 
 public class FontAtlas : IDisposable
 {
-    uint id = 0;
+    internal uint id {get; private set;} = 0;
     struct UploadRegion
     {
         internal ulong startOffset => endOffset - size;
@@ -22,6 +22,7 @@ public class FontAtlas : IDisposable
     {
         public char character;
         public byte[] pixels;
+        public int index;
     }
     #region CONSTS
     public const int GLYPH_SIZE = 64;
@@ -120,7 +121,7 @@ public class FontAtlas : IDisposable
                 var waiting = WaitingCharacters.Peek();
 
                 GlyphData glyph = Glyphs[waiting.character];
-                if (AddGlyph(waiting.character, waiting.pixels, ref glyph))
+                if (AddGlyph(waiting.character, waiting.pixels, ref glyph, waiting.index))
                 {
                     WaitingCharacters.Dequeue();
                     Glyphs[waiting.character] = glyph;
@@ -152,10 +153,29 @@ public class FontAtlas : IDisposable
         uploadList.Clear();
     }
 
-    internal unsafe bool AddGlyph(char character, byte[] pixels, ref GlyphData glyph)
+    internal unsafe bool AddGlyph(char character, byte[] pixels, ref GlyphData glyph, int index = -1)
     {
         ulong _offset = Allocate();
         bool _isBlocked = inFlight.Any(r => _offset >= r.startOffset && _offset < r.endOffset);
+
+        int _glyphIndex = index == -1 ? createdGlyphs : index;
+
+        int imageX = _glyphIndex % GLYPHD_IN_LINE;
+        int imageY = _glyphIndex / GLYPHD_IN_LINE;
+
+        int visualSize = GLYPH_SIZE - PADDING * 2;
+        if (index == -1)
+        {
+            glyph.UVMin = new Vector2D<float>(
+                (imageX * GLYPH_SIZE + PADDING) / (float)ATLAS_WIDTH,
+                (imageY * GLYPH_SIZE + PADDING) / (float)ATLAS_HEIGHT
+            );
+            glyph.UVMax = new Vector2D<float>(
+                (imageX * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_WIDTH,
+                (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
+            );
+            createdGlyphs += 1;
+        }
 
         if (_isBlocked)
         {
@@ -163,12 +183,10 @@ public class FontAtlas : IDisposable
             {
                 character = character,
                 pixels = pixels,
+                index = _glyphIndex
             });
             return false;
         }
-
-        int imageX = createdGlyphs % GLYPHD_IN_LINE;
-        int imageY = createdGlyphs / GLYPHD_IN_LINE;
 
         ringOffset = _offset + BUFFER_GLYPH_SIZE;
 
@@ -187,7 +205,7 @@ public class FontAtlas : IDisposable
         //     ptr[i + 3] = 255; // A
         // }
 
-        
+
 
         uploadList.Add(new()
         {
@@ -212,30 +230,20 @@ public class FontAtlas : IDisposable
         });
 
 
-        int visualSize = GLYPH_SIZE - PADDING * 2;
-        glyph.UVMin = new Vector2D<float>(
-            (imageX * GLYPH_SIZE + PADDING) / (float)ATLAS_WIDTH,
-            (imageY * GLYPH_SIZE + PADDING) / (float)ATLAS_HEIGHT
-        );
-        glyph.UVMax = new Vector2D<float>(
-            (imageX * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_WIDTH,
-            (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
-        );
 
 
-        Console.WriteLine("Attempting to write on: " + (uint)character + " char: " + character);
+
+        // Console.WriteLine("Attempting to write on: " + (uint)character + " char: " + character);
         ((CharacterDataGPU*)charactersBuffer.Mapped)[(uint)character] = new()
         {
             UV = new Vector2D<float>(glyph.UVMin.Y, glyph.UVMax.Y),
-            Scale = height/glyph.Height,
-            BearingY = (baseline - glyph.BearingY)/height
+            Scale = height / glyph.Height,
+            BearingY = (baseline - glyph.BearingY) / height
         };
 
-        // Console.WriteLine("Glyph for " +character + " ascii " + (uint)character +" is: " + glyph + " baseline: " + baseline);
+        // Console.WriteLine("Glyph for " + character + " ascii " + (uint)character + " is: " + glyph);
         // Console.WriteLine("Scale for " +character + " ascii " + (uint)character +" is: " + height/glyph.Height);
         // Console.WriteLine("BearingY for " +character+" is: " + (glyph.Height-glyph.BearingY)/height);
-
-        createdGlyphs+=1;
 
         return true;
     }

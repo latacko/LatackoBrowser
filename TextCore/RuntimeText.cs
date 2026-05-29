@@ -40,7 +40,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         for (int i = 0; i < _textLength; i++)
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
-            // Console.WriteLine("Char: " + Text[i] + " glyph data: " + glyphData + " ascii " + (sbyte)Text[i]);
 
             float _width = glyphData.Width;
 
@@ -62,13 +61,13 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
                 // Console.WriteLine("Char width: " + _width);
             }
 
-            // _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
+            _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
 
             // Console.WriteLine("Space width: " + _width);
 
             // GenerateQuad(_vertices, _indices, _width, new(0, 0), new(0, 0), _cursorX, ref _j);
 
-            // _cursorX += _width;
+            _cursorX += _width;
         }
 
         ModelData.Vertices = _vertices;
@@ -117,7 +116,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value/2, fontAtlas.height * Properties.fontSize.Value);
+        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value / 2, fontAtlas.height * Properties.fontSize.Value);
     }
 
     public RuntimeText SetProperties(Func<Properties, Properties> setProperties)
@@ -170,26 +169,33 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
         if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
-            _cachedModel =
-                Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *
+            cachedModel =
+                Matrix4X4.CreateScale(Properties.fontSize.Value, Properties.fontSize.Value, 1f) *
+                // Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *
                         // Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
                         // (
                         //     Parent == null ?
                         Matrix4X4.CreateTranslation(10, 10, 0f);
             //         Matrix4X4.CreateTranslation(Parent.GetLayoutLeft() + Layout.LayoutPos.X + Layout.Left.Value, Parent.GetLayoutTop() + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
             // );
+            if (Parent != null)
+            {
+                cachedModel *=
+                    Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
+                    Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
+            }
             RemoveFlag(DirtyFlags.Matrix, frame);
         }
 
         data = new TextData
         {
-            Model = _cachedModel,
+            Model = cachedModel,
             Color = Properties.TextColor,
 
-            pos = new Vector2D<float>(_cachedModel.M41, _cachedModel.M42),
+            pos = new Vector2D<float>(cachedModel.M41, cachedModel.M42),
             size = GetLayoutSize(),
 
-            TextureIndex = 0,
+            TextureIndex = fontAtlas.id,
         };
 
 

@@ -16,8 +16,8 @@ public class FontManager : IDisposable
     static Library library = new();
     // const string preload = "A";
     // const string preload = "WITAJ DME";
-    const string preload = "ELO oli";
-    // const string preload = "AĄBCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklłmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+    // const string preload = "TAKSI CZUJE";
+    const string preload = "ABCDEFGHIJKLMNOPRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
 
 
     public FontManager()
@@ -89,6 +89,16 @@ public class FontManager : IDisposable
 
         Console.WriteLine($"face.Ascender={face.Ascender} face.Descender={face.Descender} face.Height={face.Height} UnitsPerEM={face.UnitsPerEM}");
 
+        Stopwatch stopwatch = new();
+        stopwatch.Start();
+
+        var threadLocalFace = new ThreadLocal<Face>(() =>
+        {
+            var f = new Face(library, path);
+            f.SetCharSize(0, 64 * 64, 72, 72);
+            return f;
+        }, trackAllValues: true);
+
         for (int i = 0; i < preload.Length; i += 10)
         {
             int _length = i + 10 > preload.Length ? preload.Length - i : 10;
@@ -96,10 +106,11 @@ public class FontManager : IDisposable
             loadedFonts[name].StartRecording(_length);
 
 
-            for (int j = i; j < _length + i; j++)
+            Parallel.For(i, _length + i, j =>
             {
+                var faceForThread = threadLocalFace.Value;
                 var _character = preload[j];
-                face.LoadChar(_character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
+                faceForThread.LoadChar(_character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
 
                 // Console.WriteLine("Info for char |" + _character + "|");
                 // Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
@@ -107,13 +118,13 @@ public class FontManager : IDisposable
                 // Console.WriteLine(" >Bearing Y: " + face.Glyph.Metrics.HorizontalBearingY);
                 // Console.WriteLine(" >Advance: " + face.Glyph.Advance.X);
 
-                if (face.Glyph.Metrics.Width != 0)
+                if (faceForThread.Glyph.Metrics.Width != 0)
                 {
-                    float glyphHeight = face.Glyph.Metrics.Height.Value;
-                    float bearingX = face.Glyph.Metrics.HorizontalBearingX.Value;
-                    float bearingY = face.Glyph.Metrics.HorizontalBearingY.Value;
+                    float glyphHeight = faceForThread.Glyph.Metrics.Height.Value;
+                    float bearingX = faceForThread.Glyph.Metrics.HorizontalBearingX.Value;
+                    float bearingY = faceForThread.Glyph.Metrics.HorizontalBearingY.Value;
                     float fromTop = glyphHeight - bearingY;
-                    var _characterShape = BuildShape(face, _character, bearingX, fromTop);
+                    var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop);
 
 
 
@@ -126,8 +137,8 @@ public class FontManager : IDisposable
                     MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
                     var _pixmap = new Pixmap<Color3>(glyphSize, glyphSize);
 
-                    float glyphWidth = face.Glyph.Metrics.Width.Value;
-                    float AdvanceX = face.Glyph.Advance.X.Value;
+                    float glyphWidth = faceForThread.Glyph.Metrics.Width.Value;
+                    float AdvanceX = faceForThread.Glyph.Advance.X.Value;
 
                     var innerSize = glyphSize - FontAtlas.PADDING * 2;
                     double _range = FontAtlas.RANGE * ((double)glyphWidth / innerSize);
@@ -187,38 +198,45 @@ public class FontManager : IDisposable
                         _pixels[k * 4 + 3] = 255;
                     }
 
-                    GlyphData glyphData = new()
+                    GlyphData _glyphData = new()
                     {
-                        Advance = face.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
-                        BearingX = face.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
-                        BearingY = face.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
+                        Advance = faceForThread.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
+                        BearingX = faceForThread.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
+                        BearingY = faceForThread.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
                         // Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
                         Width = (float)_right / unitsPerEm,
                         Height = (float)_top / unitsPerEm,
                     };
 
+                    // Console.WriteLine("Char: " + _character + " glyph: " + _glyphData);
 
-                    loadedFonts[name].AddGlyph(_character, _pixels, ref glyphData);
-                    // Console.WriteLine($"Glyph '{_character}': Data= {glyphData} ");
-                    loadedFonts[name].Glyphs[_character] = glyphData;
 
+                    lock (loadedFonts[name])
+                    {
+                        loadedFonts[name].AddGlyph(_character, _pixels, ref _glyphData);
+                        // Console.WriteLine($"Glyph '{_character}': Data= {glyphData} ");
+                        loadedFonts[name].Glyphs[_character] = _glyphData;
+                    }
                 }
                 else
                 {
                     GlyphData _glyphData = new()
                     {
-                        Advance = face.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
-                        BearingX = face.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
-                        BearingY = face.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
+                        Advance = faceForThread.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
+                        BearingX = faceForThread.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
+                        BearingY = faceForThread.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
                     };
                     loadedFonts[name].Glyphs[_character] = _glyphData;
                 }
-            }
+            });
 
             loadedFonts[name].EndRecording();
         }
 
+        foreach (var f in threadLocalFace.Values) f.Dispose();
+        stopwatch.Stop();
 
+        Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
     public FontAtlas GetFontAtlas(string path) => loadedFonts[path];
