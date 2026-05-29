@@ -16,6 +16,7 @@ struct VertexOutput
     nointerpolation float2 size;
 
     nointerpolation uint fontIndex;
+    nointerpolation uint char;
 };
 
 // --- Bindings ---
@@ -37,6 +38,7 @@ VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uni
     output.color = textData.color;
 
     output.fontIndex = textData.fontIndex;
+    output.char = input.Char;
 
     return output;
 }
@@ -51,14 +53,45 @@ float median(float r, float g, float b)
     return max(min(r, g), min(max(r, g), b));
 }
 
+float IsChar(uint8_t ascii) {
+    return ascii == 65 ? 1 : 0;
+}
+
 [shader("fragment")]
-FragmentOutput FragmentMain(VertexOutput input)
+FragmentOutput FragmentMain(VertexOutput input, uniform uint64_t _pad0, uniform uint64_t _pad1, uniform CharacterData *characterDataPtr)
 // FragmentOutput FragmentMain(VertexOutput input, uniform float screenPixelRange)
 {
 
     FragmentOutput output;
 
-    float3 msd = textures[input.fontIndex].Sample(sampler, input.UV).rgb;
+    CharacterData characterData = characterDataPtr[65];
+
+    float2 scaledUV = input.UV;
+
+    // output.color = float4(characterData.Scale/2, 0, 0, 1);
+    // return output;
+    // scaledUV.y *= characterData.Scale;
+    // scaledUV.y += characterData.BearingY;
+    // scaledUV.y = (input.UV.y - characterData.BearingY) * characterData.Scale + characterData.UV.x;
+
+    float glyphStart = characterData.BearingY;                 // where glyph starts in 0..1 quad space
+    float glyphEnd = glyphStart + (1.0 / characterData.Scale); // where glyph ends
+
+    // remap so glyph portion maps to full atlas UV range
+    float t = (input.UV.y - glyphStart) * characterData.Scale;
+
+    // then map t (0..1) to atlas UV range
+    scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
+
+    // float glyphStart = characterData.BearingY;
+    // float glyphEnd = glyphStart + (1.0 / characterData.Scale);
+    // float t = (input.UV.y - glyphStart) * characterData.Scale;
+    // float sampledY = lerp(characterData.UV.x, characterData.UV.y, t);
+
+    // output.color = float4(characterData.Scale/2, 0, 0, 1);
+    // return output;
+
+    float3 msd = textures[input.fontIndex].Sample(sampler, scaledUV).rgb;
     float sd = median(msd.x, msd.y, msd.z);
 
     float w = fwidth(sd);
@@ -71,6 +104,8 @@ FragmentOutput FragmentMain(VertexOutput input)
     float opacity = smoothstep(0.5 - width, 0.5 + width, sd);
 
     output.color = float4(input.color.xyz, opacity);
+
+    // output.color = float4(IsChar(input.char), 0,0, opacity);
 
     // float2 dx = ddx(input.UV);
     // float2 dy = ddy(input.UV);

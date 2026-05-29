@@ -8,7 +8,7 @@ public static class ObjectsManager
 {
     public static readonly List<RuntimeModelData> Elements = [];
     public static uint LastCreatedIndex = 0;
-    public static RuntimeObject AddObject(ObjectShader objectShader, ModelData<ushort> modelData, RuntimeModelData? parent = null)
+    public static RuntimeObject AddObject(ObjectShader objectShader, ObjectModelData<ushort> modelData, RuntimeModelData? parent = null)
     {
         uint objectIndex = LastCreatedIndex++;
         RuntimeObject runtimeModelData = new(modelData, objectIndex, parent);

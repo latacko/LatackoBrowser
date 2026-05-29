@@ -8,11 +8,11 @@ using Vulkan;
 
 namespace TextCore;
 
-public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
+public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData<ushort>>
 {
     public Slot Slot;
     public Properties Properties;
-    FontAtlas fontAtlas;
+    internal FontAtlas fontAtlas;
 
     public string Text;
 
@@ -29,7 +29,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     public void GenerateMesh()
     {
-        Vertex[] _vertices = new Vertex[(Text.Length*2) * 4];
+        TextVertex[] _vertices = new TextVertex[(Text.Length*2) * 4];
         ushort[] _indices = new ushort[(Text.Length*2) * 6];
         float _cursorX = 0;
         int _j = 0;
@@ -40,16 +40,16 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         for (int i = 0; i < _textLength; i++)
         {
             GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
-            Console.WriteLine("Char: " + Text[i] + " glyph data: " + glyphData);
+            // Console.WriteLine("Char: " + Text[i] + " glyph data: " + glyphData + " ascii " + (sbyte)Text[i]);
 
             float _width = glyphData.Width;
 
             if (_width != 0)
             {
                 _width /= fontAtlas.height;
-                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, ref _j);
+                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (sbyte)Text[i], ref _j);
                 _cursorX += _width;
-                Console.WriteLine("Char width: " + _width);
+                // Console.WriteLine("Char width: " + _width);
             }
 
             _width = glyphData.Advance-glyphData.Width-glyphData.BearingX + (i+1<_textLength ? fontAtlas.Glyphs[Text[i+1]].BearingX : 0);
@@ -57,9 +57,9 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
             if (_width != 0)
             {
                 _width /= fontAtlas.height;
-                GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, ref _j);
+                GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, 0, ref _j);
                 _cursorX += _width;
-                Console.WriteLine("Char width: " + _width);
+                // Console.WriteLine("Char width: " + _width);
             }
 
             // _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
@@ -78,8 +78,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
 
-        Console.Write("Width without scale: " + widthWithoutScale);
-        Console.WriteLine($"widthWithoutScale={widthWithoutScale} fontSize={Properties.fontSize.Value} layoutSize={GetLayoutSize()}");
+        // Console.Write("Width without scale: " + widthWithoutScale);
+        // Console.WriteLine($"widthWithoutScale={widthWithoutScale} fontSize={Properties.fontSize.Value} layoutSize={GetLayoutSize()}");
 
         TextManager.Instance.Update(this);
     }
@@ -90,15 +90,15 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
         bounds.Height = Properties.fontSize.Value;
     }
 
-    public void GenerateQuad(Vertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, ref int i)
+    public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, sbyte charAscii, ref int i)
     {
         int _vericesIndex = i * 4;
         int _indicesIndex = i * 6;
 
-        vertices[_vericesIndex + 0] = new Vertex(new(x, 0, 0), new(UVMin.X, UVMin.Y));
-        vertices[_vericesIndex + 1] = new Vertex(new(x, 1, 0), new(UVMin.X, UVMax.Y));
-        vertices[_vericesIndex + 2] = new Vertex(new(x + width, 1, 0), new(UVMax.X, UVMax.Y));
-        vertices[_vericesIndex + 3] = new Vertex(new(x + width, 0, 0), new(UVMax.X, UVMin.Y));
+        vertices[_vericesIndex + 0] = new TextVertex(new(x, 0, 0), new(UVMin.X, UVMin.Y), (uint)charAscii);
+        vertices[_vericesIndex + 1] = new TextVertex(new(x, 1, 0), new(UVMin.X, UVMax.Y), (uint)charAscii);
+        vertices[_vericesIndex + 2] = new TextVertex(new(x + width, 1, 0), new(UVMax.X, UVMax.Y), (uint)charAscii);
+        vertices[_vericesIndex + 3] = new TextVertex(new(x + width, 0, 0), new(UVMax.X, UVMin.Y), (uint)charAscii);
 
         // vertices[_vericesIndex + 0] = new Vertex(new(x, 0, 0), new(0, 0));
         // vertices[_vericesIndex + 1] = new Vertex(new(x, 1, 0), new(0, 1));
@@ -207,7 +207,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData>
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale / fontAtlas.height * Properties.fontSize.Value, Properties.fontSize.Value);
+        return new Vector2D<float>(widthWithoutScale  * Properties.fontSize.Value, fontAtlas.height * Properties.fontSize.Value);
     }
 
 

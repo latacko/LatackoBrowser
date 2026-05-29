@@ -73,9 +73,12 @@ public class FontAtlas : IDisposable
 
     public Queue<WaitingCharacter> WaitingCharacters = new();
 
+    internal BufferInfo<CharacterDataGPU> charactersBiffer;
     public unsafe void Create(uint id)
     {
         this.id = id;
+
+        charactersBiffer = new(256, 0);
         ImageHelper.CreateImage(ATLAS_WIDTH, ATLAS_HEIGHT, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, ref atlasImage, ref atlasMemory);
         imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit);
 
@@ -174,6 +177,7 @@ public class FontAtlas : IDisposable
         // string.Join(",", pixels.Take(12)));
 
         byte* ptr = (byte*)(bufferData + (nint)_offset);
+
         // for (int i = 0; i < BUFFER_GLYPH_SIZE; i += 4)
         // {
         //     ptr[i + 0] = 255;   // R
@@ -216,6 +220,17 @@ public class FontAtlas : IDisposable
             (imageX * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_WIDTH,
             (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
         );
+
+
+        ((CharacterDataGPU*)charactersBiffer.Mapped)[(uint)character] = new()
+        {
+            UV = new Vector2D<float>(glyph.UVMin.Y, glyph.UVMax.Y),
+            Scale = height/glyph.Height,
+            BearingY = (glyph.Height-glyph.BearingY)/height
+        };
+
+        Console.WriteLine("Scale for " +character + " ascii " + (uint)character +" is: " + height/glyph.Height);
+        Console.WriteLine("BearingY for " +character+" is: " + (glyph.Height-glyph.BearingY)/height);
 
         createdGlyphs+=1;
 
@@ -300,6 +315,8 @@ public class FontAtlas : IDisposable
 
     public unsafe void Dispose()
     {
+        charactersBiffer.Dispose();
+
         CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
         CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, stagingBuffer, null);
         CreateVulkan.vk.FreeMemory(LogicalDevice.device, stagingBufferMemory, null);

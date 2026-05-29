@@ -59,6 +59,20 @@ public unsafe class TextShader : BaseShader
         DepthBiasEnable = Vk.False,
     };
 
+    protected override PushConstantRange[] GetPushConstantRanges() => [
+        new()
+        {
+            StageFlags = ShaderStageFlags.VertexBit,
+            Size       = sizeof(ulong)*2 // camera ubo & objects ubo
+        },
+        new()
+        {
+            StageFlags = ShaderStageFlags.FragmentBit,
+            Offset = sizeof(ulong)*2,
+            Size       = sizeof(ulong) // characters data
+        },
+    ];
+
     bool isWireFrameRendering = false;
 
     protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
@@ -68,7 +82,11 @@ public unsafe class TextShader : BaseShader
             if (element.TryGetObjectData(out var data, currentFrame))
             {
                 TextManager.Instance.Update(currentFrame, element.ObjectIndex, data);
+                Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBiffer.DeviceAddress}");
             }
+
+            fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBiffer.DeviceAddress)
+                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.FragmentBit, sizeof(ulong)*2, sizeof(ulong), deviceAddressPtr);
 
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);
         }
@@ -102,5 +120,15 @@ public unsafe class TextShader : BaseShader
             element.Dispose();
         }
         base.Dispose();
+    }
+
+    protected internal override VertexInputBindingDescription GetBindingDescription()
+    {
+        return new TextVertex().GetBindingDescription();
+    }
+
+    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        return new TextVertex().GetAttributeDescriptions();
     }
 }

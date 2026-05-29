@@ -1,6 +1,12 @@
 #language slang 2026
 module UIData;
 
+public struct VertexInput
+{
+    public float3 Position;
+    public float2 UV;
+}
+
 public struct ObjectData
 {
     public float4x4 model;

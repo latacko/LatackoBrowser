@@ -10,7 +10,7 @@ namespace TextCore;
 public class TextManager : BufferManager
 {
     internal static TextManager Instance;
-    internal BufferInfo<Vertex>[] vertexBuffer = new BufferInfo<Vertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextVertex>[] vertexBuffer = new BufferInfo<TextVertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<ushort>[] indicesBuffer = new BufferInfo<ushort>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
@@ -142,7 +142,7 @@ public class TextManager : BufferManager
             PImageInfo = &_imageInfo,
         };
 
-        Console.WriteLine("Registering texture at slot: " + slot);
+        // Console.WriteLine("Registering texture at slot: " + slot);
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);
     }
 
@@ -209,7 +209,7 @@ public class TextManager : BufferManager
 
             if (text.Slot != default)
                 Free(text.Slot);
-            Console.WriteLine("Update data");
+            // Console.WriteLine("Update data");
             text.Slot = Allocate(newBucket);
 
             text.ModelData.vertexOffset = text.Slot.VertexOffset;
@@ -233,10 +233,10 @@ public class TextManager : BufferManager
         {
             if (!text.dirty[currentFrame].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
 
-            Console.WriteLine("Found text that has changed: " + text.Text + " offset: " + text.Slot.VertexOffset + " bucket: " + VertexsPerBucket(text.Slot.Bucket) + " has vertexs: " + text.ModelData.Vertices.Length);
+            // Console.WriteLine("Found text that has changed: " + text.Text + " offset: " + text.Slot.VertexOffset + " bucket: " + VertexsPerBucket(text.Slot.Bucket) + " has vertexs: " + text.ModelData.Vertices.Length);
 
             text.ModelData.Vertices.CopyTo(
-                new Span<Vertex>(((Vertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
+                new Span<TextVertex>(((TextVertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
             );
 
             text.ModelData.Indices.CopyTo(

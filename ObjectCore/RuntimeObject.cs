@@ -5,7 +5,7 @@ using Vulkan;
 
 namespace ObjectCore;
 
-public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData>
+public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectModelData<ushort>>
 {
     public Transform Transform = new();
     public Properties Properties;
@@ -13,7 +13,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData>
 
     public List<RuntimeModelData> Children;
 
-    public RuntimeObject(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
+    public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
     {
         Properties = new(this);
         Layout = new(this);

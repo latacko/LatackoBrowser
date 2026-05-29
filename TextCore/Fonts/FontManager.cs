@@ -43,9 +43,9 @@ public class FontManager : IDisposable
         testShape.InverseYAxis = false;
 
         var testPixmap = new Pixmap<Color3>(100, 100);
-        Console.WriteLine("Test1");
+        // Console.WriteLine("Test1");
         MSDF.GenerateMSDF(testPixmap, testShape, 4.0, new Vector2(1, 1), new Vector2(0, 0));
-        Console.WriteLine("Test2");
+        // Console.WriteLine("Test2");
 
         int testNonBlack = 0;
         for (int k = 0; k < 100 * 100; k++)
@@ -53,7 +53,7 @@ public class FontManager : IDisposable
             var c = testPixmap[k % 100, k / 100];
             if (c.R != 0 || c.G != 0 || c.B != 0) testNonBlack++;
         }
-        Console.WriteLine($"Test shape non-black: {testNonBlack}");
+        // Console.WriteLine($"Test shape non-black: {testNonBlack}");
     }
 
     public void LoadFont(string name)
@@ -64,7 +64,7 @@ public class FontManager : IDisposable
             path = "/usr/share/fonts/";
         }
 
-        path += name + ".ttf";
+        path += name;
         if (loadedFonts.ContainsKey(name)) return;
         loadedFonts.Add(name, new());
         Console.WriteLine(path);
@@ -72,7 +72,6 @@ public class FontManager : IDisposable
 
         uint renderSize = 64 * 4;
         face.SetCharSize(0, 64 * 64, 72, 72);
-
         int glyphSize = FontAtlas.GLYPH_SIZE;
 
         loadedFonts[name].Create(lastId++);
@@ -99,6 +98,7 @@ public class FontManager : IDisposable
             {
                 var _character = preload[j];
                 face.LoadChar(_character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
+
                 // Console.WriteLine("Info for char |" + _character + "|");
                 // Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
                 // Console.WriteLine(" >Bearing X: " + face.Glyph.Metrics.HorizontalBearingX);
@@ -115,7 +115,7 @@ public class FontManager : IDisposable
 
 
 
-                    Console.WriteLine(_characterShape.Contours.Count);
+                    // Console.WriteLine(_characterShape.Contours.Count);
 
                     var _isValid = _characterShape.Validate();
                     if (!_isValid)
@@ -129,7 +129,7 @@ public class FontManager : IDisposable
 
                     var innerSize = glyphSize - FontAtlas.PADDING * 2;
                     double _range = FontAtlas.RANGE * ((double)glyphWidth / innerSize);
-                    Console.WriteLine(_range + "range");
+                    // Console.WriteLine(_range + "range");
                     // var _scale = new Vector2(
                     //     innerSize / glyphWidth,
                     //     innerSize / glyphHeight
@@ -151,14 +151,14 @@ public class FontManager : IDisposable
                         innerSize / glyphHeight
                     );
 
-                    Console.WriteLine("Sca;e " + _scale);
+                    // Console.WriteLine("Sca;e " + _scale);
                     double _left = 0;
                     double _right = 0;
                     double _top = 0;
                     double _bottom = 0;
                     _characterShape.GetBounds(ref _left, ref _bottom, ref _right, ref _top);
 
-                    Console.WriteLine("For char: " + _character + $" bounding box is: MIN({_left}, {_top}) MAX({_right},{_bottom})");
+                    // Console.WriteLine("For char: " + _character + $" bounding box is: MIN({_left}, {_top}) MAX({_right},{_bottom})");
                     // double centerX = (_left + _right) * 0.5;
                     // double centerY = (_top + _bottom) * 0.5;
                     // var boundsCenter = new Vector2((float)centerX, (float)centerY) * _scale;
@@ -190,13 +190,14 @@ public class FontManager : IDisposable
                         Advance = face.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
                         BearingX = face.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
                         BearingY = face.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
-                        Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
+                        // Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
+                        Width = (float)_right / unitsPerEm,
                         Height = face.Glyph.Metrics.Height.Value / unitsPerEm,
                     };
 
 
                     loadedFonts[name].AddGlyph(_character, _pixels, ref glyphData);
-                    Console.WriteLine($"Glyph '{_character}': Data= {glyphData} ");
+                    // Console.WriteLine($"Glyph '{_character}': Data= {glyphData} ");
                     loadedFonts[name].Glyphs[_character] = glyphData;
 
                 }
@@ -253,7 +254,7 @@ public class FontManager : IDisposable
             // Console.WriteLine("Contour starts:");
             for (int j = contourStart; j <= contourEnd; j++)
             {
-                Console.WriteLine("Point: " + j + " has pos of " + GetPointCoords(outline.Points[j]) + " tag: " + outline.Tags[j]);
+                // Console.WriteLine("Point: " + j + " has pos of " + GetPointCoords(outline.Points[j]) + " tag: " + outline.Tags[j]);
                 _points.Add(new()
                 {
                     Pos = GetPointCoords(outline.Points[j]),
@@ -265,26 +266,26 @@ public class FontManager : IDisposable
             int _outlineStart = 0;
             for (int j = 0; j < _points.Count; j++)
             {
-                Console.WriteLine("J: " + j + $" tag={Convert.ToString(_points[j].Tag, 2).PadLeft(8, '0')}");
+                // Console.WriteLine("J: " + j + $" tag={Convert.ToString(_points[j].Tag, 2).PadLeft(8, '0')}");
                 if ((_points[j].Tag & 0b00000001) == 0)
                 {
-                    if (j+1 < _points.Count && (_points[j + 1].Tag & 0b00000001) == 0)
+                    if (j + 1 < _points.Count && (_points[j + 1].Tag & 0b00000001) == 0)
                     {
-                        Console.WriteLine("Two consecutives points off the curve. Adding point in the middle");
+                        // Console.WriteLine("Two consecutives points off the curve. Adding point in the middle");
                         _points.Insert(j + 1, new()
                         {
                             Pos = Vector2.Lerp(_points[j].Pos, _points[j + 1].Pos, 0.5f),
                             Tag = 0b00000001,
                         });
-                        Console.WriteLine(string.Join(", ", _points));
+                        // Console.WriteLine(string.Join(", ", _points));
                     }
-                    Console.WriteLine($"Skipping {j} of the curve");
+                    // Console.WriteLine($"Skipping {j} of the curve");
                     continue;
                 }
 
                 if (j == 0)
                 {
-                    Console.WriteLine($"Skipping {j} it is start and the end.");
+                    // Console.WriteLine($"Skipping {j} it is start and the end.");
                     continue;
                 }
 
@@ -293,20 +294,20 @@ public class FontManager : IDisposable
                 Vector2 _startPoint = _points[_outlineStart].Pos;
                 Vector2 _endPoint = _points[_outLineEnds].Pos;
 
-                Console.Write("From " + _outlineStart + " to " + _outLineEnds + " is ");
+                // Console.Write("From " + _outlineStart + " to " + _outLineEnds + " is ");
                 switch (_outLineEnds - _outlineStart)
                 {
                     case 1:
-                        Console.WriteLine(" linear");
+                        // Console.WriteLine(" linear");
                         contour.Edges.Add(new LinearSegment(_startPoint, _endPoint, EdgeColor.White));
                         break;
                     case 2:
-                        Console.WriteLine(" quadratic");
+                        // Console.WriteLine(" quadratic");
                         Vector2 _controlPoint = _points[_outlineStart + 1].Pos;
                         contour.Edges.Add(new QuadraticSegment(_startPoint, _controlPoint, _endPoint, EdgeColor.White));
                         break;
                     case 3:
-                        Console.WriteLine(" cubic");
+                        // Console.WriteLine(" cubic");
                         _controlPoint = _points[_outlineStart + 1].Pos;
                         Vector2 _controlPoint2 = _points[_outlineStart + 2].Pos;
                         contour.Edges.Add(new CubicSegment(_startPoint, _controlPoint, _controlPoint2, _endPoint, EdgeColor.White));
@@ -322,12 +323,12 @@ public class FontManager : IDisposable
             {
                 Vector2 _startPos = _points[_points.Count - 2].Pos;
                 Vector2 _controlPoint = _points[_points.Count - 1].Pos;
-                Console.WriteLine("Closing shape from " + (_points.Count - 2) + " to 0 is quadratic");
+                // Console.WriteLine("Closing shape from " + (_points.Count - 2) + " to 0 is quadratic");
                 contour.Edges.Add(new QuadraticSegment(_startPos, _controlPoint, _endPoint2, EdgeColor.White));
             }
             else
             {
-                Console.WriteLine("Closing shape from " + (_points.Count - 1) + " to 0 is line");
+                // Console.WriteLine("Closing shape from " + (_points.Count - 1) + " to 0 is line");
                 Vector2 _startPos = _points[_points.Count - 1].Pos;
                 contour.Edges.Add(new LinearSegment(_startPos, _endPoint2, EdgeColor.White));
             }

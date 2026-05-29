@@ -2,27 +2,28 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using Units;
 
-namespace Units
+namespace ObjectCore
 {
-    public struct Vertex(Vector3D<float> pos, Vector2D<float> textCoord)
+    public struct ObjectVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVertex
     {
         public Vector3D<float> Pos = pos;
         public Vector2D<float> TextCoord = textCoord;
 
-        public static VertexInputBindingDescription GetBindingDescription()
+        public VertexInputBindingDescription GetBindingDescription()
         {
             VertexInputBindingDescription bindingDescription = new()
             {
                 Binding = 0,
-                Stride = (uint)Unsafe.SizeOf<Vertex>(),
+                Stride = (uint)Unsafe.SizeOf<ObjectVertex>(),
                 InputRate = VertexInputRate.Vertex,
             };
 
             return bindingDescription;
         }
 
-        public static VertexInputAttributeDescription[] GetAttributeDescriptions()
+        public VertexInputAttributeDescription[] GetAttributeDescriptions()
         {
             var attributeDescriptions = new[]
             {
@@ -31,14 +32,14 @@ namespace Units
                     Binding = 0,
                     Location = 0,
                     Format = Format.R32G32B32Sfloat,
-                    Offset = (uint)Marshal.OffsetOf<Vertex>(nameof(Pos)),
+                    Offset = (uint)Marshal.OffsetOf<ObjectVertex>(nameof(Pos)),
                 },
                 new VertexInputAttributeDescription()
                 {
                     Binding = 0,
                     Location = 1,
                     Format = Format.R32G32Sfloat,
-                    Offset = (uint)Marshal.OffsetOf<Vertex>(nameof(TextCoord)),
+                    Offset = (uint)Marshal.OffsetOf<ObjectVertex>(nameof(TextCoord)),
                 }
             };
 

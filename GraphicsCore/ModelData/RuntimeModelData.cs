@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using GraphicsCore;
 using Silk.NET.Maths;
+using Units;
 using Vulkan;
 
 [assembly: InternalsVisibleTo("ObjectCore")]
@@ -18,7 +19,7 @@ public abstract class RuntimeModelData : IDisposable
         Model = 1 << 2,
         All = Matrix | Data | Model
     }
-    public ModelData<ushort> ModelData { get; private set; }
+    public IModelData ModelData;
     public uint ObjectIndex;
 
     public EventsBase Events;
@@ -29,7 +30,7 @@ public abstract class RuntimeModelData : IDisposable
     public Vector2D<float> ParentSize;
     public RuntimeModelData? Parent;
 
-    public RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
+    public RuntimeModelData(IModelData modelData, uint objectIndex, RuntimeModelData? parent = null)
     {
         ModelData = modelData;
         ObjectIndex = objectIndex;
@@ -92,13 +93,21 @@ public abstract class RuntimeModelData : IDisposable
     }
 }
 
-public abstract class RuntimeModelData<TSelf, TObjectData> : RuntimeModelData
-    where TSelf : RuntimeModelData<TSelf, TObjectData> where TObjectData : unmanaged
+public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : RuntimeModelData
+    where TSelf : RuntimeModelData<TSelf, TObjectData, TModelData>
+    where TObjectData : unmanaged
+    where TModelData : IModelData
 {
     public new Events<TSelf> Events
     {
         get => (Events<TSelf>)base.Events;
         protected set => base.Events = value;
+    }
+
+    public new TModelData ModelData
+    {
+        get => (TModelData)base.ModelData;
+        protected set => base.ModelData = value;
     }
 
     public TSelf SetEvents(Func<Events<TSelf>, Events<TSelf>> setEvents)
@@ -107,7 +116,7 @@ public abstract class RuntimeModelData<TSelf, TObjectData> : RuntimeModelData
         return (TSelf)this;
     }
 
-    protected RuntimeModelData(ModelData<ushort> modelData, uint objectIndex, RuntimeModelData? parent = null)
+    protected RuntimeModelData(TModelData modelData, uint objectIndex, RuntimeModelData? parent = null)
         : base(modelData, objectIndex, parent) { }
 
     public abstract bool TryGetObjectData(out TObjectData data, uint frame);

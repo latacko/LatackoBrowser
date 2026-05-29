@@ -95,4 +95,14 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         }
         base.Dispose();
     }
+
+    protected internal override VertexInputBindingDescription GetBindingDescription()
+    {
+        return new ObjectVertex().GetBindingDescription();
+    }
+
+    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        return new ObjectVertex().GetAttributeDescriptions();
+    }
 }

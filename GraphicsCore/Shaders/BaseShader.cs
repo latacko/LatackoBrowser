@@ -83,6 +83,9 @@ public unsafe abstract class BaseShader : IDisposable
         },
     ];
 
+    protected internal abstract VertexInputBindingDescription GetBindingDescription();
+    protected internal abstract VertexInputAttributeDescription[] GetAttributeDescriptions();
+
     public virtual void CreatePipeline(bool wireFrameRendering = false)
     {
         #region Pipeline layout
@@ -143,8 +146,8 @@ public unsafe abstract class BaseShader : IDisposable
 
         PipelineShaderStageCreateInfo[] stages = [vertStage, fragStage];
 
-        var bindingDesc = Vertex.GetBindingDescription();
-        var attributeDescs = Vertex.GetAttributeDescriptions();
+        var bindingDesc = GetBindingDescription();
+        var attributeDescs = GetAttributeDescriptions();
 
         var depthStencil = GetDepthStencil();
         var colorBlend = GetColorBlend();

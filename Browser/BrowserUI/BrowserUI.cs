@@ -10,8 +10,8 @@ public class BrowserUI
 {
     public RuntimeObject TopBar;
     public RuntimeObject Karta;
-    public RuntimeModelData TextTest;
-    public RuntimeModelData BottomBar;
+    public RuntimeText TextTest;
+    public RuntimeText BottomBar;
 
 
 
@@ -62,11 +62,11 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("ADAMIE WITAJ", BrowserWindow.loadedShaders[1] as TextShader, null)
+        TextTest = Browser.TextManager.AddObject("ADAMIE WITJ", BrowserWindow.loadedShaders[1] as TextShader, null)
         .SetProperties(properties=> properties
             .SetFontSize(new (24))
             .SetCursor(CursorType.text)
-            .SetFont("open-sans/OpenSans-Regular")
+            .SetFont("open-sans/OpenSans-Regular.ttf")
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))

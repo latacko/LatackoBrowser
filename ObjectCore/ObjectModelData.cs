@@ -1,21 +1,16 @@
 using System.Numerics;
+using GraphicCore;
 using Units;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace GraphicCore;
+namespace ObjectCore;
 
-public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
+public class ObjectModelData<TIndex> : IModelData where TIndex : unmanaged, IBinaryInteger<TIndex>
 {
-    public Vertex[] Vertices;
+    public ObjectVertex[] Vertices;
     public TIndex[] Indices;
 
-    public Buffer vertexBuffer;
-    public uint vertexOffset;
-
-    public Buffer indexBuffer;
-    public uint indexOffset;
-
-    public ModelData(Vertex[] vertices, TIndex[] indices)
+    public ObjectModelData(ObjectVertex[] vertices, TIndex[] indices)
     {
         if (typeof(TIndex) != typeof(byte) &&
             typeof(TIndex) != typeof(ushort) &&
@@ -28,5 +23,7 @@ public class ModelData<TIndex> where TIndex : unmanaged, IBinaryInteger<TIndex>
         Indices = indices;
     }
 
-    public int GetIndicesCount()=>Indices.Length;
+    public override int GetIndicesCount()=>Indices.Length;
+
+    public override int GetVertexCount()=>Vertices.Length;
 }
