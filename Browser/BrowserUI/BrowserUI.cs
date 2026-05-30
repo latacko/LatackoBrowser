@@ -12,6 +12,8 @@ public class BrowserUI
 {
     public RuntimeObject TopBar;
     public RuntimeObject Karta;
+    public RuntimeObject hellothere;
+    public RuntimeText hellothereText;
     public RuntimeText TextTest;
     public RuntimeText BottomBar;
 
@@ -19,6 +21,7 @@ public class BrowserUI
     public void Create()
     {
         var _texture = TexturesManager.LoadTexture("textures/everythingIsFine.png");
+        var _texture2 = TexturesManager.LoadTexture("textures/hellothere.png");
 
 
         TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture)
@@ -66,9 +69,30 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("OLIIIIIIIII tekst naprawiony w koncu!!!", BrowserWindow.loadedShaders[1] as TextShader, null)
-        .SetProperties(properties=> properties
-            .SetFontSize(new (50))
+        TextTest = Browser.TextManager.AddObject("OLIIIIIIIII tekst naprawiony w końcu!!!😅", BrowserWindow.loadedShaders[1] as TextShader, null)
+        .SetProperties(properties => properties
+            .SetFontSize(new(50))
+            .SetCursor(CursorType.text)
+            .SetFont("stix-fonts/STIXTwoText-Regular.otf")
+        );
+
+        hellothere = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture2)
+        .SetLayout(
+            (layout) => layout
+                .SetLeft(new(25, UnitType.lvw)).SetTop(new(0))
+                .SetWidth(new(50, UnitType.lvw)).SetHeight(new(100, UnitType.px))
+        )
+        .SetTransform(transform=> transform
+            .SetTranslate(new UIUnit(-25, UnitType.lvw), new())
+        )
+        .SetProperties(
+            (properties) => properties
+                .SetBorderRadius(new(20, UnitType.px))
+        );
+
+        hellothereText = Browser.TextManager.AddObject("HELLO THERE", BrowserWindow.loadedShaders[1] as TextShader, hellothere)
+        .SetProperties(properties => properties
+            .SetFontSize(new(25))
             .SetCursor(CursorType.text)
             .SetFont("stix-fonts/STIXTwoText-Regular.otf")
         );

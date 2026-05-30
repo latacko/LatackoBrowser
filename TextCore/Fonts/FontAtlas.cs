@@ -9,7 +9,8 @@ namespace TextCore;
 
 public class FontAtlas : IDisposable
 {
-    internal uint id {get; private set;} = 0;
+    internal uint id { get; private set; } = 0;
+    internal string name { get; private set; } = "";
     struct UploadRegion
     {
         internal ulong startOffset => endOffset - size;
@@ -76,9 +77,10 @@ public class FontAtlas : IDisposable
     public Queue<WaitingCharacter> WaitingCharacters = new();
 
     internal BufferInfo<CharacterDataGPU> charactersBuffer;
-    public unsafe void Create(uint id)
+    public unsafe FontAtlas(uint id, string name)
     {
         this.id = id;
+        this.name = name;
 
         charactersBuffer = new(1114111, 0);
         ImageHelper.CreateImage(ATLAS_WIDTH, ATLAS_HEIGHT, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, ref atlasImage, ref atlasMemory);
@@ -322,6 +324,19 @@ public class FontAtlas : IDisposable
         // CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, &fence, Vk.True, ulong.MaxValue);
         // Console.WriteLine("Ended recording " + recordedGlyphs + " glyphs");
 
+    }
+
+    public void ScanText(string text)
+    {
+        string toLoad = "";
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (Glyphs.ContainsKey(text[i])) continue;
+            Console.WriteLine("Nie ma " + text[i]);
+            toLoad += text[i];
+        }
+        if (toLoad.Length > 0)
+            FontManager.Instance.LoadFont(name, toLoad);
     }
 
     public unsafe void Dispose()

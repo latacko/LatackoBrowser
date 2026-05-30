@@ -28,8 +28,9 @@ public class CoreManager : IDisposable
 
     public void Start()
     {
-        fontManager.LoadFont("open-sans/OpenSans-Regular.ttf");
+        // fontManager.LoadFont("open-sans/OpenSans-Regular.ttf");
         fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
+        fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
     }
     uint _ticksToReset = 0;
     public void Update(double deltaTime)

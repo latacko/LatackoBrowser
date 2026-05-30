@@ -35,7 +35,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         int _j = 0;
 
         int _textLength = Text.Length;
-
+        fontAtlas.ScanText(Text);
 
         for (int i = 0; i < _textLength; i++)
         {
@@ -46,9 +46,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
             if (_width != 0)
             {
                 _width /= fontAtlas.height;
-                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (sbyte)Text[i], ref _j);
+                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (uint)Text[i], ref _j);
                 _cursorX += _width;
-                // Console.WriteLine("Char width: " + _width);
             }
 
             _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? fontAtlas.Glyphs[Text[i + 1]].BearingX : 0);
@@ -58,14 +57,9 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
                 _width /= fontAtlas.height;
                 GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, 0, ref _j);
                 _cursorX += _width;
-                // Console.WriteLine("Char width: " + _width);
             }
 
             _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
-
-            // Console.WriteLine("Space width: " + _width);
-
-            // GenerateQuad(_vertices, _indices, _width, new(0, 0), new(0, 0), _cursorX, ref _j);
 
             _cursorX += _width;
         }
@@ -77,9 +71,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
 
-        // Console.Write("Width without scale: " + widthWithoutScale);
-        // Console.WriteLine($"widthWithoutScale={widthWithoutScale} fontSize={Properties.fontSize.Value} layoutSize={GetLayoutSize()}");
-
         TextManager.Instance.Update(this);
     }
 
@@ -89,7 +80,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         bounds.Height = Properties.fontSize.Value;
     }
 
-    public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, sbyte charAscii, ref int i)
+    public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i)
     {
         int _vericesIndex = i * 4;
         int _indicesIndex = i * 6;
@@ -144,13 +135,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
     public override Bounds GetBounds() => bounds;
 
     public override CursorType GetCursorType() => Properties.Cursor;
-
-    bool isWireFrameRendering = false;
-
-    public void SetWireframe(bool wireframe)
-    {
-        isWireFrameRendering = wireframe;
-    }
 
     public override bool TryGetObjectData(out TextData data, uint frame)
     {
@@ -224,6 +208,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     protected internal override void UpdatePosition()
     {
+        AddFlag(DirtyFlags.Matrix);
         return;
     }
 }

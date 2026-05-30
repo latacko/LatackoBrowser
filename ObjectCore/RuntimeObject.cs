@@ -40,7 +40,9 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
                 UpdateChildrenSizes();
             }
             if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
+            {
                 UpdatePosition();
+            }
 
             Layout.dirty &= Layout.LayoutDirty.Position;
             Layout.dirty &= Layout.LayoutDirty.Size;
@@ -86,8 +88,6 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     protected void UpdateChildrenSizes()
     {
-        relativePos = (Parent != null ? Parent.relativePos: new Vector3D<float>()) + new Vector3D<float>(GetLayoutLeft(), GetLayoutTop(), 0);
-        relativeRot = (Parent != null ? Parent.relativeRot: new Vector3D<float>()) + Transform.Rotation;
         if (Children == null) return;
 
         foreach (var children in Children)
@@ -98,12 +98,15 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     protected internal override void UpdatePosition()
     {
+        relativePos = (Parent != null ? Parent.relativePos : new Vector3D<float>()) + new Vector3D<float>(GetLayoutLeft(), GetLayoutTop(), 0);
+        relativeRot = (Parent != null ? Parent.relativeRot : new Vector3D<float>()) + Transform.Rotation;
         AddFlag(DirtyFlags.Matrix);
         Layout.UpdateBoundsOffset();
         if (Children == null) return;
 
         foreach (var child in Children)
         {
+            
             child.UpdatePosition();
         }
     }

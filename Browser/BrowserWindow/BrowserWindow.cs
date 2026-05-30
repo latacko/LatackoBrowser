@@ -125,10 +125,14 @@ public unsafe partial class BrowserWindow
         coreManager.Update(deltaTime);
 
         browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
-            .SetTop(new(100 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
-            .SetWidth(new(800 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
-            .SetHeight(new(300 + MathF.Sin(timeFromStart)*100, Units.UnitType.px))
+            .SetTop(new(100 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
+            .SetWidth(new(800 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
+            .SetHeight(new(300 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
             );
+
+        browserUI.hellothere.SetLayout(browserUI.hellothere.Layout
+        .SetTop(new(-100 + MathF.Sin(timeFromStart) * 200, Units.UnitType.px))
+        );
 
         // browserUI.TopBar.SetTransform(browserUI.TopBar.Transform
         //     .SetRotationZ());
@@ -168,7 +172,7 @@ public unsafe partial class BrowserWindow
 
         UpdateUniformBuffer(currentFrame);
         coreManager.Render(currentFrame);
-        
+
         RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
         // UpdateUniformBufferPerspective(currentFrame);
 

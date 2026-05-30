@@ -57,7 +57,7 @@ public class FontManager : IDisposable
         // Console.WriteLine($"Test shape non-black: {testNonBlack}");
     }
 
-    public void LoadFont(string name)
+    public void LoadFont(string name, string charset = preload)
     {
         string path = "";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -66,28 +66,23 @@ public class FontManager : IDisposable
         }
 
         path += name;
-        if (loadedFonts.ContainsKey(name)) return;
-        loadedFonts.Add(name, new());
+
         Console.WriteLine(path);
         var face = new Face(library, path);
 
         uint renderSize = 64 * 4;
         face.SetCharSize(0, 64 * 64, 72, 72);
         int glyphSize = FontAtlas.GLYPH_SIZE;
-
-        loadedFonts[name].Create(lastId++);
-
-        // float ascender = face.Size.Metrics.Ascender.ToSingle();
-        // float descender = face.Size.Metrics.Descender.ToSingle();
-        // float lineHeight = face.Size.Metrics.Height.ToSingle();
-
         float unitsPerEm = face.UnitsPerEM;
 
-        loadedFonts[name].height = (face.Ascender - face.Descender) / (float)unitsPerEm;
-        loadedFonts[name].lineGap = face.Height / (float)unitsPerEm - loadedFonts[name].height;
-        loadedFonts[name].baseline = face.Ascender / (float)face.UnitsPerEM;
+        if (!loadedFonts.ContainsKey(name))
+        {
+            loadedFonts.Add(name, new(lastId++, name));
 
-        Console.WriteLine($"face.Ascender={face.Ascender} face.Descender={face.Descender} face.Height={face.Height} UnitsPerEM={face.UnitsPerEM}");
+            loadedFonts[name].height = (face.Ascender - face.Descender) / (float)unitsPerEm;
+            loadedFonts[name].lineGap = face.Height / (float)unitsPerEm - loadedFonts[name].height;
+            loadedFonts[name].baseline = face.Ascender / (float)face.UnitsPerEM;
+        }
 
         Stopwatch stopwatch = new();
         stopwatch.Start();
@@ -99,9 +94,11 @@ public class FontManager : IDisposable
             return f;
         }, trackAllValues: true);
 
-        for (int i = 0; i < preload.Length; i += 10)
+        bool insideOut = name.EndsWith(".otf");
+
+        for (int i = 0; i < charset.Length; i += 10)
         {
-            int _length = i + 10 > preload.Length ? preload.Length - i : 10;
+            int _length = i + 10 > charset.Length ? charset.Length - i : 10;
 
             loadedFonts[name].StartRecording(_length);
 
@@ -109,10 +106,10 @@ public class FontManager : IDisposable
             Parallel.For(i, _length + i, j =>
             {
                 var faceForThread = threadLocalFace.Value;
-                var _character = preload[j];
+                var _character = charset[j];
                 faceForThread.LoadChar(_character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
 
-                // Console.WriteLine("Info for char |" + _character + "|");
+                Console.WriteLine("Info for char |" + _character + "|");
                 // Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
                 // Console.WriteLine(" >Bearing X: " + face.Glyph.Metrics.HorizontalBearingX);
                 // Console.WriteLine(" >Bearing Y: " + face.Glyph.Metrics.HorizontalBearingY);
@@ -123,30 +120,24 @@ public class FontManager : IDisposable
                     float glyphHeight = faceForThread.Glyph.Metrics.Height.Value;
                     float bearingX = faceForThread.Glyph.Metrics.HorizontalBearingX.Value;
                     float bearingY = faceForThread.Glyph.Metrics.HorizontalBearingY.Value;
+                    float glyphWidth = faceForThread.Glyph.Metrics.Width.Value;
+                    float AdvanceX = faceForThread.Glyph.Advance.X.Value;
                     float fromTop = glyphHeight - bearingY;
-                    var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop);
+                    var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop, insideOut);
 
-
-
-                    // Console.WriteLine(_characterShape.Contours.Count);
 
                     var _isValid = _characterShape.Validate();
                     if (!_isValid)
                         throw new Exception("Not a shape for " + _character);
+
                     _characterShape.Normalize();
                     MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
                     var _pixmap = new Pixmap<Color3>(glyphSize, glyphSize);
 
-                    float glyphWidth = faceForThread.Glyph.Metrics.Width.Value;
-                    float AdvanceX = faceForThread.Glyph.Advance.X.Value;
+
 
                     var innerSize = glyphSize - FontAtlas.PADDING * 2;
                     double _range = FontAtlas.RANGE * ((double)glyphWidth / innerSize);
-                    // Console.WriteLine(_range + "range");
-                    // var _scale = new Vector2(
-                    //     innerSize / glyphWidth,
-                    //     innerSize / glyphHeight
-                    // );
 
                     // // Shift so the glyph bottom-left maps to (padding, padding)
                     var _translate = new Vector2(
@@ -154,37 +145,18 @@ public class FontManager : IDisposable
                         FontAtlas.PADDING            // Y: with InverseYAxis, row is flipped internally
                     );
 
-
-                    // float pad = FontAtlas.PADDING;
-
-                    // give MSDF actual breathing room
-
                     var _scale = new Vector2(
                         innerSize / glyphWidth,
                         innerSize / glyphHeight
                     );
 
-                    // Console.WriteLine("Sca;e " + _scale);
+
                     double _left = 0;
                     double _right = 0;
                     double _top = 0;
                     double _bottom = 0;
                     _characterShape.GetBounds(ref _left, ref _bottom, ref _right, ref _top);
 
-                    // Console.WriteLine("For char: " + _character + $" bounding box is: MIN({_left}, {_top}) MAX({_right},{_bottom})");
-                    // double centerX = (_left + _right) * 0.5;
-                    // double centerY = (_top + _bottom) * 0.5;
-                    // var boundsCenter = new Vector2((float)centerX, (float)centerY) * _scale;
-                    // var cellCenter = new Vector2(glyphSize, glyphSize) * new Vector2(0.5f, 0.5f);
-
-                    // var _translate = cellCenter - boundsCenter;
-                    // var _translate = new Vector2(
-                    //     0,
-                    //     0
-                    // );
-
-                    // double _range = FontAtlas.RANGE * ((double)glyphWidth / inner);
-                    // double _range = FontAtlas.RANGE;
 
                     MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
 
@@ -200,9 +172,9 @@ public class FontManager : IDisposable
 
                     GlyphData _glyphData = new()
                     {
-                        Advance = faceForThread.Glyph.Metrics.HorizontalAdvance.Value / unitsPerEm,
-                        BearingX = faceForThread.Glyph.Metrics.HorizontalBearingX.Value / unitsPerEm,
-                        BearingY = faceForThread.Glyph.Metrics.HorizontalBearingY.Value / unitsPerEm,
+                        Advance = AdvanceX / unitsPerEm,
+                        BearingX = bearingX / unitsPerEm,
+                        BearingY = bearingY / unitsPerEm,
                         // Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
                         Width = (float)_right / unitsPerEm,
                         Height = (float)_top / unitsPerEm,
@@ -214,7 +186,7 @@ public class FontManager : IDisposable
                     lock (loadedFonts[name])
                     {
                         loadedFonts[name].AddGlyph(_character, _pixels, ref _glyphData);
-                        // Console.WriteLine($"Glyph '{_character}': Data= {glyphData} ");
+                        Console.WriteLine($"Glyph '{_character}': Data= {_glyphData} ");
                         loadedFonts[name].Glyphs[_character] = _glyphData;
                     }
                 }
@@ -247,7 +219,7 @@ public class FontManager : IDisposable
         public byte Tag;
     }
 
-    Shape BuildShape(Face face, char c, float leftPadding, float topPadding)
+    Shape BuildShape(Face face, char c, float leftPadding, float topPadding, bool insideOut)
     {
         Vector2 GetPointCoords(FTVector pos)
         {
@@ -268,10 +240,8 @@ public class FontManager : IDisposable
             //? Iterating throught points
 
             _points.Clear();
-            // Console.WriteLine("Contour starts:");
             for (int j = contourStart; j <= contourEnd; j++)
             {
-                // Console.WriteLine("Point: " + j + " has pos of " + GetPointCoords(outline.Points[j]) + " tag: " + outline.Tags[j]);
                 _points.Add(new()
                 {
                     Pos = GetPointCoords(outline.Points[j]),
@@ -280,29 +250,27 @@ public class FontManager : IDisposable
 
             }
 
+            if (insideOut)
+                _points.Reverse();
+
             int _outlineStart = 0;
             for (int j = 0; j < _points.Count; j++)
             {
-                // Console.WriteLine("J: " + j + $" tag={Convert.ToString(_points[j].Tag, 2).PadLeft(8, '0')}");
                 if ((_points[j].Tag & 0b00000001) == 0)
                 {
                     if (j + 1 < _points.Count && (_points[j + 1].Tag & 0b00000001) == 0)
                     {
-                        // Console.WriteLine("Two consecutives points off the curve. Adding point in the middle");
                         _points.Insert(j + 1, new()
                         {
                             Pos = Vector2.Lerp(_points[j].Pos, _points[j + 1].Pos, 0.5f),
                             Tag = 0b00000001,
                         });
-                        // Console.WriteLine(string.Join(", ", _points));
                     }
-                    // Console.WriteLine($"Skipping {j} of the curve");
                     continue;
                 }
 
                 if (j == 0)
                 {
-                    // Console.WriteLine($"Skipping {j} it is start and the end.");
                     continue;
                 }
 
@@ -311,7 +279,7 @@ public class FontManager : IDisposable
                 Vector2 _startPoint = _points[_outlineStart].Pos;
                 Vector2 _endPoint = _points[_outLineEnds].Pos;
 
-                // Console.Write("From " + _outlineStart + " to " + _outLineEnds + " is ");
+
                 switch (_outLineEnds - _outlineStart)
                 {
                     case 1:
@@ -324,9 +292,9 @@ public class FontManager : IDisposable
                         contour.Edges.Add(new QuadraticSegment(_startPoint, _controlPoint, _endPoint, EdgeColor.White));
                         break;
                     case 3:
-                        // Console.WriteLine(" cubic");
                         _controlPoint = _points[_outlineStart + 1].Pos;
                         Vector2 _controlPoint2 = _points[_outlineStart + 2].Pos;
+
                         contour.Edges.Add(new CubicSegment(_startPoint, _controlPoint, _controlPoint2, _endPoint, EdgeColor.White));
                         break;
                     default:
@@ -350,13 +318,13 @@ public class FontManager : IDisposable
                 contour.Edges.Add(new LinearSegment(_startPos, _endPoint2, EdgeColor.White));
             }
 
-            // Console.WriteLine("Contour ends:");
+
             contourStart = contourEnd + 1;
 
             shape.Contours.Add(contour);
         }
 
-        shape.InverseYAxis = true; // FreeType Y is up, screen Y is down
+        shape.InverseYAxis = true;
         return shape;
     }
 
