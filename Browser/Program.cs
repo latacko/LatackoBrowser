@@ -56,11 +56,6 @@ Console.WriteLine(AppContext.BaseDirectory);
 // Console.WriteLine("Time of my parsing: " + (stopwatch.Elapsed.TotalMilliseconds / iterations) + "ms");
 // Console.WriteLine("My parser is " + anglesharpPerformance/myPerformance + "x faster");
 
-#if RELEASE
-// BenchmarkRunner.Run<ParserBenchmark>();
-BenchmarkRunner.Run<BenchmarkToXDoc>();
-return;
-#endif
 
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
