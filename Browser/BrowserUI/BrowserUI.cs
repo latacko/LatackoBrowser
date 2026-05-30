@@ -13,9 +13,8 @@ public class BrowserUI
     public RuntimeObject TopBar;
     public RuntimeObject Karta;
     public RuntimeObject hellothere;
-    public RuntimeText hellothereText;
-    public RuntimeText TextTest;
-    public RuntimeText BottomBar;
+    public RuntimeTextContainer hellothereText;
+    public RuntimeTextContainer TextTest;
 
 
     public void Create()
@@ -69,7 +68,7 @@ public class BrowserUI
                 })
         );
 
-        TextTest = Browser.TextManager.AddObject("OLIIIIIIIII tekst naprawiony w końcu!!!😅", BrowserWindow.loadedShaders[1] as TextShader, null)
+        TextTest = TextManager.AddText("OLIIIIIIIII tekst naprawiony w końcu!!!😅", null)
         .SetProperties(properties => properties
             .SetFontSize(new(50))
             .SetCursor(CursorType.text)
@@ -90,7 +89,7 @@ public class BrowserUI
                 .SetBorderRadius(new(20, UnitType.px))
         );
 
-        hellothereText = Browser.TextManager.AddObject("HELLO THERE", BrowserWindow.loadedShaders[1] as TextShader, hellothere)
+        hellothereText = TextManager.AddText("HELLO THERE", hellothere)
         .SetProperties(properties => properties
             .SetFontSize(new(25))
             .SetCursor(CursorType.text)

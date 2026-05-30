@@ -10,6 +10,7 @@ namespace TextCore;
 public class TextManager : BufferManager
 {
     internal static TextManager Instance;
+    internal static TextShader textShader = new();
     internal BufferInfo<TextVertex>[] vertexBuffer = new BufferInfo<TextVertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<ushort>[] indicesBuffer = new BufferInfo<ushort>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
@@ -21,6 +22,7 @@ public class TextManager : BufferManager
 
 
     List<RuntimeText> activeTexts = new();
+    public static uint LastCreatedIndex = 0;
 
     internal DescriptorSetLayout textDescriptorLayout;
     internal DescriptorSet textDescriptorSet = new();
@@ -28,6 +30,30 @@ public class TextManager : BufferManager
     public TextManager()
     {
         Instance = this;
+    }
+
+    internal static RuntimeText AddModelText(string text, RuntimeModelData parent)
+    {
+        uint objectIndex = LastCreatedIndex++;
+        RuntimeText runtimeModelData = new(text, objectIndex, parent);
+        if (parent != null)
+        {
+            parent.AddChild(runtimeModelData);
+        }
+
+        return runtimeModelData;
+    }
+
+    public static RuntimeTextContainer AddText(string text, RuntimeModelData parent)
+    {
+        uint objectIndex = LastCreatedIndex++;
+        RuntimeTextContainer runtimeTextContainer = new(text, objectIndex, parent);
+        if (parent != null)
+            parent.AddChild(runtimeTextContainer);
+
+        textShader.elements.Add(runtimeTextContainer);
+
+        return runtimeTextContainer;
     }
 
     public override void RegisterBuffer()
@@ -42,6 +68,8 @@ public class TextManager : BufferManager
         }
         CreateDescriptorsPool();
         RegisterDescriptor();
+
+        textShader.Init();
     }
 
     public unsafe void RegisterDescriptor()
@@ -202,7 +230,7 @@ public class TextManager : BufferManager
 
     public void Update(RuntimeText text)
     {
-        BucketSize newBucket = PickBucket((uint)text.Text.Length*2);
+        BucketSize newBucket = PickBucket((uint)text.Text.Length * 2);
 
         if (newBucket != text.Slot.Bucket) // outgrew bucket — reallocate
         {
@@ -249,6 +277,7 @@ public class TextManager : BufferManager
 
     public override unsafe void Dispose()
     {
+        textShader.Dispose();
         TextDescriptorAllocatorGrowable.DestroyPools();
         CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, textDescriptorLayout, null);
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)

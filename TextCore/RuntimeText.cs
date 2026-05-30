@@ -35,7 +35,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         textContainer = (RuntimeTextContainer)parent;
     }
 
-    public static Vector2D<float> GetTextSize(FontAtlas fontAtlas, string text, float textSize)
+    public static Vector2D<float> GetTextSize(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
     {
         float _cursorX = 0;
         int _textLength = text.Length;

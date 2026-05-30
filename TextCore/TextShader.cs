@@ -7,7 +7,7 @@ namespace TextCore;
 
 public unsafe class TextShader : BaseShader
 {
-    public List<RuntimeText> elements = new();
+    public List<RuntimeTextContainer> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
 
     protected override int GetMaxObjectForShader() => 1000;
@@ -79,16 +79,18 @@ public unsafe class TextShader : BaseShader
     {
         foreach (var element in elements)
         {
-            if (element.TryGetObjectData(out var data, currentFrame))
-            {
-                TextManager.Instance.Update(currentFrame, element.ObjectIndex, data);
-                // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
-            }
-
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
-                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.FragmentBit, sizeof(ulong)*2, sizeof(ulong), deviceAddressPtr);
-
-            CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)element.ModelData.GetIndicesCount(), 1, element.ModelData.indexOffset, (int)element.ModelData.vertexOffset, element.ObjectIndex);
+                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.FragmentBit, sizeof(ulong) * 2, sizeof(ulong), deviceAddressPtr);
+                
+            foreach (var runtimeText in element.runtimeTexts)
+            {
+                if (runtimeText.TryGetObjectData(out var data, currentFrame))
+                {
+                    TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, data);
+                    // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
+                }
+                CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.ModelData.GetIndicesCount(), 1, runtimeText.ModelData.indexOffset, (int)runtimeText.ModelData.vertexOffset, runtimeText.ObjectIndex);
+            }
         }
     }
 
@@ -119,6 +121,7 @@ public unsafe class TextShader : BaseShader
         {
             element.Dispose();
         }
+
         base.Dispose();
     }
 

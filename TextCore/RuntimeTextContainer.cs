@@ -12,7 +12,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     internal FontAtlas fontAtlas;
     public Properties Properties;
     public string Text;
-    List<RuntimeText> runtimeTexts = new();
+    internal List<RuntimeText> runtimeTexts = new();
 
     public RuntimeTextContainer(string text, uint objectIndex, RuntimeModelData? parent = null) : base(null, objectIndex, parent)
     {
@@ -41,6 +41,11 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     public override void AddChild(RuntimeModelData runtimeModelData)
     {
         throw new Exception("You can't add children to this container. It's children are managed internaly");
+    }
+
+    public void AddChild(RuntimeText runtimeText)
+    {
+        runtimeTexts.Add(runtimeText);
     }
 
     public override Bounds GetBounds()
@@ -110,13 +115,26 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)
     {
-        string _remainingText = Text;
+        ReadOnlySpan<char> _remainingText = (Text + "").AsSpan();
 
-        List<int> _breakOpportunities = BreakOpportunites(_remainingText);
-        int _breakIndex = GetTextThatWillFit(width - cursorX, _breakOpportunities);
+        while (_remainingText.Length > 0)
+        {
+            List<int> _breakOpportunities = BreakOpportunites(_remainingText);
+            int _breakIndex = GetTextThatWillFit(_remainingText, width - cursorX, _breakOpportunities);
+
+            if (_breakIndex == -1)
+            {
+                TextManager.AddModelText(_remainingText.ToString(), this);
+            }
+            else
+            {
+                TextManager.AddModelText(_remainingText[0..+_breakIndex].ToString(), this);
+                _remainingText = _remainingText[_breakIndex..(_remainingText.Length - _breakIndex)];
+            }
+        }
     }
 
-    List<int> BreakOpportunites(string text)
+    List<int> BreakOpportunites(ReadOnlySpan<char> text)
     {
         var _breakIndexes = new List<int>();
 
@@ -128,7 +146,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         return _breakIndexes;
     }
 
-    int GetTextThatWillFit(float space, List<int> breakOpportunities)
+    int GetTextThatWillFit(ReadOnlySpan<char> text, float space, List<int> breakOpportunities)
     {
         if (breakOpportunities.Count == 0)
             return -1;
@@ -143,7 +161,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             int _mid = _left + (_right - _left) / 2;
 
 
-            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, Text.Substring(0, breakOpportunities[_mid]), Properties.fontSize.Value);
+            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, text[0..breakOpportunities[_mid]], Properties.fontSize.Value);
             if (_size.X <= space)
             {
                 // fits -> try a larger one
