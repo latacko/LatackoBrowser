@@ -7,14 +7,14 @@ namespace TextCore.Styles;
 
 public struct Properties
 {
-    public RuntimeText runtimeText;
+    public RuntimeTextContainer runtimeText;
     public CursorType Cursor;
     public Vector4D<float> TextColor = new(1, 1, 1, 1);
     public float Transition;
     public string font;
     public UIUnit fontSize;
 
-    public Properties(RuntimeText runtimeText)
+    public Properties(RuntimeTextContainer runtimeText)
     {
         this.runtimeText = runtimeText;
     }

@@ -11,20 +11,61 @@ namespace TextCore;
 public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData<ushort>>
 {
     public Slot Slot;
-    public Properties Properties;
-    internal FontAtlas fontAtlas;
 
     public string Text;
+
+    public float Left;
+    public float Top;
+
 
     float widthWithoutScale;
 
     Bounds bounds = new();
 
+    RuntimeTextContainer textContainer;
 
-    public RuntimeText(string text, uint objectIndex, RuntimeModelData? parent = null) : base(new([], []), objectIndex, parent)
+
+    public RuntimeText(string text, uint objectIndex, RuntimeModelData parent) : base(new([], []), objectIndex, parent)
     {
         Text = text;
-        Properties = new(this);
+
+        if (parent is not RuntimeTextContainer)
+            throw new Exception("Runtime text can be only a child of runtime text container!");
+
+        textContainer = (RuntimeTextContainer)parent;
+    }
+
+    public static Vector2D<float> GetTextSize(FontAtlas fontAtlas, string text, float textSize)
+    {
+        float _cursorX = 0;
+        int _textLength = text.Length;
+
+        for (int i = 0; i < _textLength; i++)
+        {
+            GlyphData glyphData = fontAtlas.Glyphs[text[i]];
+
+            float _width = glyphData.Width;
+
+            if (_width != 0)
+            {
+                _width /= fontAtlas.height;
+                _cursorX += _width;
+            }
+
+            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? fontAtlas.Glyphs[text[i + 1]].BearingX : 0);
+
+            if (_width != 0)
+            {
+                _width /= fontAtlas.height;
+                _cursorX += _width;
+            }
+
+            _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
+
+            _cursorX += _width;
+        }
+
+        return new Vector2D<float>(_cursorX * textSize, fontAtlas.height*textSize);
     }
 
     public void GenerateMesh()
@@ -35,31 +76,30 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         int _j = 0;
 
         int _textLength = Text.Length;
-        fontAtlas.ScanText(Text);
 
         for (int i = 0; i < _textLength; i++)
         {
-            GlyphData glyphData = fontAtlas.Glyphs[Text[i]];
+            GlyphData glyphData = textContainer.fontAtlas.Glyphs[Text[i]];
 
             float _width = glyphData.Width;
 
             if (_width != 0)
             {
-                _width /= fontAtlas.height;
+                _width /= textContainer.fontAtlas.height;
                 GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (uint)Text[i], ref _j);
                 _cursorX += _width;
             }
 
-            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? fontAtlas.Glyphs[Text[i + 1]].BearingX : 0);
+            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? textContainer.fontAtlas.Glyphs[Text[i + 1]].BearingX : 0);
 
             if (_width != 0)
             {
-                _width /= fontAtlas.height;
+                _width /= textContainer.fontAtlas.height;
                 GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, 0, ref _j);
                 _cursorX += _width;
             }
 
-            _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
+            _width = (glyphData.Advance - glyphData.Width) / textContainer.fontAtlas.height;
 
             _cursorX += _width;
         }
@@ -76,8 +116,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     void UpdateBounds()
     {
-        bounds.Width = widthWithoutScale * Properties.fontSize.Value;
-        bounds.Height = Properties.fontSize.Value;
+        bounds.Width = widthWithoutScale * textContainer.Properties.fontSize.Value;
+        bounds.Height = textContainer.Properties.fontSize.Value;
     }
 
     public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i)
@@ -107,23 +147,13 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale * Properties.fontSize.Value / 2, fontAtlas.height * Properties.fontSize.Value);
+        return new Vector2D<float>(widthWithoutScale * textContainer.Properties.fontSize.Value / 2, textContainer.fontAtlas.height * textContainer.Properties.fontSize.Value);
     }
 
-    public RuntimeText SetProperties(Func<Properties, Properties> setProperties)
+    public RuntimeText SetPosition(float left, float top)
     {
-        return SetProperties(setProperties.Invoke(Properties));
-    }
-
-    public RuntimeText SetProperties(Properties properties)
-    {
-        Properties = properties;
-        fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
-        UpdateBounds();
-        AddFlag(DirtyFlags.Data);
-        ConvertToPx(new());
-        GenerateMesh();
-
+        Left = left;
+        Top = top;
         return this;
     }
 
@@ -134,7 +164,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     public override Bounds GetBounds() => bounds;
 
-    public override CursorType GetCursorType() => Properties.Cursor;
+    public override CursorType GetCursorType() => textContainer.Properties.Cursor;
 
     public override bool TryGetObjectData(out TextData data, uint frame)
     {
@@ -154,12 +184,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
             cachedModel =
-                Matrix4X4.CreateScale(Properties.fontSize.Value, Properties.fontSize.Value, 1f) *
-                // Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *
+                Matrix4X4.CreateScale(textContainer.Properties.fontSize.Value, textContainer.Properties.fontSize.Value, 1f) *
+                        // Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *
                         // Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
                         // (
                         //     Parent == null ?
-                        Matrix4X4.CreateTranslation(10, 10, 0f);
+                        Matrix4X4.CreateTranslation(Left, Top, 0f);
             //         Matrix4X4.CreateTranslation(Parent.GetLayoutLeft() + Layout.LayoutPos.X + Layout.Left.Value, Parent.GetLayoutTop() + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
             // );
             if (Parent != null)
@@ -174,12 +204,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
         data = new TextData
         {
             Model = cachedModel,
-            Color = Properties.TextColor,
-
-            pos = new Vector2D<float>(cachedModel.M41, cachedModel.M42),
-            size = GetLayoutSize(),
-
-            TextureIndex = fontAtlas.id,
         };
 
 
@@ -194,7 +218,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     protected internal override void ConvertToPx(Vector2D<float> parentSize)
     {
-        Properties.ConvertToPx(parentSize);
+        textContainer.Properties.ConvertToPx(parentSize);
     }
 
     protected internal override float GetLayoutLeft() => 0;
