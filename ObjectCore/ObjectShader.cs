@@ -9,10 +9,6 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
     public List<RuntimeObject> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
-    protected override int GetMaxObjectForShader() => 1000;
-
-    protected override ulong GetSizeOfObjectDatas() => (ulong)(sizeof(ObjectData) * GetMaxObjectForShader());
-
     public override void Init()
     {
         base.Init();

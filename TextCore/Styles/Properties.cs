@@ -11,8 +11,8 @@ public struct Properties
     public CursorType Cursor;
     public Vector4D<float> TextColor = new(1, 1, 1, 1);
     public float Transition;
-    public string font;
-    public UIUnit fontSize;
+    public string font = "google-noto/NotoSerif-Regular.ttf";
+    public UIUnit fontSize = new(16);
 
     public Properties(RuntimeTextContainer runtimeText)
     {

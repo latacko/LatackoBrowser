@@ -106,7 +106,6 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
         foreach (var child in Children)
         {
-            
             child.UpdatePosition();
         }
     }
@@ -126,25 +125,23 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public override Bounds GetBounds() => Layout.Bounds;
     public override CursorType GetCursorType() => Properties.Cursor;
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)
+    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
     {
+        updateSizeOfLine(GetLayoutSize().Y);
+
         switch (Layout.Display)
         {
             case Layout.DisplayType.inline:
                 if (cursorX + Layout.Width.Value > width)
-                {
-                    cursorX = 0;
-                    cursorY += sizeOfLine;
-                }
+                    newLine.Invoke();
 
                 Layout.LayoutPos = new(cursorX, cursorY);
                 cursorX += Layout.Width.Value;
 
-                sizeOfLine = Math.Max(sizeOfLine, Layout.Height.Value);
                 break;
             case Layout.DisplayType.block:
-                cursorX = 0;
-                cursorY += sizeOfLine > 0 ? sizeOfLine : 0;
+                newLine.Invoke();
+
                 Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
                 Layout.BaseSize = new(width, 0);
                 break;
@@ -155,6 +152,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         Children ??= new();
         Children.Add(runtimeModelData);
+        Layout.UpdateChildrenLayout();
     }
 
     public override bool TryGetObjectData(out ObjectData data, uint frame)

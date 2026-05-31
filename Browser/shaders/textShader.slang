@@ -12,28 +12,35 @@ struct VertexOutput
 
     nointerpolation float4 color;
 
-    nointerpolation float2 pos;
-    nointerpolation float2 size;
-
     nointerpolation uint fontIndex;
     nointerpolation uint char;
 };
 
+public struct PushConstants
+{
+    public CameraUBO *cameraBuffer;
+    public TextData *textsData;
+    public ModelData *modelsData;
+    public CharacterData *characterDataPtr;
+    public uint TextIndex;
+};
+
+[push_constant]
+PushConstants pc;
+
 // --- Bindings ---
 [shader("vertex")]
-VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uniform TextData *textsData, uint instanceIndex: SV_VulkanInstanceID)
+VertexOutput VertexMain(VertexInput input, uint instanceIndex: SV_VulkanInstanceID)
 {
     VertexOutput output;
-    CameraUBO cameraData = *cameraDataPtr;
-    TextData textData = textsData[instanceIndex];
+    CameraUBO cameraData = *pc.cameraBuffer;
+    TextData textData = pc.textsData[pc.TextIndex];
+    ModelData modelData = pc.modelsData[instanceIndex];
 
-    float4x4 mvp = mul(cameraData.proj, textData.model);
+    float4x4 mvp = mul(cameraData.proj, modelData.model);
 
     output.Pos = mul(mvp, float4(input.Position, 1));
     output.UV = input.UV;
-
-    output.pos = textData.pos;
-    output.size = textData.size;
 
     output.color = textData.color;
 
@@ -58,13 +65,13 @@ float IsChar(uint ascii) {
 }
 
 [shader("fragment")]
-FragmentOutput FragmentMain(VertexOutput input, uniform uint64_t _pad0, uniform uint64_t _pad1, uniform CharacterData *characterDataPtr)
+FragmentOutput FragmentMain(VertexOutput input)
 // FragmentOutput FragmentMain(VertexOutput input, uniform float screenPixelRange)
 {
 
     FragmentOutput output;
 
-    CharacterData characterData = characterDataPtr[input.char];
+    CharacterData characterData = pc.characterDataPtr[input.char];
 
     float2 scaledUV = input.UV;
 

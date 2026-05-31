@@ -10,10 +10,11 @@ namespace TextCore;
 public class TextManager : BufferManager
 {
     internal static TextManager Instance;
-    internal static TextShader textShader = new();
+    public static TextShader TextShader = new();
     internal BufferInfo<TextVertex>[] vertexBuffer = new BufferInfo<TextVertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<ushort>[] indicesBuffer = new BufferInfo<ushort>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<TextData>[] dataBuffer = new BufferInfo<TextData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextContainerData>[] textContainerDataBuffer = new BufferInfo<TextContainerData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<ModelData>[] textModelDataBuffer = new BufferInfo<ModelData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
     uint vertexHead = 0;
     uint indexHead = 0;
@@ -32,7 +33,7 @@ public class TextManager : BufferManager
         Instance = this;
     }
 
-    internal static RuntimeText AddModelText(string text, RuntimeModelData parent)
+    internal static RuntimeText AddModelText(string text, RuntimeTextContainer parent)
     {
         uint objectIndex = LastCreatedIndex++;
         RuntimeText runtimeModelData = new(text, objectIndex, parent);
@@ -51,7 +52,9 @@ public class TextManager : BufferManager
         if (parent != null)
             parent.AddChild(runtimeTextContainer);
 
-        textShader.elements.Add(runtimeTextContainer);
+        TextShader.elements.Add(runtimeTextContainer);
+
+        Console.WriteLine("Adding text to the textShader." + TextShader.GetHashCode());
 
         return runtimeTextContainer;
     }
@@ -64,12 +67,13 @@ public class TextManager : BufferManager
 
             indicesBuffer[i] = new(5000, BufferUsageFlags.IndexBufferBit);
 
-            dataBuffer[i] = new(256, 0);
+            textModelDataBuffer[i] = new(256, 0);
+            textContainerDataBuffer[i] = new(256, 0);
         }
         CreateDescriptorsPool();
         RegisterDescriptor();
 
-        textShader.Init();
+        TextShader.Init();
     }
 
     public unsafe void RegisterDescriptor()
@@ -250,9 +254,14 @@ public class TextManager : BufferManager
         text.AddFlag(RuntimeModelData.DirtyFlags.Model);
     }
 
-    public unsafe void Update(uint currentFrame, uint objectIndex, TextData objectData)
+    public unsafe void Update(uint currentFrame, uint objectIndex, ModelData objectData)
     {
-        ((TextData*)dataBuffer[currentFrame].Mapped)[objectIndex] = objectData;
+        ((ModelData*)textModelDataBuffer[currentFrame].Mapped)[objectIndex] = objectData;
+    }
+
+    public unsafe void Update(uint currentFrame, uint objectIndex, TextContainerData textContainerData)
+    {
+        ((TextContainerData*)textContainerDataBuffer[currentFrame].Mapped)[objectIndex] = textContainerData;
     }
 
     public unsafe void CopyToBuffer(uint currentFrame)
@@ -277,7 +286,7 @@ public class TextManager : BufferManager
 
     public override unsafe void Dispose()
     {
-        textShader.Dispose();
+        TextShader.Dispose();
         TextDescriptorAllocatorGrowable.DestroyPools();
         CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, textDescriptorLayout, null);
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
@@ -286,7 +295,8 @@ public class TextManager : BufferManager
 
             indicesBuffer[i].Dispose();
 
-            dataBuffer[i].Dispose();
+            textModelDataBuffer[i].Dispose();
+            textContainerDataBuffer[i].Dispose();
         }
     }
 }

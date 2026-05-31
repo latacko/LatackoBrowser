@@ -3,6 +3,7 @@ using Silk.NET.Maths;
 using Units;
 
 namespace ObjectCore;
+
 public struct Layout
 {
     [Flags]
@@ -171,14 +172,29 @@ public struct Layout
         if (runtimeObject.Children == null) return;
         float sizeOfLine = 0;
 
+        var _paddingLeft = PaddingLeft.Value;
+        var _paddingTop = PaddingTop.Value;
+
         float innerWidth = Width.Value - PaddingLeft.Value - PaddingRight.Value;
-        float cursorX = PaddingLeft.Value;
-        float cursorY = PaddingTop.Value;
+        float cursorX = _paddingLeft;
+        float cursorY = _paddingTop;
 
         foreach (var child in runtimeObject.Children)
         {
-            child.UpdateLayout(ref cursorX, ref cursorY, ref sizeOfLine, ref innerWidth);
+            child.UpdateLayout(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
             // child.Layout.UpdateChildrenLayout();
+        }
+
+        void NewLine()
+        {
+            cursorX = _paddingLeft;
+            cursorY += sizeOfLine;
+        }
+
+        void UpdateSizeOfLine(float newSizeOfLine)
+        {
+            if (sizeOfLine < newSizeOfLine)
+                sizeOfLine = newSizeOfLine;
         }
     }
 }

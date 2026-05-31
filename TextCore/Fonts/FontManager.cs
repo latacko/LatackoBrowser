@@ -109,7 +109,7 @@ public class FontManager : IDisposable
                 var _character = charset[j];
                 faceForThread.LoadChar(_character, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
 
-                Console.WriteLine("Info for char |" + _character + "|");
+                // Console.WriteLine("Info for char |" + _character + "|");
                 // Console.WriteLine(" >Width: " + face.Glyph.Metrics.Width);
                 // Console.WriteLine(" >Bearing X: " + face.Glyph.Metrics.HorizontalBearingX);
                 // Console.WriteLine(" >Bearing Y: " + face.Glyph.Metrics.HorizontalBearingY);
@@ -186,7 +186,7 @@ public class FontManager : IDisposable
                     lock (loadedFonts[name])
                     {
                         loadedFonts[name].AddGlyph(_character, _pixels, ref _glyphData);
-                        Console.WriteLine($"Glyph '{_character}': Data= {_glyphData} ");
+                        // Console.WriteLine($"Glyph '{_character}': Data= {_glyphData} ");
                         loadedFonts[name].Glyphs[_character] = _glyphData;
                     }
                 }
@@ -208,7 +208,7 @@ public class FontManager : IDisposable
         foreach (var f in threadLocalFace.Values) f.Dispose();
         stopwatch.Stop();
 
-        Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
+        // Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
     public FontAtlas GetFontAtlas(string path) => loadedFonts[path];

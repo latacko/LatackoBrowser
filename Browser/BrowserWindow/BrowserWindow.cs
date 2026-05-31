@@ -171,7 +171,7 @@ public unsafe partial class BrowserWindow
 
 
         UpdateUniformBuffer(currentFrame);
-        coreManager.Render(currentFrame);
+        coreManager.OnRender(currentFrame);
 
         RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
         // UpdateUniformBufferPerspective(currentFrame);

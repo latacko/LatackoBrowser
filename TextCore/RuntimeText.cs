@@ -8,7 +8,7 @@ using Vulkan;
 
 namespace TextCore;
 
-public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData<ushort>>
+public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelData<ushort>>
 {
     public Slot Slot;
 
@@ -33,6 +33,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
             throw new Exception("Runtime text can be only a child of runtime text container!");
 
         textContainer = (RuntimeTextContainer)parent;
+        GenerateMesh();
     }
 
     public static Vector2D<float> GetTextSize(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
@@ -166,7 +167,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
 
     public override CursorType GetCursorType() => textContainer.Properties.Cursor;
 
-    public override bool TryGetObjectData(out TextData data, uint frame)
+    public override bool TryGetObjectData(out ModelData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
@@ -190,10 +191,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
                         // (
                         //     Parent == null ?
                         Matrix4X4.CreateTranslation(Left, Top, 0f);
+                        // Matrix4X4.CreateTranslation(10, 10, 0f);
             //         Matrix4X4.CreateTranslation(Parent.GetLayoutLeft() + Layout.LayoutPos.X + Layout.Left.Value, Parent.GetLayoutTop() + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
             // );
             if (Parent != null)
             {
+                // Console.WriteLine("relative pos: " + Parent.relativePos.Y);
                 cachedModel *=
                     Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
                     Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
@@ -201,7 +204,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
             RemoveFlag(DirtyFlags.Matrix, frame);
         }
 
-        data = new TextData
+        data = new ModelData
         {
             Model = cachedModel,
         };
@@ -225,15 +228,15 @@ public class RuntimeText : RuntimeModelData<RuntimeText, TextData, TextModelData
     protected internal override float GetLayoutTop() => 0;
 
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)
-    {
-        return;
-    }
-
     protected internal override void UpdatePosition()
     {
         AddFlag(DirtyFlags.Matrix);
         return;
+    }
+
+    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)
+    {
+        throw new System.Exception("This funtion shoudn't be executed on runtime text!");
     }
 }
 

@@ -16,9 +16,12 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     public RuntimeTextContainer(string text, uint objectIndex, RuntimeModelData? parent = null) : base(null, objectIndex, parent)
     {
-        fontAtlas.ScanText(Text);
         Text = text;
         Properties = new(this);
+        fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
+        fontAtlas.ScanText(Text);
+        UpdateParentSize();
+        ConvertToPx(ParentSize);
     }
 
     public RuntimeTextContainer SetProperties(Func<Properties, Properties> setProperties)
@@ -30,6 +33,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     {
         Properties = properties;
         fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
+        fontAtlas.ScanText(Text);
         // UpdateBounds();
         AddFlag(DirtyFlags.Data);
         ConvertToPx(new());
@@ -92,6 +96,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     protected internal override void ConvertToPx(Vector2D<float> parentSize)
     {
+        Properties.ConvertToPx(parentSize);
         foreach (var runtimeText in runtimeTexts)
         {
             runtimeText.ConvertToPx(parentSize);
@@ -105,7 +110,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        throw new Exception("You shoudn't get layout for this object.");
+        return Parent.GetLayoutSize();
     }
 
     protected internal override float GetLayoutTop()
@@ -113,25 +118,57 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         throw new Exception("You shoudn't get layout for this object.");
     }
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, ref float sizeOfLine, ref float width)
+    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
         ReadOnlySpan<char> _remainingText = (Text + "").AsSpan();
 
+        Console.WriteLine("Updating layout for text: " + Text);
+
         while (_remainingText.Length > 0)
         {
-            List<int> _breakOpportunities = BreakOpportunites(_remainingText);
-            int _breakIndex = GetTextThatWillFit(_remainingText, width - cursorX, _breakOpportunities);
-
-            if (_breakIndex == -1)
-            {
-                TextManager.AddModelText(_remainingText.ToString(), this);
-            }
+            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, _remainingText, Properties.fontSize.Value);
+            Console.WriteLine("Size of whole text: " + _size + " > " + (width-cursorX));
+            if (_size.X > width - cursorX)
+                SliceText(ref _remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
             else
             {
-                TextManager.AddModelText(_remainingText[0..+_breakIndex].ToString(), this);
-                _remainingText = _remainingText[_breakIndex..(_remainingText.Length - _breakIndex)];
+                AddText(_remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                _remainingText = [];
             }
         }
+    }
+
+    void SliceText(ref ReadOnlySpan<char> _remainingText, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    {
+        List<int> _breakOpportunities = BreakOpportunites(_remainingText);
+        int _breakIndex = GetTextThatWillFit(_remainingText, width - cursorX, _breakOpportunities);
+        Console.WriteLine("The break index for thix text is: " + _breakIndex + " break opportunities: " + string.Join(", ", _breakOpportunities));
+        if (_breakIndex == -1)
+        {
+            Console.WriteLine("Creating whole remaining text: " + _remainingText.ToString());
+            AddText(_remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            _remainingText = [];
+        }
+        else
+        {
+            Console.WriteLine("Creating remaining text to break index: " + _remainingText[0..+_breakIndex].ToString());
+            AddText(_remainingText[0..+_breakIndex], ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            _remainingText = _remainingText[(_breakIndex + 1)..];
+        }
+    }
+
+    void AddText(ReadOnlySpan<char> text, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    {
+        var _runtimeText = TextManager.AddModelText(text.ToString(), this);
+        var _size = _runtimeText.GetLayoutSize();
+        _runtimeText.SetPosition(cursorX, cursorY);
+
+        updatedSizeOfLine(fontAtlas.lineGap + _size.Y);
+
+        if (cursorX + _size.X > width)
+            newLine();
+
+        cursorX += _size.X;
     }
 
     List<int> BreakOpportunites(ReadOnlySpan<char> text)
@@ -153,33 +190,37 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
         int _left = 0;
         int _right = breakOpportunities.Count - 1;
-
-        int _bestIndex = -1;
+        int _bestBreakPos = -1;
 
         while (_left <= _right)
         {
             int _mid = _left + (_right - _left) / 2;
+            int _breakPos = breakOpportunities[_mid];
 
+            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, text[0.._breakPos], Properties.fontSize.Value);
 
-            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, text[0..breakOpportunities[_mid]], Properties.fontSize.Value);
             if (_size.X <= space)
             {
-                // fits -> try a larger one
-                _bestIndex = _mid;
+                _bestBreakPos = _breakPos; // actual char index, not the list index
                 _left = _mid + 1;
             }
             else
             {
-                // too wide -> try smaller
                 _right = _mid - 1;
             }
         }
 
-        return _bestIndex;
+        return _bestBreakPos;
     }
 
     protected internal override void UpdatePosition()
     {
-        throw new NotImplementedException();
+        relativePos = Parent!.relativePos;
+        relativeRot = Parent!.relativeRot;
+
+        foreach (var runtimeText in runtimeTexts)
+        {
+            runtimeText.AddFlag(DirtyFlags.Matrix);
+        }
     }
 }

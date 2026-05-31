@@ -1,5 +1,6 @@
 ﻿using ObjectCore;
 using ObjectCore.Textures;
+using Silk.NET.Vulkan;
 using TextCore;
 
 namespace CoreManager;
@@ -28,9 +29,9 @@ public class CoreManager : IDisposable
 
     public void Start()
     {
-        // fontManager.LoadFont("open-sans/OpenSans-Regular.ttf");
-        fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
-        fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
+        fontManager.LoadFont("google-noto/NotoSerif-Regular.ttf");
+        // fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
+        // fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
     }
     uint _ticksToReset = 0;
     public void Update(double deltaTime)
@@ -46,9 +47,14 @@ public class CoreManager : IDisposable
         }
     }
 
-    public void Render(uint currentFrame)
+    public void OnRender(uint currentFrame)
     {
         textManager.CopyToBuffer(currentFrame);
+    }
+
+    public void RenderShader(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    {
+        TextManager.TextShader.Render(commandBuffer, currentFrame, wireFrameRendering);
     }
 
     public void Dispose()

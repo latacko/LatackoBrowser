@@ -31,7 +31,6 @@ public unsafe partial class BrowserWindow
 
     internal static GraphicCore.BaseShader[] loadedShaders = [
         new ObjectShader(),
-        new TextShader(),
     ];
 
     void CreateVulkan()
@@ -208,6 +207,8 @@ public unsafe partial class BrowserWindow
         {
             shader.Render(commandBuffer, currentFrame, wireFrameRendering);
         }
+
+        coreManager.RenderShader(commandBuffer, currentFrame, wireFrameRendering);
 
         if (swapchain.recreatedSwapChain)
             swapchain.recreatedSwapChain = false;

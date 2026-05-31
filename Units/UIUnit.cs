@@ -13,11 +13,11 @@ public struct UIUnit
 
     public float Value => ValueInPx;
     
-    internal UIUnit(float value) : this(value, UnitType.px)
+    public UIUnit(float value) : this(value, UnitType.px)
     {
     }
 
-    internal UIUnit(float value, UnitType valueType = UnitType.px)
+    public UIUnit(float value, UnitType valueType = UnitType.px)
     {
         ValueInUnit = value;
         ValueType = value == 0 ? UnitType.px : valueType;

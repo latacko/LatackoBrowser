@@ -1,3 +1,4 @@
+using System.Drawing;
 using GraphicCore;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
@@ -9,9 +10,6 @@ public unsafe class TextShader : BaseShader
 {
     public List<RuntimeTextContainer> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
-
-    protected override int GetMaxObjectForShader() => 1000;
-    protected override ulong GetSizeOfObjectDatas() => (ulong)(sizeof(TextData) * GetMaxObjectForShader());
 
     public override void Init()
     {
@@ -62,14 +60,8 @@ public unsafe class TextShader : BaseShader
     protected override PushConstantRange[] GetPushConstantRanges() => [
         new()
         {
-            StageFlags = ShaderStageFlags.VertexBit,
-            Size       = sizeof(ulong)*2 // camera ubo & objects ubo
-        },
-        new()
-        {
-            StageFlags = ShaderStageFlags.FragmentBit,
-            Offset = sizeof(ulong)*2,
-            Size       = sizeof(ulong) // characters data
+            StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
+            Size       = sizeof(ulong)*4 + sizeof(uint)  // camera ubo & text data & objects ubo
         },
     ];
 
@@ -79,14 +71,23 @@ public unsafe class TextShader : BaseShader
     {
         foreach (var element in elements)
         {
+            if (element.TryGetObjectData(out var textData, currentFrame))
+            {
+                TextManager.Instance.Update(currentFrame, element.ObjectIndex, textData);
+            }
+
+            fixed (uint* objectIndexPtr = &element.ObjectIndex)
+                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), objectIndexPtr);
+
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
-                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.FragmentBit, sizeof(ulong) * 2, sizeof(ulong), deviceAddressPtr);
-                
+                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
+
             foreach (var runtimeText in element.runtimeTexts)
             {
-                if (runtimeText.TryGetObjectData(out var data, currentFrame))
+
+                if (runtimeText.TryGetObjectData(out var modelData, currentFrame))
                 {
-                    TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, data);
+                    TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, modelData);
                     // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
                 }
                 CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.ModelData.GetIndicesCount(), 1, runtimeText.ModelData.indexOffset, (int)runtimeText.ModelData.vertexOffset, runtimeText.ObjectIndex);
@@ -105,12 +106,13 @@ public unsafe class TextShader : BaseShader
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
         CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
 
-        ulong* addresses = stackalloc ulong[2]
+        ulong* addresses = stackalloc ulong[3]
         {
             VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
-            TextManager.Instance.dataBuffer[currentFrame].DeviceAddress,
+            TextManager.Instance.textContainerDataBuffer[currentFrame].DeviceAddress,
+            TextManager.Instance.textModelDataBuffer[currentFrame].DeviceAddress,
         };
-        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
+        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
 
         RenderElements(commandBuffer, currentFrame);
     }

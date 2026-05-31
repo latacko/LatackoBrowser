@@ -72,7 +72,6 @@ public class BrowserUI
         .SetProperties(properties => properties
             .SetFontSize(new(50))
             .SetCursor(CursorType.text)
-            .SetFont("stix-fonts/STIXTwoText-Regular.otf")
         );
 
         hellothere = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture2)
@@ -93,7 +92,6 @@ public class BrowserUI
         .SetProperties(properties => properties
             .SetFontSize(new(25))
             .SetCursor(CursorType.text)
-            .SetFont("stix-fonts/STIXTwoText-Regular.otf")
         );
 
         // BottomBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0], VulkanManager.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad))
