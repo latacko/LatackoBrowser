@@ -165,12 +165,13 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
         for (int i = runtimeTexts.Count - 1; i > _usedTexts; i--)
         {
-            TextManager.Instance.Remove(runtimeTexts[i]);
+            runtimeTexts[i].VertexSlotData.GetRingBuffer().Remove(runtimeTexts[i].VertexSlotData);
+            runtimeTexts[i].IndicesSlotData.GetRingBuffer().Remove(runtimeTexts[i].IndicesSlotData);
             runtimeTexts.RemoveAt(i);
         }
         stopwatch.Stop();
         msUpdatetime += stopwatch.ElapsedMilliseconds;
-        Console.WriteLine("Layout update avarage: " + (msUpdatetime/UpdateLayoutCount) + "ms");
+        // Console.WriteLine("Layout update avarage: " + (msUpdatetime/UpdateLayoutCount) + "ms");
     }
 
     void SliceText(int runtimeTextToReuse, ref int leftSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)

@@ -2,16 +2,19 @@ using System;
 using GraphicCore;
 using GraphicsCore;
 using Silk.NET.Maths;
+using TextCore.Slots;
 using TextCore.Styles;
 using Units;
 using Vulkan;
+using VulkanManager.BufferManager;
 
 namespace TextCore;
 
 public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelData<ushort>>
 {
-    public Slot Slot;
-
+    public VulkanManager.BufferManager.Slot Slot;
+    public SlotData<TextVertex> VertexSlotData = new();
+    public SlotData<ushort> IndicesSlotData = new();
     ReadOnlyMemory<char> Text;
     int leftRange = 0;
     int rightRange = 0;
@@ -50,7 +53,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     public bool Equals(int leftRange, int rightRange)
     {
-        return this.leftRange ==leftRange && this.rightRange == rightRange;
+        return this.leftRange == leftRange && this.rightRange == rightRange;
     }
 
     public void UpdateText(int leftRange, int rightRange)
@@ -65,7 +68,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         float cursorX = 0f;
         float invHeight = 1f / fontAtlas.height;
         int textLength = text.Length;
-        var glyphs = fontAtlas.Glyphs;  
+        var glyphs = fontAtlas.Glyphs;
 
         for (int i = 0; i < textLength; i++)
         {
@@ -79,7 +82,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     public void GenerateMesh()
     {
-        // Console.WriteLine("trying to generate mesh with size of: " + ((rightRange - leftRange) * 2 * 4));
+        Console.WriteLine("trying to generate mesh with size of: " + ((rightRange - leftRange) * 2 * 4) + " " + TextStr);
         TextVertex[] _vertices = new TextVertex[(rightRange - leftRange) * 2 * 4];
         ushort[] _indices = new ushort[(rightRange - leftRange) * 2 * 6];
         float _cursorX = 0;
@@ -115,8 +118,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
             _cursorX += _width;
         }
 
-        ModelData.Vertices = _vertices;
-        ModelData.Indices = _indices;
+        VertexSlotData.Data = _vertices;
+        IndicesSlotData.Data = _indices;
 
         widthWithoutScale = _cursorX;
         UpdateBounds();

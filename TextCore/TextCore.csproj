@@ -20,4 +20,8 @@
     <PackageReference Include="SpaceWizards.SharpFont" Version="1.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Slots/" />
+  </ItemGroup>
+
 </Project>

@@ -19,4 +19,8 @@
     <ProjectReference Include="../Units/Units.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="BufferManager/" />
+  </ItemGroup>
+
 </Project>

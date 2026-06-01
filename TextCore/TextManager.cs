@@ -2,6 +2,7 @@
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
+using VulkanManager.BufferManager;
 using VulkanManager.Helpers;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
@@ -11,8 +12,9 @@ public class TextManager : BufferManager
 {
     internal static TextManager Instance;
     public static TextShader TextShader = new();
-    internal BufferInfo<TextVertex>[] vertexBuffer = new BufferInfo<TextVertex>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<ushort>[] indicesBuffer = new BufferInfo<ushort>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal DynamicBuffer<TextVertex> vertexBuffer;
+    internal DynamicBuffer<ushort> indicesBuffer;
+
     internal BufferInfo<TextContainerData>[] textContainerDataBuffer = new BufferInfo<TextContainerData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal BufferInfo<ModelData>[] textModelDataBuffer = new BufferInfo<ModelData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
@@ -61,11 +63,11 @@ public class TextManager : BufferManager
 
     public override void RegisterBuffer()
     {
+        vertexBuffer = new(1000, 4, BufferUsageFlags.VertexBufferBit);
+        indicesBuffer = new(5000, 6, BufferUsageFlags.IndexBufferBit);
+        
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            vertexBuffer[i] = new(1000, BufferUsageFlags.VertexBufferBit);
-
-            indicesBuffer[i] = new(5000, BufferUsageFlags.IndexBufferBit);
 
             textModelDataBuffer[i] = new(256, 0);
             textContainerDataBuffer[i] = new(256, 0);
@@ -178,79 +180,12 @@ public class TextManager : BufferManager
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);
     }
 
-    static uint VertexsPerBucket(BucketSize b) => (uint)b * 4;
-    static uint IndicesPerBucket(BucketSize b) => (uint)b * 6;
-
-    static BucketSize PickBucket(uint glyphCount) => glyphCount switch
-    {
-        <= 16 => BucketSize.Tiny,
-        <= 32 => BucketSize.Small,
-        <= 64 => BucketSize.Medium,
-        <= 128 => BucketSize.Large,
-        _ => BucketSize.Huge
-    };
-
-    Slot Allocate(BucketSize bucket)
-    {
-        if (freePools.TryGetValue(bucket, out var pool) && pool.TryDequeue(out var slot))
-            return slot;
-
-        var newSlot = new Slot(vertexHead, indexHead, bucket);
-        vertexHead += VertexsPerBucket(bucket);
-        indexHead += IndicesPerBucket(bucket);
-
-        return newSlot;
-    }
-
-    void Free(Slot slot)
-    {
-        if (freePools.TryGetValue(slot.Bucket, out var bucket))
-            bucket.Enqueue(slot);
-        else
-        {
-            var _queue = new Queue<Slot>();
-            _queue.Enqueue(slot);
-            freePools.Add(slot.Bucket, _queue);
-        }
-    }
-
-    public void Add(RuntimeText text)
-    {
-        text.Slot = Allocate(PickBucket((uint)text.TextLength));
-        text.ModelData.vertexOffset = text.Slot.VertexOffset;
-        text.ModelData.indexOffset = text.Slot.IndexOffset;
-        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            text.AddFlag(RuntimeModelData.DirtyFlags.Matrix);
-        }
-        activeTexts.Add(text);
-    }
-
-    public void Remove(RuntimeText text)
-    {
-        Free(text.Slot);
-        activeTexts.Remove(text);
-    }
-
     public void Update(RuntimeText text)
     {
-        BucketSize newBucket = PickBucket((uint)text.TextLength * 2);
-
-        if (newBucket != text.Slot.Bucket) // outgrew bucket — reallocate
-        {
-
-            if (text.Slot != default)
-                Free(text.Slot);
-            text.Slot = Allocate(newBucket);
-
-            text.ModelData.vertexOffset = text.Slot.VertexOffset;
-            text.ModelData.indexOffset = text.Slot.IndexOffset;
-
-            if (!activeTexts.Contains(text))
-                activeTexts.Add(text);
-        }
-
-        text.AddFlag(RuntimeModelData.DirtyFlags.Model);
+        // Console.WriteLine("Vertex: ");
+        vertexBuffer.Update(text.VertexSlotData);
+        // Console.WriteLine("Indices: ");
+        indicesBuffer.Update(text.IndicesSlotData);
     }
 
     public unsafe void Update(uint currentFrame, uint objectIndex, ModelData objectData)
@@ -265,20 +200,24 @@ public class TextManager : BufferManager
 
     public unsafe void CopyToBuffer(uint currentFrame)
     {
-        foreach (var text in activeTexts)
-        {
-            if (!text.dirty[currentFrame].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
+        // Console.WriteLine("Vertex:");
+        vertexBuffer.CopyToBuffer(currentFrame);
+        // Console.WriteLine("Indices:");
+        indicesBuffer.CopyToBuffer(currentFrame);
+        // foreach (var text in activeTexts)
+        // {
+        //     if (!text.dirty[currentFrame].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
 
-            text.ModelData.Vertices.CopyTo(
-                new Span<TextVertex>(((TextVertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
-            );
+        //     text.ModelData.Vertices.CopyTo(
+        //         new Span<TextVertex>(((TextVertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
+        //     );
 
-            text.ModelData.Indices.CopyTo(
-                new Span<ushort>((ushort*)indicesBuffer[currentFrame].Mapped + text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
-            );
+        //     text.ModelData.Indices.CopyTo(
+        //         new Span<ushort>((ushort*)indicesBuffer[currentFrame].Mapped + text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
+        //     );
 
-            text.RemoveFlag(RuntimeModelData.DirtyFlags.Model, currentFrame);
-        }
+        //     text.RemoveFlag(RuntimeModelData.DirtyFlags.Model, currentFrame);
+        // }
     }
 
     public override unsafe void Dispose()
@@ -286,11 +225,12 @@ public class TextManager : BufferManager
         TextShader.Dispose();
         TextDescriptorAllocatorGrowable.DestroyPools();
         CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, textDescriptorLayout, null);
+
+        vertexBuffer.Dispose();
+        indicesBuffer.Dispose();
+
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            vertexBuffer[i].Dispose();
-
-            indicesBuffer[i].Dispose();
 
             textModelDataBuffer[i].Dispose();
             textContainerDataBuffer[i].Dispose();

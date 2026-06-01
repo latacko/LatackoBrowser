@@ -3,7 +3,7 @@ using Silk.NET.Vulkan;
 using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace TextCore;
+namespace VulkanManager.BufferManager;
 
 public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
 {
@@ -13,11 +13,11 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
     public nint Mapped; // CPU pointer (optional)
 
     public ulong DeviceAddress; // VkDeviceAddress
-    int size;
+    uint size;
 
     BufferUsageFlags usage;
 
-    public BufferInfo(int initSize, BufferUsageFlags usage)
+    public BufferInfo(uint initSize, BufferUsageFlags usage)
     {
         size = initSize;
         this.usage = usage;
@@ -26,7 +26,7 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
 
     void CreateBuffer(ref Buffer buffer, ref DeviceMemory memory, ref nint mapped, ref ulong deviceAddress)
     {
-        ulong _bufferSize = (ulong)sizeof(T) * (ulong)size;
+        ulong _bufferSize = (ulong)sizeof(T) * size;
         BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit | usage, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref buffer, ref memory);
         nint data;
         CreateVulkan.vk.MapMemory(LogicalDevice.device, memory, 0, _bufferSize, 0, (void**)&data);
@@ -43,7 +43,7 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
 
     internal void DoubleBuffer()
     {
-        int oldSize = size;
+        uint oldSize = size;
         size *= 2;
 
         Buffer _buffer = new();
@@ -54,8 +54,8 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
 
         CreateBuffer(ref _buffer, ref _memory, ref _mapped, ref _deviceAddress);
 
-        new Span<T>((void*)Mapped, oldSize).CopyTo(
-            new Span<T>((void*)_mapped, size)
+        new Span<T>((void*)Mapped, (int)oldSize).CopyTo(
+            new Span<T>((void*)_mapped, (int)size)
         );
         
         Dispose();

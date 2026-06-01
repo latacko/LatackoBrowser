@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager.BufferManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 

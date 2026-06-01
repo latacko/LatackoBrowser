@@ -83,6 +83,7 @@ public unsafe class TextShader : BaseShader
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
             lock (element.runtimeTexts)
             {
+                ulong vOffset = 0;
                 foreach (var runtimeText in element.runtimeTexts)
                 {
 
@@ -91,7 +92,10 @@ public unsafe class TextShader : BaseShader
                         TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, modelData);
                         // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
                     }
-                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.ModelData.GetIndicesCount(), 1, runtimeText.ModelData.indexOffset, (int)runtimeText.ModelData.vertexOffset, runtimeText.ObjectIndex);
+
+                    CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref runtimeText.VertexSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer, ref vOffset);
+                    CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, runtimeText.IndicesSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer, 0, IndexType.Uint16);
+                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.IndicesSlotData.GetDataCount(), 1, runtimeText.IndicesSlotData.GetSlot().Offset, (int)runtimeText.VertexSlotData.GetSlot().Offset, runtimeText.ObjectIndex);
                 }
             }
         }
@@ -105,8 +109,8 @@ public unsafe class TextShader : BaseShader
         CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
 
         ulong vOffset = 0;
-        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
-        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
+        // CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
+        // CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
 
         ulong* addresses = stackalloc ulong[3]
         {
