@@ -193,8 +193,10 @@ public struct Layout
 
         void UpdateSizeOfLine(float newSizeOfLine)
         {
-            if (sizeOfLine < newSizeOfLine)
+            if (newSizeOfLine > sizeOfLine)
+            {
                 sizeOfLine = newSizeOfLine;
+            }
         }
     }
 }

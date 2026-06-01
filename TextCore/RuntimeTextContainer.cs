@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using GraphicCore;
 using GraphicsCore;
 using Silk.NET.Maths;
@@ -12,16 +13,17 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     internal FontAtlas fontAtlas;
     public Properties Properties;
     public string Text;
+    ReadOnlyMemory<char> TextMemory;
     internal List<RuntimeText> runtimeTexts = new();
 
     public RuntimeTextContainer(string text, uint objectIndex, RuntimeModelData? parent = null) : base(null, objectIndex, parent)
     {
         Text = text;
+        TextMemory = Text.AsMemory();
         Properties = new(this);
         fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
         fontAtlas.ScanText(Text);
-        UpdateParentSize();
-        ConvertToPx(ParentSize);
+        ConvertToPx();
     }
 
     public RuntimeTextContainer SetProperties(Func<Properties, Properties> setProperties)
@@ -36,7 +38,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         fontAtlas.ScanText(Text);
         // UpdateBounds();
         AddFlag(DirtyFlags.Data);
-        ConvertToPx(new());
+        ConvertToPx();
         // GenerateMesh();
 
         return this;
@@ -67,7 +69,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         if (Swapchain.Instance.recreatedSwapChain)
         {
             // Console.WriteLine("Recreated");
-            UpdateParentSize();
+            UpdateMySize();
             AddFlag(DirtyFlags.Matrix);
         }
 
@@ -94,12 +96,12 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         return true;
     }
 
-    protected internal override void ConvertToPx(Vector2D<float> parentSize)
+    protected internal override void ConvertToPx()
     {
-        Properties.ConvertToPx(parentSize);
+        Properties.ConvertToPx(ParentSize);
         foreach (var runtimeText in runtimeTexts)
         {
-            runtimeText.ConvertToPx(parentSize);
+            runtimeText.ConvertToPx();
         }
     }
 
@@ -118,75 +120,131 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         throw new Exception("You shoudn't get layout for this object.");
     }
 
+    private readonly List<int> _breakOpportunitiesBuffer = new();
+
+    Stopwatch stopwatch = new();
+    double msUpdatetime;
+    uint UpdateLayoutCount = 0;
+
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
-        ReadOnlySpan<char> _remainingText = (Text + "").AsSpan();
+        UpdateLayoutCount++;
+        stopwatch.Restart();
+        ReadOnlySpan<char> _remainingText = Text.AsSpan();
+        int _leftSlice = 0;
 
-        Console.WriteLine("Updating layout for text: " + Text);
 
-        while (_remainingText.Length > 0)
+        int _runtimeTextToReuse = 0;
+        int _runtimeTextCount = runtimeTexts.Count;
+
+        int _usedTexts = -1;
+        while (_leftSlice < TextMemory.Length)
         {
-            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, _remainingText, Properties.fontSize.Value);
-            Console.WriteLine("Size of whole text: " + _size + " > " + (width-cursorX));
-            if (_size.X > width - cursorX)
-                SliceText(ref _remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            if (_runtimeTextToReuse >= _runtimeTextCount)
+            {
+                _runtimeTextToReuse = -1;
+            }
+
+            float _measuredTextWidth = RuntimeText.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], Properties.fontSize.Value);
+            if (_measuredTextWidth > width - cursorX)
+            {
+                SliceText(_runtimeTextToReuse, ref _leftSlice, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                _runtimeTextToReuse++;
+                newLine();
+            }
             else
             {
-                AddText(_remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
-                _remainingText = [];
+                AddText(_runtimeTextToReuse, _leftSlice, Text.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                _leftSlice = Text.Length;
+                _runtimeTextToReuse++;
             }
+            _usedTexts++;
+
+            // Console.WriteLine("Zostało tekstu: " + (_remainingText.Length-_leftSlice));
         }
+
+        for (int i = runtimeTexts.Count - 1; i > _usedTexts; i--)
+        {
+            TextManager.Instance.Remove(runtimeTexts[i]);
+            runtimeTexts.RemoveAt(i);
+        }
+        stopwatch.Stop();
+        msUpdatetime += stopwatch.ElapsedMilliseconds;
+        Console.WriteLine("Layout update avarage: " + (msUpdatetime/UpdateLayoutCount) + "ms");
     }
 
-    void SliceText(ref ReadOnlySpan<char> _remainingText, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    void SliceText(int runtimeTextToReuse, ref int leftSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
-        List<int> _breakOpportunities = BreakOpportunites(_remainingText);
-        int _breakIndex = GetTextThatWillFit(_remainingText, width - cursorX, _breakOpportunities);
-        Console.WriteLine("The break index for thix text is: " + _breakIndex + " break opportunities: " + string.Join(", ", _breakOpportunities));
+        var _span = TextMemory.Span;
+        List<int> _breakOpportunities = BreakOpportunites(_span[leftSlice..]);
+        // Console.WriteLine("Break oppotunities: " + string.Join(", ", _breakOpportunities));
+        int _breakIndex = GetTextThatWillFit(_span[leftSlice..], width - cursorX, _breakOpportunities);
+        // Console.WriteLine("Final index: " + _breakIndex + " left slice: " + leftSlice);
         if (_breakIndex == -1)
         {
-            Console.WriteLine("Creating whole remaining text: " + _remainingText.ToString());
-            AddText(_remainingText, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
-            _remainingText = [];
+            AddText(runtimeTextToReuse, leftSlice, TextMemory.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            leftSlice = TextMemory.Length;
         }
         else
         {
-            Console.WriteLine("Creating remaining text to break index: " + _remainingText[0..+_breakIndex].ToString());
-            AddText(_remainingText[0..+_breakIndex], ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
-            _remainingText = _remainingText[(_breakIndex + 1)..];
+            AddText(runtimeTextToReuse, leftSlice, leftSlice + _breakIndex, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            leftSlice = leftSlice + _breakIndex + 1;
         }
     }
 
-    void AddText(ReadOnlySpan<char> text, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    void AddText(int runtimeTextToReuse, int leftSlice, int rightSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
-        var _runtimeText = TextManager.AddModelText(text.ToString(), this);
-        var _size = _runtimeText.GetLayoutSize();
-        _runtimeText.SetPosition(cursorX, cursorY);
+        lock (runtimeTexts)
+        {
+            RuntimeText _runtimeText;
+            if (runtimeTextToReuse == -1)
+                _runtimeText = TextManager.AddModelText(Text.AsMemory(), leftSlice, rightSlice, this);
+            else
+            {
+                _runtimeText = runtimeTexts[runtimeTextToReuse];
 
-        updatedSizeOfLine(fontAtlas.lineGap + _size.Y);
+                if (!_runtimeText.Equals(leftSlice, rightSlice))
+                    _runtimeText.UpdateText(leftSlice, rightSlice);
+            }
+            var _size = _runtimeText.GetLayoutSize();
 
-        if (cursorX + _size.X > width)
-            newLine();
+            _runtimeText.SetPosition(cursorX, cursorY);
+            updatedSizeOfLine(fontAtlas.lineGap + _size.Y);
 
-        cursorX += _size.X;
+            cursorX += _size.X;
+        }
+
     }
 
     List<int> BreakOpportunites(ReadOnlySpan<char> text)
     {
-        var _breakIndexes = new List<int>();
+        _breakOpportunitiesBuffer.Clear();
 
         for (int i = 0; i < text.Length; i++)
         {
             if (char.IsWhiteSpace(text[i]))
-                _breakIndexes.Add(i);
+                _breakOpportunitiesBuffer.Add(i);
         }
-        return _breakIndexes;
+        return _breakOpportunitiesBuffer;
     }
 
     int GetTextThatWillFit(ReadOnlySpan<char> text, float space, List<int> breakOpportunities)
     {
         if (breakOpportunities.Count == 0)
             return -1;
+
+        Span<float> prefixWidths = breakOpportunities.Count <= 128
+        ? stackalloc float[breakOpportunities.Count]
+        : new float[breakOpportunities.Count];
+
+        int prevBreak = 0;
+        for (int i = 0; i < breakOpportunities.Count; i++)
+        {
+            int breakPos = breakOpportunities[i];
+            float segmentWidth = RuntimeText.GetTextWidth(fontAtlas, text[prevBreak..breakPos], Properties.fontSize.Value);
+            prefixWidths[i] = (i == 0 ? 0f : prefixWidths[i - 1]) + segmentWidth;
+            prevBreak = breakPos;
+        }
 
         int _left = 0;
         int _right = breakOpportunities.Count - 1;
@@ -195,13 +253,9 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         while (_left <= _right)
         {
             int _mid = _left + (_right - _left) / 2;
-            int _breakPos = breakOpportunities[_mid];
-
-            Vector2D<float> _size = RuntimeText.GetTextSize(fontAtlas, text[0.._breakPos], Properties.fontSize.Value);
-
-            if (_size.X <= space)
+            if (prefixWidths[_mid] <= space)
             {
-                _bestBreakPos = _breakPos; // actual char index, not the list index
+                _bestBreakPos = breakOpportunities[_mid];
                 _left = _mid + 1;
             }
             else
@@ -217,6 +271,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     {
         relativePos = Parent!.relativePos;
         relativeRot = Parent!.relativeRot;
+        relativeTransformation = Parent!.relativeTransformation;
 
         foreach (var runtimeText in runtimeTexts)
         {

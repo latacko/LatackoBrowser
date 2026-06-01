@@ -28,6 +28,7 @@ public abstract class RuntimeModelData : IDisposable
     internal protected Matrix4X4<float> cachedModel;
     internal protected Vector3D<float> relativePos;
     internal protected Vector3D<float> relativeRot;
+    internal protected Vector3D<float> relativeTransformation;
 
     public Vector2D<float> ParentSize;
     public RuntimeModelData? Parent;
@@ -40,14 +41,14 @@ public abstract class RuntimeModelData : IDisposable
         if (parent != null)
             Parent = parent;
 
-        UpdateParentSize();
+        UpdateMySize(true);
     }
 
     public void SetParent(RuntimeModelData? parent = null)
     {
         if (parent != null)
             Parent = parent;
-        UpdateParentSize();
+        UpdateMySize(true);
     }
 
     protected internal void AddFlag(DirtyFlags flags)
@@ -63,7 +64,7 @@ public abstract class RuntimeModelData : IDisposable
         dirty[frame] &= ~flags;
     }
 
-    protected internal abstract void ConvertToPx(Vector2D<float> parentSize);
+    protected internal abstract void ConvertToPx();
 
     protected internal abstract void UpdatePosition();
 
@@ -78,15 +79,11 @@ public abstract class RuntimeModelData : IDisposable
 
 
 
-    protected internal virtual void UpdateParentSize(Vector2D<float> size = default)
+    protected internal virtual void UpdateMySize(bool informChildren = false)
     {
-        if (size != default)
+        if (Parent != null)
         {
-            ParentSize = size;
-        }
-        else
-        {
-            ParentSize = Parent != null ? Parent.GetLayoutSize() : new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
+            ParentSize = Parent.GetLayoutSize();
         }
     }
 

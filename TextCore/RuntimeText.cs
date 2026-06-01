@@ -12,7 +12,17 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 {
     public Slot Slot;
 
-    public string Text;
+    ReadOnlyMemory<char> Text;
+    int leftRange = 0;
+    int rightRange = 0;
+
+    /// <summary>
+    /// Only for debug pupropses.
+    /// </summary>
+    /// <returns></returns>
+    public string TextStr => Text.Span[leftRange..rightRange].ToString();
+
+    public int TextLength => rightRange - leftRange;
 
     public float Left;
     public float Top;
@@ -25,9 +35,11 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     RuntimeTextContainer textContainer;
 
 
-    public RuntimeText(string text, uint objectIndex, RuntimeModelData parent) : base(new([], []), objectIndex, parent)
+    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, RuntimeModelData parent) : base(new([], []), objectIndex, parent)
     {
         Text = text;
+        this.leftRange = leftRange;
+        this.rightRange = rightRange;
 
         if (parent is not RuntimeTextContainer)
             throw new Exception("Runtime text can be only a child of runtime text container!");
@@ -36,71 +48,69 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         GenerateMesh();
     }
 
-    public static Vector2D<float> GetTextSize(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
+    public bool Equals(int leftRange, int rightRange)
     {
-        float _cursorX = 0;
-        int _textLength = text.Length;
+        return this.leftRange ==leftRange && this.rightRange == rightRange;
+    }
 
-        for (int i = 0; i < _textLength; i++)
+    public void UpdateText(int leftRange, int rightRange)
+    {
+        this.leftRange = leftRange;
+        this.rightRange = rightRange;
+        GenerateMesh();
+    }
+
+    public static float GetTextWidth(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
+    {
+        float cursorX = 0f;
+        float invHeight = 1f / fontAtlas.height;
+        int textLength = text.Length;
+        var glyphs = fontAtlas.Glyphs;  
+
+        for (int i = 0; i < textLength; i++)
         {
-            GlyphData glyphData = fontAtlas.Glyphs[text[i]];
-
-            float _width = glyphData.Width;
-
-            if (_width != 0)
-            {
-                _width /= fontAtlas.height;
-                _cursorX += _width;
-            }
-
-            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? fontAtlas.Glyphs[text[i + 1]].BearingX : 0);
-
-            if (_width != 0)
-            {
-                _width /= fontAtlas.height;
-                _cursorX += _width;
-            }
-
-            _width = (glyphData.Advance - glyphData.Width) / fontAtlas.height;
-
-            _cursorX += _width;
+            GlyphData g = glyphs[text[i]];
+            float nextBearingX = (i + 1 < textLength) ? glyphs[text[i + 1]].BearingX : 0f;
+            cursorX += (2f * g.Advance - g.Width - g.BearingX + nextBearingX) * invHeight;
         }
 
-        return new Vector2D<float>(_cursorX * textSize, fontAtlas.height*textSize);
+        return cursorX * textSize;
     }
 
     public void GenerateMesh()
     {
-        TextVertex[] _vertices = new TextVertex[(Text.Length * 2) * 4];
-        ushort[] _indices = new ushort[(Text.Length * 2) * 6];
+        // Console.WriteLine("trying to generate mesh with size of: " + ((rightRange - leftRange) * 2 * 4));
+        TextVertex[] _vertices = new TextVertex[(rightRange - leftRange) * 2 * 4];
+        ushort[] _indices = new ushort[(rightRange - leftRange) * 2 * 6];
         float _cursorX = 0;
         int _j = 0;
+        float invHeight = 1f / textContainer.fontAtlas.height;
 
+        ReadOnlySpan<char> _text = Text.Span;
         int _textLength = Text.Length;
 
-        for (int i = 0; i < _textLength; i++)
+        for (int i = leftRange; i < rightRange; i++)
         {
-            GlyphData glyphData = textContainer.fontAtlas.Glyphs[Text[i]];
+            GlyphData glyphData = textContainer.fontAtlas.Glyphs[_text[i]];
 
             float _width = glyphData.Width;
-
             if (_width != 0)
             {
-                _width /= textContainer.fontAtlas.height;
-                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (uint)Text[i], ref _j);
+                _width *= invHeight;
+                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (uint)_text[i], ref _j);
                 _cursorX += _width;
             }
 
-            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? textContainer.fontAtlas.Glyphs[Text[i + 1]].BearingX : 0);
+            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX : 0);
 
             if (_width != 0)
             {
-                _width /= textContainer.fontAtlas.height;
+                _width *= invHeight;
                 GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, 0, ref _j);
                 _cursorX += _width;
             }
 
-            _width = (glyphData.Advance - glyphData.Width) / textContainer.fontAtlas.height;
+            _width = (glyphData.Advance - glyphData.Width) * invHeight;
 
             _cursorX += _width;
         }
@@ -172,7 +182,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         if (Swapchain.Instance.recreatedSwapChain)
         {
             // Console.WriteLine("Recreated");
-            UpdateParentSize();
+            UpdateMySize();
             AddFlag(DirtyFlags.Matrix);
         }
 
@@ -191,13 +201,14 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
                         // (
                         //     Parent == null ?
                         Matrix4X4.CreateTranslation(Left, Top, 0f);
-                        // Matrix4X4.CreateTranslation(10, 10, 0f);
+            // Matrix4X4.CreateTranslation(10, 10, 0f);
             //         Matrix4X4.CreateTranslation(Parent.GetLayoutLeft() + Layout.LayoutPos.X + Layout.Left.Value, Parent.GetLayoutTop() + Layout.LayoutPos.Y + Layout.Top.Value, 0f)
             // );
             if (Parent != null)
             {
                 // Console.WriteLine("relative pos: " + Parent.relativePos.Y);
                 cachedModel *=
+                    Matrix4X4.CreateTranslation(-Parent.relativeTransformation.X, -Parent.relativeTransformation.Y, 0) *
                     Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
                     Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
             }
@@ -219,9 +230,9 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         return true;
     }
 
-    protected internal override void ConvertToPx(Vector2D<float> parentSize)
+    protected internal override void ConvertToPx()
     {
-        textContainer.Properties.ConvertToPx(parentSize);
+        textContainer.Properties.ConvertToPx(ParentSize);
     }
 
     protected internal override float GetLayoutLeft() => 0;

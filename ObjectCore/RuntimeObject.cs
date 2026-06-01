@@ -36,8 +36,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         {
             if (Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
             {
-                ConvertToPx(ParentSize);
-                UpdateChildrenSizes();
+                ConvertToPx();
+                UpdateMySize();
             }
             if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
             {
@@ -60,6 +60,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public RuntimeObject SetTransform(Transform transform)
     {
         Transform = transform;
+        ConvertToPx();
         AddFlag(DirtyFlags.Matrix);
         return this;
     }
@@ -72,27 +73,27 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public RuntimeObject SetProperties(Properties properties)
     {
         Properties = properties;
+        ConvertToPx();
         AddFlag(DirtyFlags.Data);
         return this;
     }
 
-    protected internal override void UpdateParentSize(Vector2D<float> size = default)
+    protected internal override void UpdateMySize(bool informChildren = false)
     {
-        base.UpdateParentSize(size);
+        base.UpdateMySize(informChildren);
 
         var _prevSize = Layout.GetSize();
-        ConvertToPx(ParentSize);
-        if (_prevSize != Layout.GetSize())
-            UpdateChildrenSizes();
-    }
+        ConvertToPx();
 
-    protected void UpdateChildrenSizes()
-    {
-        if (Children == null) return;
+        if (_prevSize == Layout.GetSize()) return;
+        Layout.UpdateChildrenLayout();
+
+
+        if (!informChildren || Children == null) return;
 
         foreach (var children in Children)
         {
-            children.UpdateParentSize(Layout.GetSize());
+            children.UpdateMySize();
         }
     }
 
@@ -100,6 +101,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         relativePos = (Parent != null ? Parent.relativePos : new Vector3D<float>()) + new Vector3D<float>(GetLayoutLeft(), GetLayoutTop(), 0);
         relativeRot = (Parent != null ? Parent.relativeRot : new Vector3D<float>()) + Transform.Rotation;
+        relativeTransformation = (Parent != null ? Parent.relativeTransformation : new Vector3D<float>()) + new Vector3D<float>(Transform.TranslateX.Value, Transform.TranslateY.Value, 0);
+
         AddFlag(DirtyFlags.Matrix);
         Layout.UpdateBoundsOffset();
         if (Children == null) return;
@@ -110,10 +113,10 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         }
     }
 
-    protected internal override void ConvertToPx(Vector2D<float> parentSize)
+    protected internal override void ConvertToPx()
     {
-        Layout.ConvertToPx(parentSize);
-        Transform.ConvertToPx(parentSize);
+        Layout.ConvertToPx(ParentSize);
+        Transform.ConvertToPx(Layout.GetSize());
         Properties.ConvertToPx(Layout.GetSize());
 
         AddFlag(DirtyFlags.Matrix);
@@ -159,7 +162,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            UpdateParentSize();
+            UpdateMySize();
             AddFlag(DirtyFlags.Matrix);
         }
 
@@ -172,6 +175,9 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
         if (dirty[frame].HasFlag(DirtyFlags.Matrix))
         {
+            // Task.Run(() =>
+            // {
+            // });
             cachedModel =
                 Matrix4X4.CreateScale(Layout.GetSize().X, Layout.GetSize().Y, 1f) *
                 Matrix4X4.CreateTranslation(-Transform.TranslateX.Value, -Transform.TranslateY.Value, 0f) *

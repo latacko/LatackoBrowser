@@ -81,16 +81,18 @@ public unsafe class TextShader : BaseShader
 
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
-
-            foreach (var runtimeText in element.runtimeTexts)
+            lock (element.runtimeTexts)
             {
-
-                if (runtimeText.TryGetObjectData(out var modelData, currentFrame))
+                foreach (var runtimeText in element.runtimeTexts)
                 {
-                    TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, modelData);
-                    // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
+
+                    if (runtimeText.TryGetObjectData(out var modelData, currentFrame))
+                    {
+                        TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, modelData);
+                        // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
+                    }
+                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.ModelData.GetIndicesCount(), 1, runtimeText.ModelData.indexOffset, (int)runtimeText.ModelData.vertexOffset, runtimeText.ObjectIndex);
                 }
-                CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.ModelData.GetIndicesCount(), 1, runtimeText.ModelData.indexOffset, (int)runtimeText.ModelData.vertexOffset, runtimeText.ObjectIndex);
             }
         }
     }
