@@ -22,15 +22,15 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
         }
     }
 
-    BucketSize PickBucket(uint quadCount)
+    BucketSize PickBucket(uint elementsCount)
     {
-        if (quadCount <= 16 * bucketSizeMultiplier)
+        if (elementsCount <= (int)BucketSize.Tiny * bucketSizeMultiplier)
             return BucketSize.Tiny;
-        else if (quadCount <= 32 * bucketSizeMultiplier)
+        else if (elementsCount <= (int)BucketSize.Small * bucketSizeMultiplier)
             return BucketSize.Small;
-        else if (quadCount <= 64 * bucketSizeMultiplier)
+        else if (elementsCount <= (int)BucketSize.Medium * bucketSizeMultiplier)
             return BucketSize.Medium;
-        else if (quadCount <= 128 * bucketSizeMultiplier)
+        else if (elementsCount <= (int)BucketSize.Large * bucketSizeMultiplier)
             return BucketSize.Large;
         else
             return BucketSize.Huge;
@@ -52,7 +52,7 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
     {
         if (freePools.TryGetValue(bucket, out var pool) && pool.Count > 0)
             return true;
-        return offsetHead + (uint)bucket <= bufferSize;
+        return offsetHead + ((uint)bucket*bucketSizeMultiplier) <= bufferSize;
     }
 
     Slot Allocate(BucketSize bucket)
@@ -68,6 +68,7 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
 
     void Free(Slot slot)
     {
+        // Console.WriteLine("Usuwam slot: " + slot.Bucket);
         if (freePools.TryGetValue(slot.Bucket, out var bucket))
             bucket.Enqueue(slot);
         else
@@ -80,12 +81,14 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
 
     public void Remove(ISlotInformation<BufferData> slotInformation)
     {
+        slots.Remove(slotInformation);
         Free(slotInformation.GetSlot());
     }
 
     public bool Update(ISlotInformation<BufferData> slotInformation)
     {
         BucketSize newBucket = PickBucket(slotInformation.GetDataCount());
+        // Console.WriteLine("Element count: " + slotInformation.GetDataCount() + " a wybieram bucket: " + ((int)newBucket*bucketSizeMultiplier));
         Slot _slot = slotInformation.GetSlot();
         if (newBucket != _slot.Bucket) // outgrew bucket — reallocate
         {
@@ -105,6 +108,7 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
             if (!slots.Contains(slotInformation))
                 slots.Add(slotInformation);
         }
+        // Console.WriteLine("Set is dirty");
         slotInformation.SetDirty();
         return true;
     }
@@ -114,8 +118,11 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
         foreach (var slot in slots)
         {
             if (!slot.IsDirty(currentFrame)) continue;
-            Console.WriteLine("Copy to buffer with multiplier of: " + bucketSizeMultiplier + " bucket size: " + ((int)slot.GetSlot().Bucket) + " vertexes: " + slot.GetDataCount() + " offset: " + slot.GetSlot().Offset + " vertexs: ");
-            slot.GetDatas().CopyTo(
+            // Console.WriteLine("Copy to buffer with multiplier of: " + bucketSizeMultiplier + " bucket size: " + ((int)slot.GetSlot().Bucket*bucketSizeMultiplier) + " vertexes: " + slot.GetDataCount() + " offset: " + slot.GetSlot().Offset + " handle: " + buffersInfo[0].Buffer.Handle);
+            
+            ReadOnlySpan<BufferData> sourceSpan = slot.GetDatas().AsSpan(0, (int)slot.GetDataCount());
+
+            sourceSpan.CopyTo(
                 new Span<BufferData>(((BufferData*)buffersInfo[currentFrame].Mapped) + slot.GetSlot().Offset, (int)slot.GetSlot().Bucket * (int)bucketSizeMultiplier)
             );
 

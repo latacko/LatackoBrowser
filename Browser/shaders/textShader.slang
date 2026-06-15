@@ -13,7 +13,7 @@ struct VertexOutput
     nointerpolation float4 color;
 
     nointerpolation uint fontIndex;
-    nointerpolation uint char;
+    float char;
 };
 
 public struct PushConstants
@@ -64,14 +64,63 @@ float IsChar(uint ascii) {
     return ascii == 84 ? 1 : 0;
 }
 
+#define ATLAS_WIDTH 1024.0
+#define ATLAS_HEIGHT 1024.0
+#define MSDF_RANGE 6.0
+
+// [shader("fragment")]
+// FragmentOutput FragmentMain(VertexOutput input)
+// {
+
+//     FragmentOutput output;
+
+//     CharacterData characterData = pc.characterDataPtr[input.char];
+
+//     float2 scaledUV = input.UV;
+
+//     float t = (input.UV.y - characterData.UV.x) / (characterData.UV.y - characterData.UV.x);
+//     t -= characterData.BearingY;
+//     t *= characterData.Scale;
+
+//     if (t < 0 || t > 1)
+//     {
+//         output.color = float4(0, 0, 0, 0);
+//         return output;
+//     }
+
+//     scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
+
+//     float3 msd = textures[input.fontIndex].Sample(sampler, scaledUV).rgb;
+//     float sd = median(msd.x, msd.y, msd.z);
+
+//     float2 uvPerPixel = fwidth(scaledUV);
+
+//     float w = fwidth(sd);
+
+//     // SHARPEN: Scale down 'w' to make the transition edge much tighter
+//     float sharpness = 0.5; // Lower values = sharper. 0.0 = completely aliased.
+//     float width = w * sharpness;
+
+//     // Apply the tighter smoothing window
+//     float opacity = smoothstep(0.5 - width, 0.5 + width, sd);
+
+//     output.color = float4(input.color.xyz, opacity);
+
+//     return output;
+// }
+
 [shader("fragment")]
 FragmentOutput FragmentMain(VertexOutput input)
-// FragmentOutput FragmentMain(VertexOutput input, uniform float screenPixelRange)
 {
-
     FragmentOutput output;
 
-    CharacterData characterData = pc.characterDataPtr[input.char];
+    if (input.char != uint(input.char)) {
+        output.color = float4(0, 0, 1, 0);
+        return output;
+    }
+
+
+    CharacterData characterData = pc.characterDataPtr[uint(input.char)];
 
     float2 scaledUV = input.UV;
 
@@ -79,25 +128,29 @@ FragmentOutput FragmentMain(VertexOutput input)
     t -= characterData.BearingY;
     t *= characterData.Scale;
 
-    if (t < 0 || t > 1)
+    if (t < -0.01 || t > 1)
     {
-        output.color = float4(0, 0, 0, 0);
+        output.color = float4(1, 0, 0, 0);
         return output;
     }
 
     scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
 
     float3 msd = textures[input.fontIndex].Sample(sampler, scaledUV).rgb;
-    float sd = median(msd.x, msd.y, msd.z);
+    float msdf = median(msd.x, msd.y, msd.z);
 
-    float w = fwidth(sd);
+    float2 fwidthUV = float2(
+        fwidth(input.UV.x),
+        fwidth(input.UV.y) * characterData.Scale // korekta skali Y
+    );
 
-    // SHARPEN: Scale down 'w' to make the transition edge much tighter
-    float sharpness = 0.5; // Lower values = sharper. 0.0 = completely aliased.
-    float width = w * sharpness;
+    float2 screenTexSize = 1.0 / fwidthUV;
 
-    // Apply the tighter smoothing window
-    float opacity = smoothstep(0.5 - width, 0.5 + width, sd);
+    float2 unitRange = float2(MSDF_RANGE / ATLAS_WIDTH, MSDF_RANGE / ATLAS_HEIGHT);
+    float screenPxRange = max(0.5f * dot(unitRange, screenTexSize), 1.0f);
+    float screenPxDistance = screenPxRange * (msdf - 0.5f);
+
+    float opacity = clamp(screenPxDistance + 0.5f, 0.0f, 1.0f);
 
     output.color = float4(input.color.xyz, opacity);
 

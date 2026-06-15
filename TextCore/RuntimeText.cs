@@ -16,8 +16,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     public SlotData<TextVertex> VertexSlotData = new();
     public SlotData<ushort> IndicesSlotData = new();
     ReadOnlyMemory<char> Text;
-    int leftRange = 0;
-    int rightRange = 0;
+    internal int leftRange = 0;
+    internal int rightRange = 0;
 
     /// <summary>
     /// Only for debug pupropses.
@@ -63,8 +63,11 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         GenerateMesh();
     }
 
+    //FIXME - troszkę zaniża długość tekstu
     public static float GetTextWidth(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
     {
+        if (text.IsEmpty) return 0f;
+
         float cursorX = 0f;
         float invHeight = 1f / fontAtlas.height;
         int textLength = text.Length;
@@ -73,59 +76,98 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         for (int i = 0; i < textLength; i++)
         {
             GlyphData g = glyphs[text[i]];
-            float nextBearingX = (i + 1 < textLength) ? glyphs[text[i + 1]].BearingX : 0f;
-            cursorX += (2f * g.Advance - g.Width - g.BearingX + nextBearingX) * invHeight;
+
+            // 1. Odwzorowanie dodawania szerokości właściwej znaku (jeśli istnieje)
+            float glyphWidth = g.Width;
+            if (glyphWidth != 0)
+            {
+                cursorX += glyphWidth * invHeight;
+            }
+
+            // Jeśli to ostatni znak, nie przetwarzamy odstępu do następnego
+            if (i + 1 == textLength)
+                break;
+
+            // 2. Odwzorowanie dodawania odstępu między znakami
+            float nextBearingX = glyphs[text[i + 1]].BearingX;
+            float spacingWidth = g.Advance - g.Width - g.BearingX + nextBearingX;
+
+            if (spacingWidth != 0)
+            {
+                cursorX += spacingWidth * invHeight;
+            }
         }
 
         return cursorX * textSize;
     }
 
+
     public void GenerateMesh()
     {
-        Console.WriteLine("trying to generate mesh with size of: " + ((rightRange - leftRange) * 2 * 4) + " " + TextStr);
-        TextVertex[] _vertices = new TextVertex[(rightRange - leftRange) * 2 * 4];
-        ushort[] _indices = new ushort[(rightRange - leftRange) * 2 * 6];
+        // Console.WriteLine("trying to generate mesh with size of: " + ((rightRange - leftRange) * 4 + 2) + " " + TextStr);
+        // if (VertexSlotData != null && VertexSlotData.GetRingBuffer() != null && VertexSlotData.GetRingBuffer().buffersInfo[0] != null && IndicesSlotData != null)
+        //     Console.WriteLine("Vertex buffer: " + VertexSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle + " index buffer " + +IndicesSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle);
+
+        TextVertex[] _vertices = new TextVertex[(rightRange - leftRange) * 4 + 2];
+        ushort[] _indices = new ushort[(rightRange - leftRange) * 4 + 2];
+
         float _cursorX = 0;
         int _j = 0;
         float invHeight = 1f / textContainer.fontAtlas.height;
 
         ReadOnlySpan<char> _text = Text.Span;
-        int _textLength = Text.Length;
+
+        GlyphData _fcharGlyphData = textContainer.fontAtlas.Glyphs[_text[leftRange]];
+        _vertices[0] = new TextVertex(new(0, 1, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMax.Y), _text[leftRange]);
+        _vertices[1] = new TextVertex(new(0, 0, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMin.Y), _text[leftRange]);
+
+        _indices[0] = 1;
+        _indices[1] = 0;
 
         for (int i = leftRange; i < rightRange; i++)
         {
-            GlyphData glyphData = textContainer.fontAtlas.Glyphs[_text[i]];
+            GlyphData _glyphData = textContainer.fontAtlas.Glyphs[_text[i]];
 
-            float _width = glyphData.Width;
+            float _width = _glyphData.Width;
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, _width, glyphData.UVMin, glyphData.UVMax, _cursorX, (uint)_text[i], ref _j);
+                GenerateQuad(_vertices, _indices, _width, _glyphData.UVMin, _glyphData.UVMax, _cursorX, _text[i], ref _j, false);
                 _cursorX += _width;
             }
 
-            _width = glyphData.Advance - glyphData.Width - glyphData.BearingX + (i + 1 < _textLength ? textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX : 0);
+            if (i + 1 == rightRange)
+                break;
+
+            GlyphData _nextCharGlyphData = textContainer.fontAtlas.Glyphs[_text[i + 1]];
+
+            _width = _glyphData.Advance - _glyphData.Width - _glyphData.BearingX + textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX;
 
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, _width, new(), new(), _cursorX, 0, ref _j);
+                GenerateQuad(_vertices, _indices, _width, _nextCharGlyphData.UVMin, _nextCharGlyphData.UVMax, _cursorX, _text[i + 1], ref _j, true);
                 _cursorX += _width;
             }
 
-            _width = (glyphData.Advance - glyphData.Width) * invHeight;
+            // _width = (glyphData.Advance - glyphData.Width) * invHeight;
 
-            _cursorX += _width;
+            // _cursorX += _width;
         }
 
+
         VertexSlotData.Data = _vertices;
+        VertexSlotData.dataCount = _j * 2 + 2;
         IndicesSlotData.Data = _indices;
+        IndicesSlotData.dataCount = _j * 2 + 2;
 
         widthWithoutScale = _cursorX;
         UpdateBounds();
         AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
 
         TextManager.Instance.Update(this);
+        // if (VertexSlotData != null && VertexSlotData.GetRingBuffer() != null && VertexSlotData.GetRingBuffer().buffersInfo[0] != null && IndicesSlotData != null)
+        //     Console.WriteLine("New Vertex buffer: " + VertexSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle + " index buffer " + +IndicesSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle);
     }
 
     void UpdateBounds()
@@ -134,27 +176,21 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         bounds.Height = textContainer.Properties.fontSize.Value;
     }
 
-    public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i)
+    public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i, bool beginning)
     {
-        int _vericesIndex = i * 4;
-        int _indicesIndex = i * 6;
+        int _vericesIndex = i * 2 + 2;
+        int _indicesIndex = i * 2 + 2;
 
-        vertices[_vericesIndex + 0] = new TextVertex(new(x, 0, 0), new(UVMin.X, UVMin.Y), (uint)charAscii);
-        vertices[_vericesIndex + 1] = new TextVertex(new(x, 1, 0), new(UVMin.X, UVMax.Y), (uint)charAscii);
-        vertices[_vericesIndex + 2] = new TextVertex(new(x + width, 1, 0), new(UVMax.X, UVMax.Y), (uint)charAscii);
-        vertices[_vericesIndex + 3] = new TextVertex(new(x + width, 0, 0), new(UVMax.X, UVMin.Y), (uint)charAscii);
+        vertices[_vericesIndex] = new TextVertex(new(x + width, 0, 0), beginning ? new(UVMin.X, UVMin.Y) : new(UVMax.X, UVMin.Y), (uint)charAscii);
+        vertices[_vericesIndex + 1] = new TextVertex(new(x + width, 1, 0), beginning ? new(UVMin.X, UVMax.Y) : new(UVMax.X, UVMax.Y), (uint)charAscii);
 
         // vertices[_vericesIndex + 0] = new Vertex(new(x, 0, 0), new(0, 0));
         // vertices[_vericesIndex + 1] = new Vertex(new(x, 1, 0), new(0, 1));
         // vertices[_vericesIndex + 2] = new Vertex(new(x + width, 1, 0), new(1, 1));
         // vertices[_vericesIndex + 3] = new Vertex(new(x + width, 0, 0), new(1, 0));
 
-        indices[_indicesIndex + 0] = (ushort)(_vericesIndex + 0);
+        indices[_indicesIndex] = (ushort)(_vericesIndex);
         indices[_indicesIndex + 1] = (ushort)(_vericesIndex + 1);
-        indices[_indicesIndex + 2] = (ushort)(_vericesIndex + 2);
-        indices[_indicesIndex + 3] = (ushort)(_vericesIndex + 2);
-        indices[_indicesIndex + 4] = (ushort)(_vericesIndex + 3);
-        indices[_indicesIndex + 5] = (ushort)(_vericesIndex + 0);
 
         i++;
     }
@@ -246,6 +282,12 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     {
         AddFlag(DirtyFlags.Matrix);
         return;
+    }
+
+
+    protected internal override void UpdateChildrenLayout()
+    {
+        throw new Exception("You shoudn't update children layout for this object.");
     }
 
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)

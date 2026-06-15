@@ -72,6 +72,7 @@ public abstract class RuntimeModelData : IDisposable
     protected internal abstract float GetLayoutTop();
     protected internal abstract Vector2D<float> GetLayoutSize();
     protected internal abstract void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
+    protected internal abstract void UpdateChildrenLayout();
     public abstract void AddChild(RuntimeModelData runtimeModelData);
 
     public abstract CursorType GetCursorType();

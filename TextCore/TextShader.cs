@@ -65,10 +65,22 @@ public unsafe class TextShader : BaseShader
         },
     ];
 
+    protected internal override PipelineInputAssemblyStateCreateInfo GetPipelineInputAssemblyStateCreateInfo() => new()
+    {
+        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
+        Topology = PrimitiveTopology.TriangleStrip,
+        PrimitiveRestartEnable = Vk.False,
+    };
+
     bool isWireFrameRendering = false;
 
     protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
     {
+        Silk.NET.Vulkan.Buffer _lastVertexBuffer = default;
+        Silk.NET.Vulkan.Buffer _lastIndexBuffer = default;
+        ulong _lastFontAtlasAddress = 0;
+        ulong vOffset = 0;
+
         foreach (var element in elements)
         {
             if (element.TryGetObjectData(out var textData, currentFrame))
@@ -81,9 +93,9 @@ public unsafe class TextShader : BaseShader
 
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
+
             lock (element.runtimeTexts)
             {
-                ulong vOffset = 0;
                 foreach (var runtimeText in element.runtimeTexts)
                 {
 
@@ -93,8 +105,20 @@ public unsafe class TextShader : BaseShader
                         // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
                     }
 
-                    CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref runtimeText.VertexSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer, ref vOffset);
-                    CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, runtimeText.IndicesSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer, 0, IndexType.Uint16);
+                    var _vertexBuffer = runtimeText.VertexSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer;
+                    var _indexBuffer = runtimeText.IndicesSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer;
+
+                    if (_lastVertexBuffer.Handle != _vertexBuffer.Handle)
+                    {
+                        _lastVertexBuffer = _vertexBuffer;
+                        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref _vertexBuffer, ref vOffset);
+                    }
+
+                    if (_lastIndexBuffer.Handle != _indexBuffer.Handle)
+                    {
+                        _lastIndexBuffer = _indexBuffer;
+                        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, IndexType.Uint16);
+                    }
                     CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.IndicesSlotData.GetDataCount(), 1, runtimeText.IndicesSlotData.GetSlot().Offset, (int)runtimeText.VertexSlotData.GetSlot().Offset, runtimeText.ObjectIndex);
                 }
             }

@@ -2,17 +2,15 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Silk.NET.Maths;
 
-[assembly:InternalsVisibleTo("Browser")]
+[assembly: InternalsVisibleTo("Browser")]
 namespace Units;
 
 public struct UIUnit
 {
-    float ValueInPx = -1;
     float ValueInUnit;
     UnitType ValueType;
+    public readonly bool IsPercentage;
 
-    public float Value => ValueInPx;
-    
     public UIUnit(float value) : this(value, UnitType.px)
     {
     }
@@ -21,56 +19,46 @@ public struct UIUnit
     {
         ValueInUnit = value;
         ValueType = value == 0 ? UnitType.px : valueType;
+        IsPercentage = ValueType == UnitType.percentageWidth || ValueType == UnitType.percentageHeight;
     }
 
-    public UIUnit ConvertToPx(Vector2D<float> parentSize = default)
+    public readonly float Resolve(Vector2D<float> parentSize)
     {
-        if (ValueType == UnitType.percentageWidth)
-            ValueInPx = parentSize != default ? ValueInUnit * parentSize.X / 100f : 0;
-        else if (ValueType == UnitType.percentageHeight)
-            ValueInPx = parentSize != default ? ValueInUnit * parentSize.Y / 100f : 0;
-        else
-            ValueInPx = ValueInUnit * UnitsConverter.Get(ValueType);
-        return this;
+        switch (ValueType)
+        {
+            case UnitType.percentageWidth:
+                return parentSize != default ? ValueInUnit * parentSize.X / 100f : 0;
+            case UnitType.percentageHeight:
+                return parentSize != default ? ValueInUnit * parentSize.Y / 100f : 0;
+            default:
+                return ValueInUnit * UnitsConverter.Get(ValueType);
+        }
     }
 
-    public static UIUnit operator +(UIUnit a, UIUnit b)
+    public readonly float Resolve()
     {
-        var _newValue = a.ValueInPx + b.ValueInPx;
-
-        return new(_newValue);
-    }
-
-    public static UIUnit operator -(UIUnit a, UIUnit b)
-    {
-        var _newValue = a.ValueInPx - b.ValueInPx;
-
-        return new UIUnit(_newValue);
+        return ValueInUnit * UnitsConverter.Get(ValueType);
     }
 
     public static bool operator ==(UIUnit a, UIUnit b)
     {
-        return a.ValueInPx == b.ValueInPx;
-    }
-    public static bool operator !=(UIUnit a, UIUnit b)
-    {
-        return a.ValueInPx != b.ValueInPx;
+        return a.ValueInUnit == b.ValueInUnit && a.ValueType == b.ValueType;
     }
 
-    public override int GetHashCode()
+    public static bool operator !=(UIUnit a, UIUnit b)
     {
-        return Value.GetHashCode();
+        return a.ValueInUnit != b.ValueInUnit || a.ValueType != b.ValueType;
     }
 
     public override bool Equals([NotNullWhen(true)] object? obj)
     {
-        if (obj is UIUnit unity)
-            return ValueInPx == unity.ValueInPx;
+        if (obj is UIUnit unit)
+            return ValueInUnit == unit.ValueInUnit && ValueType == unit.ValueType;
         return false;
     }
 
     public override string ToString()
     {
-        return ValueInUnit.ToString() + ValueType.ToString() + "=" + Value.ToString() + "px";
+        return ValueInUnit.ToString() + ValueType.ToString();
     }
 }

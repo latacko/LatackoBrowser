@@ -80,6 +80,13 @@ public unsafe abstract class BaseShader : IDisposable
     protected internal abstract VertexInputBindingDescription GetBindingDescription();
     protected internal abstract VertexInputAttributeDescription[] GetAttributeDescriptions();
 
+    protected internal virtual PipelineInputAssemblyStateCreateInfo GetPipelineInputAssemblyStateCreateInfo() => new()
+    {
+        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
+        Topology = PrimitiveTopology.TriangleList,
+        PrimitiveRestartEnable = Vk.False,
+    };
+
     public virtual void CreatePipeline(bool wireFrameRendering = false)
     {
         #region Pipeline layout
@@ -170,12 +177,7 @@ public unsafe abstract class BaseShader : IDisposable
                 PVertexAttributeDescriptions = attrPtr,
             };
 
-            PipelineInputAssemblyStateCreateInfo inputAssembly = new()
-            {
-                SType = StructureType.PipelineInputAssemblyStateCreateInfo,
-                Topology = PrimitiveTopology.TriangleList,
-                PrimitiveRestartEnable = Vk.False,
-            };
+            PipelineInputAssemblyStateCreateInfo inputAssembly = GetPipelineInputAssemblyStateCreateInfo();
 
             PipelineViewportStateCreateInfo viewportState = new()
             {

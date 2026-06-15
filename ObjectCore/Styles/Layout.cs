@@ -24,6 +24,8 @@ public struct Layout
         Size = 1 << 1,
         Top = 1 << 2,
         Bottom = 1 << 3,
+        Padding = 1 << 4,
+        Margin = 1 << 4,
     }
 
     internal LayoutDirty dirty;
@@ -32,19 +34,16 @@ public struct Layout
     Bounds bounds = new();
     public Bounds Bounds => bounds;
     internal Vector2D<float> LayoutPos;
-    public UIUnit Top;
-    public Align TopAlign = Align.Top;
-    public UIUnit Left;
-    public Align LeftAlign = Align.Left;
+    public UIUnit Top { get; private set; }
+    public Align TopAlign { get; private set; } = Align.Top;
+    public UIUnit Left { get; private set; }
+    public Align LeftAlign { get; private set; } = Align.Left;
     #endregion
 
     #region Size
-    internal Vector2D<float> BaseSize;
-    internal UIUnit Width;
-    internal UIUnit Height;
+    internal UIUnit Width { get; private set; }
+    internal UIUnit Height { get; private set; }
     #endregion
-
-    RuntimeObject runtimeObject;
     public enum DisplayType
     {
         inline,
@@ -59,104 +58,88 @@ public struct Layout
     public DisplayType Display;
 
     #region Padding
-    public UIUnit PaddingLeft;
-    public UIUnit PaddingTop;
-    public UIUnit PaddingRight;
-    public UIUnit PaddingBottom;
+    public UIUnit PaddingLeft { get; private set; }
+    public UIUnit PaddingTop { get; private set; }
+    public UIUnit PaddingRight { get; private set; }
+    public UIUnit PaddingBottom { get; private set; }
     #endregion
 
     #region Margin
-    public UIUnit MarginLeft;
-    public UIUnit MarginTop;
-    public UIUnit MarginRight;
-    public UIUnit MarginBottom;
+    public UIUnit MarginLeft { get; private set; }
+    public UIUnit MarginTop { get; private set; }
+    public UIUnit MarginRight { get; private set; }
+    public UIUnit MarginBottom { get; private set; }
     #endregion
 
-    public Layout(RuntimeObject runtimeObject)
+    public Layout()
     {
-        this.runtimeObject = runtimeObject;
     }
 
 
-    public void ConvertToPx(Vector2D<float> parentSize)
-    {
-        Width.ConvertToPx(parentSize);
-        Height.ConvertToPx(parentSize);
+    // public void UpdateBoundsOffset()
+    // {
+    //     if (runtimeObject == null)
+    //         return;
 
-        Left.ConvertToPx(parentSize);
-        Top.ConvertToPx(parentSize);
-    }
-
-    public void UpdateBoundsOffset()
-    {
-        if (runtimeObject.Parent == null)
-        {
-            bounds.OffsetX = Left.Value;
-            bounds.OffsetY = Top.Value;
-        }
-        else
-        {
-            bounds.OffsetX = runtimeObject.Parent.GetLayoutLeft() + LayoutPos.X + Left.Value;
-            bounds.OffsetY = runtimeObject.Parent.GetLayoutTop() + LayoutPos.Y + Top.Value;
-        }
-    }
+    //     if (runtimeObject.Parent == null)
+    //     {
+    // bounds.OffsetX = Left.Value;
+    // bounds.OffsetY = Top.Value;
+    // }
+    // else
+    // {
+    // bounds.OffsetX = runtimeObject.Parent.GetLayoutLeft() + LayoutPos.X + Left.Value;
+    // bounds.OffsetY = runtimeObject.Parent.GetLayoutTop() + LayoutPos.Y + Top.Value;
+    //     }
+    // }
 
     public Layout SetLeft(UIUnit left, Align align = Align.Left)
     {
-        left.ConvertToPx(runtimeObject.ParentSize);
         if (Left == left) return this;
         Left = left;
         LeftAlign = align;
         dirty |= LayoutDirty.Position;
-        UpdateBoundsOffset();
         return this;
     }
 
     public Layout SetTop(UIUnit top, Align align = Align.Top)
     {
-        top.ConvertToPx(runtimeObject.ParentSize);
         if (Top == top) return this;
         Top = top;
         TopAlign = align;
         dirty |= LayoutDirty.Position;
-        UpdateBoundsOffset();
         return this;
     }
 
     public Layout SetWidth(UIUnit width)
     {
-        width.ConvertToPx(runtimeObject.ParentSize);
         if (Width == width) return this;
         Width = width;
         dirty |= LayoutDirty.Size;
-
-        bounds.Width = width.Value;
         return this;
     }
 
     public Layout SetHeight(UIUnit height)
     {
-        height.ConvertToPx(runtimeObject.ParentSize);
         if (Height == height) return this;
         Height = height;
         dirty |= LayoutDirty.Size;
-        bounds.Height = Height.Value;
         return this;
     }
 
     public Vector2D<float> GetSize()
     {
-        float _width;
-        float _height;
+        float _width = 0;
+        float _height = 0;
 
-        if (Width.Value == -1)
-            _width = BaseSize.X;
-        else
-            _width = Width.Value;
-        if (Height.Value == -1)
-            _height = BaseSize.Y;
-        else
-            _height = Height.Value;
+        // if (Width.Value == -1)
+        //     _width = BaseSize.X;
+        // else
+        //     _width = Width.Value;
+        // if (Height.Value == -1)
+        //     _height = BaseSize.Y;
+        // else
+        //     _height = Height.Value;
 
         return new(_width, _height);
     }
@@ -169,34 +152,34 @@ public struct Layout
 
     public void UpdateChildrenLayout()
     {
-        if (runtimeObject.Children == null) return;
-        float sizeOfLine = 0;
+        // if (runtimeObject.Children == null) return;
+        // float sizeOfLine = 0;
 
-        var _paddingLeft = PaddingLeft.Value;
-        var _paddingTop = PaddingTop.Value;
+        // var _paddingLeft = PaddingLeft.Value;
+        // var _paddingTop = PaddingTop.Value;
 
-        float innerWidth = Width.Value - PaddingLeft.Value - PaddingRight.Value;
-        float cursorX = _paddingLeft;
-        float cursorY = _paddingTop;
+        // float innerWidth = Width.Value - PaddingLeft.Value - PaddingRight.Value;
+        // float cursorX = _paddingLeft;
+        // float cursorY = _paddingTop;
 
-        foreach (var child in runtimeObject.Children)
-        {
-            child.UpdateLayout(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
-            // child.Layout.UpdateChildrenLayout();
-        }
+        // foreach (var child in runtimeObject.Children)
+        // {
+        //     child.UpdateLayout(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
+        //     // child.Layout.UpdateChildrenLayout();
+        // }
 
-        void NewLine()
-        {
-            cursorX = _paddingLeft;
-            cursorY += sizeOfLine;
-        }
+        // void NewLine()
+        // {
+        //     cursorX = _paddingLeft;
+        //     cursorY += sizeOfLine;
+        // }
 
-        void UpdateSizeOfLine(float newSizeOfLine)
-        {
-            if (newSizeOfLine > sizeOfLine)
-            {
-                sizeOfLine = newSizeOfLine;
-            }
-        }
+        // void UpdateSizeOfLine(float newSizeOfLine)
+        // {
+        //     if (newSizeOfLine > sizeOfLine)
+        //     {
+        //         sizeOfLine = newSizeOfLine;
+        //     }
+        // }
     }
 }

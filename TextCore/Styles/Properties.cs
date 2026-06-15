@@ -7,6 +7,15 @@ namespace TextCore.Styles;
 
 public struct Properties
 {
+    [Flags]
+    public enum ProperitesDirty : byte
+    {
+        None = 0,
+        FontSize = 1 << 1,
+    }
+
+    internal ProperitesDirty dirty;
+
     public RuntimeTextContainer runtimeText;
     public CursorType Cursor;
     public Vector4D<float> TextColor = new(1, 1, 1, 1);
@@ -82,10 +91,5 @@ public struct Properties
     {
         this.fontSize = fontSize;
         return this;
-    }
-
-    public void ConvertToPx(Vector2D<float> parentSize)
-    {
-        fontSize.ConvertToPx(parentSize);
     }
 }

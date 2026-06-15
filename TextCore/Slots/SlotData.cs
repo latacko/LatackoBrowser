@@ -8,8 +8,9 @@ public class SlotData<BufferData> : ISlotInformation<BufferData> where BufferDat
     bool[] isDirty;
     RingBuffer<BufferData> ringBuffer;
     VulkanManager.BufferManager.Slot slot;
+    internal int dataCount; 
 
-    public BufferData[] _data;
+    internal BufferData[] _data;
     public BufferData[] Data
     {
         get => _data;
@@ -30,7 +31,7 @@ public class SlotData<BufferData> : ISlotInformation<BufferData> where BufferDat
     }
 
 
-    public uint GetDataCount()=>(uint)Data.Length;
+    public uint GetDataCount()=>(uint)dataCount;
 
     public BufferData[] GetDatas()=>Data;
 

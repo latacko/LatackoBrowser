@@ -6,6 +6,16 @@ namespace ObjectCore;
 
 public struct Properties
 {
+    [Flags]
+    public enum ProperitesDirty : byte
+    {
+        None = 0,
+        BorderRadius = 1 << 1,
+    }
+
+    internal ProperitesDirty dirty;
+
+
     public RuntimeObject runtimeObject;
     public CursorType Cursor;
     public Vector4D<float> BackgroundColor = new(1, 1, 1, 1);
@@ -48,7 +58,7 @@ public struct Properties
 
     public readonly void UpdateColorTransitionHelper(Vector4D<float> targetColor)
     {
-        runtimeObject.SetProperties(runtimeObject.Properties.SetBackgroundColorWithoutTransitionInLinear(targetColor.X, targetColor.Y, targetColor.Z, targetColor.W));
+        runtimeObject.Style.SetProperties(runtimeObject.Style.Properties.SetBackgroundColorWithoutTransitionInLinear(targetColor.X, targetColor.Y, targetColor.Z, targetColor.W));
     }
 
     public Properties SetBackgroundColorWithoutTransition(float r, float g, float b, float a)
@@ -79,22 +89,24 @@ public struct Properties
     #region Set Border
     public Properties SetBorderRadius(UIUnit borderRadius)
     {
-        borderRadius.ConvertToPx(runtimeObject.Layout.GetSize());
+        // borderRadius.ConvertToPx(runtimeObject.Layout.GetSize());
 
         borderRadiusTopLeft = borderRadius;
         borderRadiusTopRight = borderRadius;
         borderRadiusBottomRight = borderRadius;
         borderRadiusBottomLeft = borderRadius;
 
+        dirty |= ProperitesDirty.BorderRadius;
+
         return this;
     }
 
     public Properties SetBorderRadius(UIUnit topLeft, UIUnit topRight, UIUnit bottomRight, UIUnit bottomLeft)
     {
-        topLeft.ConvertToPx(runtimeObject.Layout.GetSize());
-        topRight.ConvertToPx(runtimeObject.Layout.GetSize());
-        bottomRight.ConvertToPx(runtimeObject.Layout.GetSize());
-        bottomLeft.ConvertToPx(runtimeObject.Layout.GetSize());
+        // topLeft.ConvertToPx(runtimeObject.Layout.GetSize());
+        // topRight.ConvertToPx(runtimeObject.Layout.GetSize());
+        // bottomRight.ConvertToPx(runtimeObject.Layout.GetSize());
+        // bottomLeft.ConvertToPx(runtimeObject.Layout.GetSize());
 
 
         borderRadiusTopLeft = topLeft;
@@ -102,17 +114,9 @@ public struct Properties
         borderRadiusBottomRight = bottomRight;
         borderRadiusBottomLeft = bottomLeft;
 
+        dirty |= ProperitesDirty.BorderRadius;
+
         return this;
     }
     #endregion
-
-    public Properties ConvertToPx(Vector2D<float> selfSize)
-    {
-        borderRadiusTopLeft.ConvertToPx(selfSize);
-        borderRadiusTopRight.ConvertToPx(selfSize);
-        borderRadiusBottomRight.ConvertToPx(selfSize);
-        borderRadiusBottomLeft.ConvertToPx(selfSize);
-
-        return this;
-    }
 }

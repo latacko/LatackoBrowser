@@ -63,8 +63,8 @@ public class TextManager : BufferManager
 
     public override void RegisterBuffer()
     {
-        vertexBuffer = new(1000, 4, BufferUsageFlags.VertexBufferBit);
-        indicesBuffer = new(5000, 6, BufferUsageFlags.IndexBufferBit);
+        vertexBuffer = new(10000, 2, BufferUsageFlags.VertexBufferBit);
+        indicesBuffer = new(5000, 2, BufferUsageFlags.IndexBufferBit);
         
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {

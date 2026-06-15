@@ -1,5 +1,6 @@
 ﻿using GraphicCore;
 using GraphicsCore;
+using ObjectCore.Styles;
 using ObjectCore.Textures;
 using Silk.NET.Maths;
 using Vulkan;
@@ -8,73 +9,22 @@ namespace ObjectCore;
 
 public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectModelData<ushort>>
 {
-    public Transform Transform = new();
-    public Properties Properties;
-    public Layout Layout;
+    public Style Style;
+    ComputedStyle computedStyle;
+    Vector2D<float> worldPosition;
 
     public List<RuntimeModelData> Children;
     public Texture texture;
 
     public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
     {
-        Properties = new(this);
-        Layout = new(this);
-        Events = new(this);
-
         this.texture = texture;
     }
 
-    public RuntimeObject SetLayout(Func<Layout, Layout> setLayout)
+    public RuntimeObject SetStyle(Style style)
     {
-        return SetLayout(setLayout.Invoke(Layout));
-    }
-
-    public RuntimeObject SetLayout(Layout layout)
-    {
-        Layout = layout;
-        if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position) || Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
-        {
-            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
-            {
-                ConvertToPx();
-                UpdateMySize();
-            }
-            if (Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
-            {
-                UpdatePosition();
-            }
-
-            Layout.dirty &= Layout.LayoutDirty.Position;
-            Layout.dirty &= Layout.LayoutDirty.Size;
-
-            AddFlag(DirtyFlags.Matrix);
-        }
-        return this;
-    }
-
-    public RuntimeObject SetTransform(Func<Transform, Transform> setTransform)
-    {
-        return SetTransform(setTransform.Invoke(Transform));
-    }
-
-    public RuntimeObject SetTransform(Transform transform)
-    {
-        Transform = transform;
-        ConvertToPx();
-        AddFlag(DirtyFlags.Matrix);
-        return this;
-    }
-
-    public RuntimeObject SetProperties(Func<Properties, Properties> setProperties)
-    {
-        return SetProperties(setProperties.Invoke(Properties));
-    }
-
-    public RuntimeObject SetProperties(Properties properties)
-    {
-        Properties = properties;
-        ConvertToPx();
-        AddFlag(DirtyFlags.Data);
+        Style = style;
+        StylesManager.AddInlineStyle(style);
         return this;
     }
 
@@ -82,11 +32,11 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         base.UpdateMySize(informChildren);
 
-        var _prevSize = Layout.GetSize();
-        ConvertToPx();
+        var _prevSize = computedStyle.Size;
+        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
 
-        if (_prevSize == Layout.GetSize()) return;
-        Layout.UpdateChildrenLayout();
+        if (_prevSize == computedStyle.Size) return;
+        // Layout.UpdateChildrenLayout();
 
 
         if (!informChildren || Children == null) return;
@@ -100,11 +50,11 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     protected internal override void UpdatePosition()
     {
         relativePos = (Parent != null ? Parent.relativePos : new Vector3D<float>()) + new Vector3D<float>(GetLayoutLeft(), GetLayoutTop(), 0);
-        relativeRot = (Parent != null ? Parent.relativeRot : new Vector3D<float>()) + Transform.Rotation;
-        relativeTransformation = (Parent != null ? Parent.relativeTransformation : new Vector3D<float>()) + new Vector3D<float>(Transform.TranslateX.Value, Transform.TranslateY.Value, 0);
+        relativeRot = (Parent != null ? Parent.relativeRot : new Vector3D<float>()) + Style.Transform.Rotation;
+        relativeTransformation = (Parent != null ? Parent.relativeTransformation : new Vector3D<float>()) + new Vector3D<float>(computedStyle.Translate.X, computedStyle.Translate.Y, 0);
 
         AddFlag(DirtyFlags.Matrix);
-        Layout.UpdateBoundsOffset();
+        // Layout.UpdateBoundsOffset();
         if (Children == null) return;
 
         foreach (var child in Children)
@@ -115,38 +65,45 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     protected internal override void ConvertToPx()
     {
-        Layout.ConvertToPx(ParentSize);
-        Transform.ConvertToPx(Layout.GetSize());
-        Properties.ConvertToPx(Layout.GetSize());
+        // Layout.ConvertToPx(ParentSize);
+        // Transform.ConvertToPx(Layout.GetSize());
+        // Properties.ConvertToPx(Layout.GetSize());
+
+        UpdatePosition();
 
         AddFlag(DirtyFlags.Matrix);
     }
 
-    protected internal override float GetLayoutLeft() => Layout.Left.Value;
-    protected internal override float GetLayoutTop() => Layout.Top.Value;
-    protected internal override Vector2D<float> GetLayoutSize() => Layout.GetSize();
-    public override Bounds GetBounds() => Layout.Bounds;
-    public override CursorType GetCursorType() => Properties.Cursor;
+    protected internal override float GetLayoutLeft() => computedStyle.Pos.X;
+    protected internal override float GetLayoutTop() => computedStyle.Pos.Y;
+    protected internal override Vector2D<float> GetLayoutSize() => computedStyle.Size;
+    public override Bounds GetBounds() => new();
+    public override CursorType GetCursorType() => Style.Properties.Cursor;
+
+    protected internal override void UpdateChildrenLayout()
+    {
+        // Layout.UpdateChildrenLayout();
+    }
 
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
     {
         updateSizeOfLine(GetLayoutSize().Y);
 
-        switch (Layout.Display)
+        switch (Style.Layout.Display)
         {
             case Layout.DisplayType.inline:
-                if (cursorX + Layout.Width.Value > width)
+                if (cursorX + computedStyle.Size.X > width)
                     newLine.Invoke();
 
-                Layout.LayoutPos = new(cursorX, cursorY);
-                cursorX += Layout.Width.Value;
+                // Layout.LayoutPos = new(cursorX, cursorY);
+                cursorX += computedStyle.Size.X;
 
                 break;
             case Layout.DisplayType.block:
                 newLine.Invoke();
 
-                Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
-                Layout.BaseSize = new(width, 0);
+                // Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
+                // Layout.BaseSize = new(width, 0);
                 break;
         }
     }
@@ -155,7 +112,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         Children ??= new();
         Children.Add(runtimeModelData);
-        Layout.UpdateChildrenLayout();
+        // Layout.UpdateChildrenLayout();
+        runtimeModelData.UpdatePosition();
     }
 
     public override bool TryGetObjectData(out ObjectData data, uint frame)
@@ -179,10 +137,10 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
             // {
             // });
             cachedModel =
-                Matrix4X4.CreateScale(Layout.GetSize().X, Layout.GetSize().Y, 1f) *
-                Matrix4X4.CreateTranslation(-Transform.TranslateX.Value, -Transform.TranslateY.Value, 0f) *
-                Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
-                Matrix4X4.CreateTranslation(Layout.Left.Value, Layout.Top.Value, 0f);
+                Matrix4X4.CreateScale(computedStyle.Size.X, computedStyle.Size.Y, 1f) *
+                Matrix4X4.CreateTranslation(-computedStyle.Translate.X, -computedStyle.Translate.Y, 0f) *
+                Matrix4X4.CreateFromYawPitchRoll(Style.Transform.Rotation.X, Style.Transform.Rotation.Y, Style.Transform.Rotation.Z) *
+                Matrix4X4.CreateTranslation(worldPosition.X, worldPosition.Y, 0f);
 
             if (Parent != null)
             {
@@ -196,16 +154,16 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         data = new ObjectData
         {
             Model = cachedModel,
-            Color = Properties.BackgroundColor,
+            Color = Style.Properties.BackgroundColor,
 
             pos = new Vector2D<float>(cachedModel.M41, cachedModel.M42),
-            size = Layout.GetSize(),
+            size = computedStyle.Size,
 
             TextureIndex = texture == null ? uint.MaxValue : texture.GetID(),
-            borderRadiusTopLeft = Properties.borderRadiusTopLeft.Value,
-            borderRadiusTopRight = Properties.borderRadiusTopRight.Value,
-            borderRadiusBottomRight = Properties.borderRadiusBottomRight.Value,
-            borderRadiusBottomLeft = Properties.borderRadiusBottomLeft.Value,
+            borderRadiusTopLeft = computedStyle.BorderRadius.X,
+            borderRadiusTopRight = computedStyle.BorderRadius.Y,
+            borderRadiusBottomRight = computedStyle.BorderRadius.Z,
+            borderRadiusBottomLeft = computedStyle.BorderRadius.W,
         };
 
         RemoveFlag(DirtyFlags.Data, frame);

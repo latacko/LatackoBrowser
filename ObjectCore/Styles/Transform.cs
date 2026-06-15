@@ -3,7 +3,8 @@ using Silk.NET.Maths;
 using Units;
 using Vulkan;
 
-namespace GraphicCore;
+namespace ObjectCore;
+
 public struct Transform
 {
     public enum BoxE : byte
@@ -14,6 +15,16 @@ public struct Transform
         Stroke,
         View,
     }
+
+    [Flags]
+    public enum TransformDirty : byte
+    {
+        None = 0,
+        Translate = 1 << 1,
+    }
+
+    internal TransformDirty dirty;
+
     public BoxE Box;
     public UIUnit TranslateX;
     public UIUnit TranslateY;
@@ -89,12 +100,4 @@ public struct Transform
         return this;
     }
     #endregion
-
-    internal Transform ConvertToPx(Vector2D<float> parentSize)
-    {
-        TranslateX.ConvertToPx(parentSize);
-        TranslateY.ConvertToPx(parentSize);
-
-        return this;
-    }
 }

@@ -13,6 +13,7 @@ using System.Numerics;
 using Silk.NET.Input.Sdl;
 using ObjectCore;
 using TextCore;
+using ObjectCore.Styles;
 
 namespace Browser;
 
@@ -124,19 +125,19 @@ public unsafe partial class BrowserWindow
 
         coreManager.Update(deltaTime);
 
-        browserUI.TopBar.SetLayout(browserUI.TopBar.Layout
+        browserUI.TopBar.Style.SetLayout(browserUI.TopBar.Style.Layout
             .SetTop(new(100 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
             .SetWidth(new(800 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
             .SetHeight(new(300 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
             );
 
-        browserUI.hellothere.SetLayout(browserUI.hellothere.Layout
-        .SetTop(new(-100 + MathF.Sin(timeFromStart) * 200, Units.UnitType.px))
-        );
+        // browserUI.hellothere.SetLayout(browserUI.hellothere.Layout
+        // .SetTop(new(-100 + MathF.Sin(timeFromStart) * 200, Units.UnitType.px))
+        // );
 
         // browserUI.TopBar.SetTransform(browserUI.TopBar.Transform
         //     .SetRotationZ());
-        browserUI.TopBar?.SetTransform(browserUI.TopBar.Transform.SetRotationZ(browserUI.TopBar.Transform.Rotation.Z + (float)deltaTime));
+        browserUI.TopBar?.Style.SetTransform(browserUI.TopBar.Style.Transform.SetRotationZ(browserUI.TopBar.Style.Transform.Rotation.Z + (float)deltaTime));
         // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
 
@@ -159,6 +160,7 @@ public unsafe partial class BrowserWindow
         if (_result == Result.ErrorOutOfDateKhr)
         {
             swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+            StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
             return;
         }
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
@@ -172,6 +174,7 @@ public unsafe partial class BrowserWindow
 
         UpdateUniformBuffer(currentFrame);
         coreManager.OnRender(currentFrame);
+        StylesManager.ComputeStyles();
 
         RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
         // UpdateUniformBufferPerspective(currentFrame);
@@ -225,6 +228,7 @@ public unsafe partial class BrowserWindow
             {
                 framebufferResized = false;
                 swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+                StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
             }
             else if (_result != Result.Success)
             {

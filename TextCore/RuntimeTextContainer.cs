@@ -36,9 +36,11 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         Properties = properties;
         fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
         fontAtlas.ScanText(Text);
+
         // UpdateBounds();
         AddFlag(DirtyFlags.Data);
         ConvertToPx();
+        Parent!.UpdateChildrenLayout();
         // GenerateMesh();
 
         return this;
@@ -52,6 +54,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     public void AddChild(RuntimeText runtimeText)
     {
         runtimeTexts.Add(runtimeText);
+        Console.WriteLine("Adding text: " + runtimeText.TextStr);
     }
 
     public override Bounds GetBounds()
@@ -126,9 +129,16 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     double msUpdatetime;
     uint UpdateLayoutCount = 0;
 
+    bool sthChanged = false;
+
+    protected internal override void UpdateChildrenLayout()
+    {
+        throw new Exception("You shoudn't update children layout for this object.");
+    }
+
     protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
-        UpdateLayoutCount++;
+        Console.WriteLine("Update layout width: " + width + "px");
         stopwatch.Restart();
         ReadOnlySpan<char> _remainingText = Text.AsSpan();
         int _leftSlice = 0;
@@ -136,6 +146,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
         int _runtimeTextToReuse = 0;
         int _runtimeTextCount = runtimeTexts.Count;
+        sthChanged = false;
 
         int _usedTexts = -1;
         while (_leftSlice < TextMemory.Length)
@@ -146,14 +157,17 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             }
 
             float _measuredTextWidth = RuntimeText.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], Properties.fontSize.Value);
+            Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth);
             if (_measuredTextWidth > width - cursorX)
             {
+                Console.WriteLine("Too much slicing");
                 SliceText(_runtimeTextToReuse, ref _leftSlice, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
                 _runtimeTextToReuse++;
                 newLine();
             }
             else
             {
+                Console.WriteLine("Good adding all");
                 AddText(_runtimeTextToReuse, _leftSlice, Text.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
                 _leftSlice = Text.Length;
                 _runtimeTextToReuse++;
@@ -170,8 +184,12 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             runtimeTexts.RemoveAt(i);
         }
         stopwatch.Stop();
-        msUpdatetime += stopwatch.ElapsedMilliseconds;
-        // Console.WriteLine("Layout update avarage: " + (msUpdatetime/UpdateLayoutCount) + "ms");
+        if (sthChanged)
+        {
+            UpdateLayoutCount++;
+            msUpdatetime += stopwatch.ElapsedMilliseconds;
+        }
+        // Console.WriteLine("Layout update avarage: " + (msUpdatetime / UpdateLayoutCount) + "ms");
     }
 
     void SliceText(int runtimeTextToReuse, ref int leftSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
@@ -199,13 +217,19 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         {
             RuntimeText _runtimeText;
             if (runtimeTextToReuse == -1)
+            {
                 _runtimeText = TextManager.AddModelText(Text.AsMemory(), leftSlice, rightSlice, this);
+                sthChanged = true;
+            }
             else
             {
                 _runtimeText = runtimeTexts[runtimeTextToReuse];
 
                 if (!_runtimeText.Equals(leftSlice, rightSlice))
+                {
                     _runtimeText.UpdateText(leftSlice, rightSlice);
+                    sthChanged = true;
+                }
             }
             var _size = _runtimeText.GetLayoutSize();
 
@@ -243,13 +267,17 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         {
             int breakPos = breakOpportunities[i];
             float segmentWidth = RuntimeText.GetTextWidth(fontAtlas, text[prevBreak..breakPos], Properties.fontSize.Value);
+            Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + Properties.fontSize.Value);
             prefixWidths[i] = (i == 0 ? 0f : prefixWidths[i - 1]) + segmentWidth;
             prevBreak = breakPos;
         }
 
+
         int _left = 0;
         int _right = breakOpportunities.Count - 1;
         int _bestBreakPos = -1;
+
+        Console.WriteLine("Space for text is: " + space);
 
         while (_left <= _right)
         {
@@ -264,6 +292,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
                 _right = _mid - 1;
             }
         }
+        Console.WriteLine("Finaly text is: " + text[0.._bestBreakPos].ToString());
 
         return _bestBreakPos;
     }
