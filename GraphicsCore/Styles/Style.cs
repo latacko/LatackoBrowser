@@ -3,7 +3,7 @@ using GraphicCore;
 using Silk.NET.Maths;
 using Units;
 
-namespace ObjectCore.Styles;
+namespace GraphicCore.Styles;
 
 public class Style
 {
@@ -14,12 +14,14 @@ public class Style
         Layout = 1 << 0,
         Properties = 1 << 1,
         Transform = 1 << 2,
+        FontProperties = 1 << 3,
     }
     DirtyFlag dirty;
 
     public Layout Layout = new();
     public Properties Properties = new();
     public Transform Transform = new();
+    public FontProperties FontProperties = new();
 
     internal ComputedStyle computedStyles;
 
@@ -56,6 +58,18 @@ public class Style
     {
         dirty |= DirtyFlag.Properties;
         Properties = properties;
+        return this;
+    }
+
+    public Style SetFontProperties(Func<FontProperties, FontProperties> setProperties)
+    {
+        return SetFontProperties(setProperties.Invoke(FontProperties));
+    }
+
+    public Style SetFontProperties(FontProperties fontProperties)
+    {
+        dirty |= DirtyFlag.FontProperties;
+        FontProperties = fontProperties;
         return this;
     }
 
@@ -176,6 +190,20 @@ public class Style
 
                 computedStyles.Translate = _translate;
                 Transform.dirty &= ~Transform.TransformDirty.Translate;
+            }
+        }
+
+        if (_shouldForce || dirty.HasFlag(DirtyFlag.FontProperties))
+        {
+            if (_shouldForce || FontProperties.dirty.HasFlag(FontProperties.FontProperitesDirty.FontSize))
+            {
+                var _fontSize = computedStyles.FontSize;
+
+                if (TryUpdateValue(FontProperties.fontSize, objectSize, out pixels))
+                    _fontSize = pixels;
+
+                computedStyles.FontSize = _fontSize;
+                FontProperties.dirty &= ~FontProperties.FontProperitesDirty.FontSize;
             }
         }
 

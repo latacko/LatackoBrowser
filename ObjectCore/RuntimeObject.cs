@@ -1,6 +1,5 @@
 ﻿using GraphicCore;
 using GraphicsCore;
-using ObjectCore.Styles;
 using ObjectCore.Textures;
 using Silk.NET.Maths;
 using Vulkan;
@@ -9,8 +8,15 @@ namespace ObjectCore;
 
 public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectModelData<ushort>>
 {
-    public Style Style;
-    ComputedStyle computedStyle;
+    [Flags]
+    internal protected enum DirtyFlags : byte
+    {
+        None = 0,
+        Layout = 1 << 0,
+        Size = 1 << 1,
+    }
+
+    DirtyFlags objectDirty;
     Vector2D<float> worldPosition;
 
     public List<RuntimeModelData> Children;
@@ -18,33 +24,26 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
     {
+        Events = new(this);
+
         this.texture = texture;
     }
 
-    public RuntimeObject SetStyle(Style style)
+    public override void AddChild(RuntimeModelData runtimeModelData)
     {
-        Style = style;
-        StylesManager.AddInlineStyle(style);
-        return this;
+        Children ??= new();
+        Children.Add(runtimeModelData);
+
+        objectDirty |= DirtyFlags.Layout;
     }
 
-    protected internal override void UpdateMySize(bool informChildren = false)
+
+
+    protected internal override void ParentSizeUpdated(bool informChildren = false)
     {
-        base.UpdateMySize(informChildren);
+        base.ParentSizeUpdated(informChildren);
 
-        var _prevSize = computedStyle.Size;
-        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
-
-        if (_prevSize == computedStyle.Size) return;
-        // Layout.UpdateChildrenLayout();
-
-
-        if (!informChildren || Children == null) return;
-
-        foreach (var children in Children)
-        {
-            children.UpdateMySize();
-        }
+        objectDirty |= DirtyFlags.Size;
     }
 
     protected internal override void UpdatePosition()
@@ -53,7 +52,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         relativeRot = (Parent != null ? Parent.relativeRot : new Vector3D<float>()) + Style.Transform.Rotation;
         relativeTransformation = (Parent != null ? Parent.relativeTransformation : new Vector3D<float>()) + new Vector3D<float>(computedStyle.Translate.X, computedStyle.Translate.Y, 0);
 
-        AddFlag(DirtyFlags.Matrix);
+        AddFlag(RenderDirtyFlags.Matrix);
         // Layout.UpdateBoundsOffset();
         if (Children == null) return;
 
@@ -63,35 +62,18 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         }
     }
 
-    protected internal override void ConvertToPx()
-    {
-        // Layout.ConvertToPx(ParentSize);
-        // Transform.ConvertToPx(Layout.GetSize());
-        // Properties.ConvertToPx(Layout.GetSize());
-
-        UpdatePosition();
-
-        AddFlag(DirtyFlags.Matrix);
-    }
-
-    protected internal override float GetLayoutLeft() => computedStyle.Pos.X;
-    protected internal override float GetLayoutTop() => computedStyle.Pos.Y;
-    protected internal override Vector2D<float> GetLayoutSize() => computedStyle.Size;
-    public override Bounds GetBounds() => new();
-    public override CursorType GetCursorType() => Style.Properties.Cursor;
-
     protected internal override void UpdateChildrenLayout()
     {
         // Layout.UpdateChildrenLayout();
     }
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
+    protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
     {
         updateSizeOfLine(GetLayoutSize().Y);
 
         switch (Style.Layout.Display)
         {
-            case Layout.DisplayType.inline:
+            case GraphicCore.Styles.Layout.DisplayType.inline:
                 if (cursorX + computedStyle.Size.X > width)
                     newLine.Invoke();
 
@@ -99,7 +81,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
                 cursorX += computedStyle.Size.X;
 
                 break;
-            case Layout.DisplayType.block:
+            case GraphicCore.Styles.Layout.DisplayType.block:
                 newLine.Invoke();
 
                 // Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
@@ -108,34 +90,32 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         }
     }
 
-    public override void AddChild(RuntimeModelData runtimeModelData)
-    {
-        Children ??= new();
-        Children.Add(runtimeModelData);
-        // Layout.UpdateChildrenLayout();
-        runtimeModelData.UpdatePosition();
-    }
+    protected internal override float GetLayoutLeft() => computedStyle.Pos.X;
+    protected internal override float GetLayoutTop() => computedStyle.Pos.Y;
+    protected internal override Vector2D<float> GetLayoutSize() => computedStyle.Size;
+    public override Bounds GetBounds() => new();
+    public override CursorType GetCursorType() => Style.Properties.Cursor;
+
 
     public override bool TryGetObjectData(out ObjectData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            UpdateMySize();
-            AddFlag(DirtyFlags.Matrix);
+            ParentSizeUpdated();
+            AddFlag(RenderDirtyFlags.Matrix);
         }
 
-        if (dirty[frame] == DirtyFlags.None)
+        UpdateObjectDirty();
+
+        if (renderDirty[frame] == RenderDirtyFlags.None)
         {
             data = default;
             return false;
         }
 
 
-        if (dirty[frame].HasFlag(DirtyFlags.Matrix))
+        if (renderDirty[frame].HasFlag(RenderDirtyFlags.Matrix))
         {
-            // Task.Run(() =>
-            // {
-            // });
             cachedModel =
                 Matrix4X4.CreateScale(computedStyle.Size.X, computedStyle.Size.Y, 1f) *
                 Matrix4X4.CreateTranslation(-computedStyle.Translate.X, -computedStyle.Translate.Y, 0f) *
@@ -148,7 +128,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
                     Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
                     Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
             }
-            RemoveFlag(DirtyFlags.Matrix, frame);
+            RemoveFlag(RenderDirtyFlags.Matrix, frame);
         }
 
         data = new ObjectData
@@ -166,8 +146,66 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
             borderRadiusBottomLeft = computedStyle.BorderRadius.W,
         };
 
-        RemoveFlag(DirtyFlags.Data, frame);
+        RemoveFlag(RenderDirtyFlags.Data, frame);
 
         return true;
+    }
+
+    void UpdateObjectDirty()
+    {
+        if (objectDirty == DirtyFlags.None) return;
+
+        if (objectDirty.HasFlag(DirtyFlags.Layout))
+        {
+            UpdateArrangement();
+
+            objectDirty &= ~DirtyFlags.Layout;
+        }
+
+        if (objectDirty.HasFlag(DirtyFlags.Size))
+        {
+            UpdateMySize();
+
+            objectDirty &= ~DirtyFlags.Size;
+        }
+    }
+
+    void UpdateArrangement()
+    {
+        if (Children == null) return;
+        float sizeOfLine = 0;
+        var _paddingLeft = computedStyle.Padding.X;
+        var _paddingTop = computedStyle.Padding.Y;
+        float innerWidth = computedStyle.Size.X - _paddingLeft - computedStyle.Padding.Z;
+
+        float cursorX = _paddingLeft;
+        float cursorY = _paddingTop;
+
+        foreach (var child in Children)
+        {
+            child.Arrange(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
+        }
+        void NewLine()
+        {
+            cursorX = _paddingLeft;
+            cursorY += sizeOfLine;
+        }
+        void UpdateSizeOfLine(float newSizeOfLine)
+        {
+            if (newSizeOfLine > sizeOfLine)
+            {
+                sizeOfLine = newSizeOfLine;
+            }
+        }
+    }
+
+    void UpdateMySize()
+    {
+        var _prevSize = computedStyle.Size;
+        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+
+        if (_prevSize == computedStyle.Size) return;
+        // Layout.UpdateChildrenLayout();
+
     }
 }

@@ -3,7 +3,6 @@ using System.Diagnostics;
 using GraphicCore;
 using GraphicsCore;
 using Silk.NET.Maths;
-using TextCore.Styles;
 using Vulkan;
 
 namespace TextCore;
@@ -11,39 +10,18 @@ namespace TextCore;
 public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextContainerData, IModelData>
 {
     internal FontAtlas fontAtlas;
-    public Properties Properties;
     public string Text;
     ReadOnlyMemory<char> TextMemory;
     internal List<RuntimeText> runtimeTexts = new();
 
     public RuntimeTextContainer(string text, uint objectIndex, RuntimeModelData? parent = null) : base(null, objectIndex, parent)
     {
+        SetStyle(TextManager.TextDefaultStyle);
+
         Text = text;
         TextMemory = Text.AsMemory();
-        Properties = new(this);
-        fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
+        fontAtlas = FontManager.Instance.GetFontAtlas(Style.FontProperties.font);
         fontAtlas.ScanText(Text);
-        ConvertToPx();
-    }
-
-    public RuntimeTextContainer SetProperties(Func<Properties, Properties> setProperties)
-    {
-        return SetProperties(setProperties.Invoke(Properties));
-    }
-
-    public RuntimeTextContainer SetProperties(Properties properties)
-    {
-        Properties = properties;
-        fontAtlas = FontManager.Instance.GetFontAtlas(Properties.font);
-        fontAtlas.ScanText(Text);
-
-        // UpdateBounds();
-        AddFlag(DirtyFlags.Data);
-        ConvertToPx();
-        Parent!.UpdateChildrenLayout();
-        // GenerateMesh();
-
-        return this;
     }
 
     public override void AddChild(RuntimeModelData runtimeModelData)
@@ -72,11 +50,11 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         if (Swapchain.Instance.recreatedSwapChain)
         {
             // Console.WriteLine("Recreated");
-            UpdateMySize();
-            AddFlag(DirtyFlags.Matrix);
+            ParentSizeUpdated();
+            AddFlag(RenderDirtyFlags.Matrix);
         }
 
-        if (dirty[frame] == DirtyFlags.None || dirty[frame] == DirtyFlags.Model)
+        if (renderDirty[frame] == RenderDirtyFlags.None || renderDirty[frame] == RenderDirtyFlags.Model)
         {
             data = default;
             return false;
@@ -85,7 +63,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
         data = new TextContainerData
         {
-            Color = Properties.TextColor,
+            Color = Style.FontProperties.TextColor,
             TextureIndex = fontAtlas.id,
         };
 
@@ -94,18 +72,9 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         // Console.WriteLine(dirty[frame] + "frame: " + frame);
         // Console.WriteLine(data);
 
-        RemoveFlag(DirtyFlags.Data, frame);
+        RemoveFlag(RenderDirtyFlags.Data, frame);
 
         return true;
-    }
-
-    protected internal override void ConvertToPx()
-    {
-        Properties.ConvertToPx(ParentSize);
-        foreach (var runtimeText in runtimeTexts)
-        {
-            runtimeText.ConvertToPx();
-        }
     }
 
     protected internal override float GetLayoutLeft()
@@ -136,7 +105,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         throw new Exception("You shoudn't update children layout for this object.");
     }
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
         Console.WriteLine("Update layout width: " + width + "px");
         stopwatch.Restart();
@@ -156,7 +125,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
                 _runtimeTextToReuse = -1;
             }
 
-            float _measuredTextWidth = RuntimeText.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], Properties.fontSize.Value);
+            float _measuredTextWidth = RuntimeText.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], computedStyle.FontSize);
             Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth);
             if (_measuredTextWidth > width - cursorX)
             {
@@ -266,8 +235,8 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         for (int i = 0; i < breakOpportunities.Count; i++)
         {
             int breakPos = breakOpportunities[i];
-            float segmentWidth = RuntimeText.GetTextWidth(fontAtlas, text[prevBreak..breakPos], Properties.fontSize.Value);
-            Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + Properties.fontSize.Value);
+            float segmentWidth = RuntimeText.GetTextWidth(fontAtlas, text[prevBreak..breakPos], computedStyle.FontSize);
+            Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + computedStyle.FontSize);
             prefixWidths[i] = (i == 0 ? 0f : prefixWidths[i - 1]) + segmentWidth;
             prevBreak = breakPos;
         }
@@ -305,7 +274,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
         foreach (var runtimeText in runtimeTexts)
         {
-            runtimeText.AddFlag(DirtyFlags.Matrix);
+            runtimeText.AddFlag(RenderDirtyFlags.Matrix);
         }
     }
 }

@@ -1,7 +1,7 @@
 using System;
 using Silk.NET.Maths;
 
-namespace ObjectCore.Styles;
+namespace GraphicCore.Styles;
 
 public struct ComputedStyle
 {
@@ -11,4 +11,8 @@ public struct ComputedStyle
     public Vector4D<float> Margin;
     public Vector4D<float> BorderRadius;
     public Vector2D<float> Translate;
+
+    #region Text
+    public float FontSize;
+    #endregion
 }

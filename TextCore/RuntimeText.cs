@@ -3,7 +3,6 @@ using GraphicCore;
 using GraphicsCore;
 using Silk.NET.Maths;
 using TextCore.Slots;
-using TextCore.Styles;
 using Units;
 using Vulkan;
 using VulkanManager.BufferManager;
@@ -163,7 +162,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
         widthWithoutScale = _cursorX;
         UpdateBounds();
-        AddFlag(DirtyFlags.Model | DirtyFlags.Matrix);
+        AddFlag(RenderDirtyFlags.Model | RenderDirtyFlags.Matrix);
 
         TextManager.Instance.Update(this);
         // if (VertexSlotData != null && VertexSlotData.GetRingBuffer() != null && VertexSlotData.GetRingBuffer().buffersInfo[0] != null && IndicesSlotData != null)
@@ -172,8 +171,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     void UpdateBounds()
     {
-        bounds.Width = widthWithoutScale * textContainer.Properties.fontSize.Value;
-        bounds.Height = textContainer.Properties.fontSize.Value;
+        bounds.Width = widthWithoutScale * textContainer.computedStyle.FontSize;
+        bounds.Height = textContainer.computedStyle.FontSize;
     }
 
     public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i, bool beginning)
@@ -197,7 +196,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     protected internal override Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(widthWithoutScale * textContainer.Properties.fontSize.Value / 2, textContainer.fontAtlas.height * textContainer.Properties.fontSize.Value);
+        return new Vector2D<float>(widthWithoutScale * textContainer.computedStyle.FontSize / 2, textContainer.fontAtlas.height * textContainer.computedStyle.FontSize);
     }
 
     public RuntimeText SetPosition(float left, float top)
@@ -214,27 +213,27 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     public override Bounds GetBounds() => bounds;
 
-    public override CursorType GetCursorType() => textContainer.Properties.Cursor;
+    public override CursorType GetCursorType() => Style.FontProperties.Cursor;
 
     public override bool TryGetObjectData(out ModelData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
             // Console.WriteLine("Recreated");
-            UpdateMySize();
-            AddFlag(DirtyFlags.Matrix);
+            ParentSizeUpdated();
+            AddFlag(RenderDirtyFlags.Matrix);
         }
 
-        if (dirty[frame] == DirtyFlags.None || dirty[frame] == DirtyFlags.Model)
+        if (renderDirty[frame] == RenderDirtyFlags.None || renderDirty[frame] == RenderDirtyFlags.Model)
         {
             data = default;
             return false;
         }
 
-        if (dirty[frame].HasFlag(DirtyFlags.Matrix))
+        if (renderDirty[frame].HasFlag(RenderDirtyFlags.Matrix))
         {
             cachedModel =
-                Matrix4X4.CreateScale(textContainer.Properties.fontSize.Value, textContainer.Properties.fontSize.Value, 1f) *
+                Matrix4X4.CreateScale(textContainer.computedStyle.FontSize, textContainer.computedStyle.FontSize, 1f) *
                         // Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *
                         // Matrix4X4.CreateFromYawPitchRoll(Transform.Rotation.X, Transform.Rotation.Y, Transform.Rotation.Z) *
                         // (
@@ -251,7 +250,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
                     Matrix4X4.CreateFromYawPitchRoll(Parent.relativeRot.X, Parent.relativeRot.Y, Parent.relativeRot.Z) *
                     Matrix4X4.CreateTranslation(Parent.relativePos.X, Parent.relativePos.Y, Parent.relativePos.Z);
             }
-            RemoveFlag(DirtyFlags.Matrix, frame);
+            RemoveFlag(RenderDirtyFlags.Matrix, frame);
         }
 
         data = new ModelData
@@ -264,14 +263,9 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         // Console.WriteLine(dirty[frame] + "frame: " + frame);
         // Console.WriteLine(data);
 
-        RemoveFlag(DirtyFlags.Data, frame);
+        RemoveFlag(RenderDirtyFlags.Data, frame);
 
         return true;
-    }
-
-    protected internal override void ConvertToPx()
-    {
-        textContainer.Properties.ConvertToPx(ParentSize);
     }
 
     protected internal override float GetLayoutLeft() => 0;
@@ -280,7 +274,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     protected internal override void UpdatePosition()
     {
-        AddFlag(DirtyFlags.Matrix);
+        AddFlag(RenderDirtyFlags.Matrix);
         return;
     }
 
@@ -290,7 +284,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         throw new Exception("You shoudn't update children layout for this object.");
     }
 
-    protected internal override void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)
+    protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)
     {
         throw new System.Exception("This funtion shoudn't be executed on runtime text!");
     }

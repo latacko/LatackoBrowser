@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using GraphicCore.Styles;
 using GraphicsCore;
 using Silk.NET.Maths;
 using Units;
@@ -11,20 +12,19 @@ namespace GraphicCore;
 public abstract class RuntimeModelData : IDisposable
 {
     [Flags]
-    internal protected enum DirtyFlags : byte
+    internal protected enum RenderDirtyFlags : byte
     {
         None = 0,
         Matrix = 1 << 0,
         Data = 1 << 1,
         Model = 1 << 2,
-        All = Matrix | Data | Model
     }
     public IModelData ModelData;
     public uint ObjectIndex;
 
     public EventsBase Events;
 
-    internal protected DirtyFlags[] dirty = new DirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal protected RenderDirtyFlags[] renderDirty = new RenderDirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal protected Matrix4X4<float> cachedModel;
     internal protected Vector3D<float> relativePos;
     internal protected Vector3D<float> relativeRot;
@@ -32,6 +32,9 @@ public abstract class RuntimeModelData : IDisposable
 
     public Vector2D<float> ParentSize;
     public RuntimeModelData? Parent;
+
+    public Style Style;
+    internal protected ComputedStyle computedStyle;
 
     public RuntimeModelData(IModelData modelData, uint objectIndex, RuntimeModelData? parent = null)
     {
@@ -41,46 +44,42 @@ public abstract class RuntimeModelData : IDisposable
         if (parent != null)
             Parent = parent;
 
-        UpdateMySize(true);
+        ParentSizeUpdated(true);
     }
 
     public void SetParent(RuntimeModelData? parent = null)
     {
         if (parent != null)
             Parent = parent;
-        UpdateMySize(true);
+        ParentSizeUpdated(true);
     }
 
-    protected internal void AddFlag(DirtyFlags flags)
+    protected internal void AddFlag(RenderDirtyFlags flags)
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            dirty[i] |= flags;
+            renderDirty[i] |= flags;
         }
     }
 
-    protected internal void RemoveFlag(DirtyFlags flags, uint frame)
+    protected internal void RemoveFlag(RenderDirtyFlags flags, uint frame)
     {
-        dirty[frame] &= ~flags;
+        renderDirty[frame] &= ~flags;
     }
-
-    protected internal abstract void ConvertToPx();
 
     protected internal abstract void UpdatePosition();
 
     protected internal abstract float GetLayoutLeft();
     protected internal abstract float GetLayoutTop();
     protected internal abstract Vector2D<float> GetLayoutSize();
-    protected internal abstract void UpdateLayout(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
+    protected internal abstract void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
     protected internal abstract void UpdateChildrenLayout();
     public abstract void AddChild(RuntimeModelData runtimeModelData);
 
     public abstract CursorType GetCursorType();
     public abstract Bounds GetBounds();
 
-
-
-    protected internal virtual void UpdateMySize(bool informChildren = false)
+    protected internal virtual void ParentSizeUpdated(bool informChildren = false)
     {
         if (Parent != null)
         {
@@ -113,6 +112,13 @@ public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : Runtime
     public TSelf SetEvents(Func<Events<TSelf>, Events<TSelf>> setEvents)
     {
         Events = setEvents.Invoke(Events);
+        return (TSelf)this;
+    }
+
+    public TSelf SetStyle(Style style)
+    {
+        Style = style;
+        StylesManager.AddInlineStyle(style);
         return (TSelf)this;
     }
 

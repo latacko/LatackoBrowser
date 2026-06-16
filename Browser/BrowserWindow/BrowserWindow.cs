@@ -1,19 +1,11 @@
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using Silk.NET.Core;
-using Silk.NET.Core.Native;
 using Silk.NET.Maths;
 using Silk.NET.Input;
 using Silk.NET.Vulkan;
-using Silk.NET.Vulkan.Extensions.EXT;
-using Silk.NET.Vulkan.Extensions.KHR;
 using Silk.NET.Windowing;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
-using System.Numerics;
 using Silk.NET.Input.Sdl;
 using ObjectCore;
-using TextCore;
-using ObjectCore.Styles;
+using GraphicCore.Styles;
 
 namespace Browser;
 

@@ -2,7 +2,7 @@ using GraphicCore;
 using Silk.NET.Maths;
 using Units;
 
-namespace ObjectCore;
+namespace GraphicCore.Styles;
 
 public struct Layout
 {
@@ -148,38 +148,5 @@ public struct Layout
     {
         Display = display;
         return this;
-    }
-
-    public void UpdateChildrenLayout()
-    {
-        // if (runtimeObject.Children == null) return;
-        // float sizeOfLine = 0;
-
-        // var _paddingLeft = PaddingLeft.Value;
-        // var _paddingTop = PaddingTop.Value;
-
-        // float innerWidth = Width.Value - PaddingLeft.Value - PaddingRight.Value;
-        // float cursorX = _paddingLeft;
-        // float cursorY = _paddingTop;
-
-        // foreach (var child in runtimeObject.Children)
-        // {
-        //     child.UpdateLayout(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
-        //     // child.Layout.UpdateChildrenLayout();
-        // }
-
-        // void NewLine()
-        // {
-        //     cursorX = _paddingLeft;
-        //     cursorY += sizeOfLine;
-        // }
-
-        // void UpdateSizeOfLine(float newSizeOfLine)
-        // {
-        //     if (newSizeOfLine > sizeOfLine)
-        //     {
-        //         sizeOfLine = newSizeOfLine;
-        //     }
-        // }
     }
 }

@@ -1,8 +1,8 @@
 using Browser;
 using GraphicCore;
+using GraphicCore.Styles;
 using GraphicsCore;
 using ObjectCore;
-using ObjectCore.Styles;
 using ObjectCore.Textures;
 using Silk.NET.Vulkan;
 using TextCore;
@@ -95,11 +95,13 @@ public class BrowserUI
                 Console.WriteLine("hello there");
         }));
 
-        hellothereText = TextManager.AddText(@"Lorem ipsum dolor sit amet, adipiscing ea culpa laborum ipsum duis do. Proident reprehenderit id nostrud aliquip sit velit. Et in excepteur ipsum consequat. Nisi est nostrud nulla velit, ullamco nisi officia sit sunt. Sunt laboris occaecat culpa mollit. Sit nisi proident sunt cupidatat irure sunt dolore, reprehenderit ullamco dolore deserunt dolore ullamco culpa et.", hellothere)
-        .SetProperties(properties => properties
-            .SetFontSize(new(25))
-            .SetCursor(CursorType.text)
-        );
+        // hellothereText = TextManager.AddText(@"Lorem ipsum dolor sit amet, adipiscing ea culpa laborum ipsum duis do. Proident reprehenderit id nostrud aliquip sit velit. Et in excepteur ipsum consequat. Nisi est nostrud nulla velit, ullamco nisi officia sit sunt. Sunt laboris occaecat culpa mollit. Sit nisi proident sunt cupidatat irure sunt dolore, reprehenderit ullamco dolore deserunt dolore ullamco culpa et.", hellothere)
+        // .SetStyle(new Style()
+        //     .SetFontProperties(properties => properties
+        //         .SetFontSize(new(25))
+        //         .SetCursor(CursorType.text)
+        //     )
+        // );
 
         //         hellothereText = TextManager.AddText(@"Lorem ipsum dolor sit amet, adipiscing ea culpa laborum ipsum duis do. Proident reprehenderit id nostrud aliquip sit velit. Et in excepteur ipsum consequat. Nisi est nostrud nulla velit, ullamco nisi officia sit sunt. Sunt laboris occaecat culpa mollit. Sit nisi proident sunt cupidatat irure sunt dolore, reprehenderit ullamco dolore deserunt dolore ullamco culpa et. Exercitation eiusmod ex dolore sunt duis qui eu, est eu est et et lorem, qui sint non adipiscing quis dolor proident ad. Aute consectetur sit deserunt sunt cillum. Commodo qui veniam est cupidatat. Elit commodo ut anim cupidatat culpa.
         // Commodo occaecat ex exercitation. Ut nulla magna anim cupidatat nulla voluptate. Ex ullamco voluptate ex dolor sit pariatur. Culpa non proident consectetur exercitation sit nisi. Irure ea eu quis ut minim consectetur. Aliquip enim nulla aliqua pariatur irure. Nisi excepteur proident dolor labore, magna aute magna proident deserunt irure cupidatat. Lorem est velit qui esse cillum. Mollit do proident ex consequat.

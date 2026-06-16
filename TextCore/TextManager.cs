@@ -1,4 +1,5 @@
 ﻿using GraphicCore;
+using GraphicCore.Styles;
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
@@ -29,6 +30,8 @@ public class TextManager : BufferManager
 
     internal DescriptorSetLayout textDescriptorLayout;
     internal DescriptorSet textDescriptorSet = new();
+
+    internal static Style TextDefaultStyle;
 
     public TextManager()
     {
@@ -76,6 +79,12 @@ public class TextManager : BufferManager
         RegisterDescriptor();
 
         TextShader.Init();
+
+        TextDefaultStyle = new Style()
+            .SetFontProperties((FontProperties)=>FontProperties
+                .SetFont("google-noto/NotoSerif-Regular.ttf")
+                .SetFontSize(new(16))
+            );
     }
 
     public unsafe void RegisterDescriptor()

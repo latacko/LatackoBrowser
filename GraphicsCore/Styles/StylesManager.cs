@@ -1,6 +1,6 @@
 using System;
 
-namespace ObjectCore.Styles;
+namespace GraphicCore.Styles;
 
 public static class StylesManager
 {
