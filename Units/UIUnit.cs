@@ -8,7 +8,7 @@ namespace Units;
 public struct UIUnit
 {
     float ValueInUnit;
-    UnitType ValueType;
+    public UnitType ValueType;
     public readonly bool IsPercentage;
 
     public UIUnit(float value) : this(value, UnitType.px)

@@ -42,7 +42,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     protected internal override void ParentSizeUpdated(bool informChildren = false)
     {
         base.ParentSizeUpdated(informChildren);
-
+        Console.WriteLine("Parent size changed");
         objectDirty |= DirtyFlags.Size;
     }
 
@@ -77,14 +77,14 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
                 if (cursorX + computedStyle.Size.X > width)
                     newLine.Invoke();
 
-                // Layout.LayoutPos = new(cursorX, cursorY);
+                worldPosition = new(cursorX, cursorY);
                 cursorX += computedStyle.Size.X;
 
                 break;
             case GraphicCore.Styles.Layout.DisplayType.block:
                 newLine.Invoke();
 
-                // Layout.LayoutPos = new Vector2D<float>(cursorX, cursorY);
+                worldPosition = new(cursorX, cursorY);
                 // Layout.BaseSize = new(width, 0);
                 break;
         }
@@ -101,7 +101,8 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            ParentSizeUpdated();
+            if (Parent == null)
+                objectDirty |= DirtyFlags.Size;
             AddFlag(RenderDirtyFlags.Matrix);
         }
 
@@ -147,7 +148,6 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         };
 
         RemoveFlag(RenderDirtyFlags.Data, frame);
-
         return true;
     }
 
@@ -164,6 +164,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
         if (objectDirty.HasFlag(DirtyFlags.Size))
         {
+            Console.WriteLine("Size:");
             UpdateMySize();
 
             objectDirty &= ~DirtyFlags.Size;
@@ -203,9 +204,16 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     {
         var _prevSize = computedStyle.Size;
         computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
-
+        Console.WriteLine("Update my size: " + computedStyle.Size);
         if (_prevSize == computedStyle.Size) return;
         // Layout.UpdateChildrenLayout();
-
+        if (Children != null)
+        {
+            foreach (var child in Children)
+            {
+                child.ParentSizeUpdated();
+            }
+        }
+        AddFlag(RenderDirtyFlags.Matrix);
     }
 }

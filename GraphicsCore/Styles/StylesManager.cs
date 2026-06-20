@@ -10,23 +10,26 @@ public static class StylesManager
         None = 0,
         ScreenSize = 1 << 0,
     }
-    static DirtyFlag dirty;
+    static DirtyFlag dirty = DirtyFlag.ScreenSize;
     static readonly Dictionary<string, Style> styles = new();
     static readonly HashSet<Style> inlineStyles = new();
 
     public static void SetStyle(string styleKey, Style style)
     {
         styles[styleKey] = style;
+        styles[styleKey].computedStyles = styles[styleKey].ComputeStyles();
     }
 
     public static void UpdateStyle(string styleKey, Func<Style, Style> updatedStyle)
     {
         styles[styleKey] = updatedStyle.Invoke(styles[styleKey]);
+        styles[styleKey].computedStyles = styles[styleKey].ComputeStyles();
     }
 
     public static void AddInlineStyle(Style style)
     {
         inlineStyles.Add(style);
+        style.computedStyles = style.ComputeStyles();
     }
 
     public static void AddFlag(DirtyFlag dirty)
@@ -37,18 +40,19 @@ public static class StylesManager
     public static void ComputeStyles()
     {
         bool _shouldForce = dirty.HasFlag(DirtyFlag.ScreenSize);
-        if (!_shouldForce)
-            return;
+        // if (!_shouldForce)
+        //     return;
             
+        // Console.WriteLine("Computing styles.");
         Parallel.ForEach(styles, item =>
         {
             item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce);
         });
 
 
-        Parallel.ForEach(styles, item =>
+        Parallel.ForEach(inlineStyles, item =>
         {
-            item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce);
+            item.computedStyles = item.ComputeStyles(_shouldForce);
         });
 
         dirty &= ~DirtyFlag.ScreenSize;

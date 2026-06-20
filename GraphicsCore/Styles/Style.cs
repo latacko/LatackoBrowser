@@ -75,11 +75,13 @@ public class Style
 
     public ComputedStyle ComputeStyles(bool forceUpdate = false, bool updatePercentage = false, Vector2D<float> parentSize = default, Vector2D<float> objectSize = default)
     {
-        if (dirty == DirtyFlag.None)
-            return computedStyles;
-        float pixels;
-
         bool _shouldForce = forceUpdate || updatePercentage;
+
+        if (dirty == DirtyFlag.None && !_shouldForce)
+        {
+            return computedStyles;
+        }
+        float pixels;
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Layout))
         {
@@ -151,6 +153,8 @@ public class Style
                 objectSize = computedStyles.Size;
                 Layout.dirty &= ~Layout.LayoutDirty.Size;
             }
+
+            dirty &= ~DirtyFlag.Layout;
         }
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Properties))
@@ -174,6 +178,7 @@ public class Style
                 computedStyles.BorderRadius = _borderRadius;
                 Properties.dirty &= ~Properties.ProperitesDirty.BorderRadius;
             }
+            dirty &= ~DirtyFlag.Properties;
         }
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Transform))
@@ -191,6 +196,7 @@ public class Style
                 computedStyles.Translate = _translate;
                 Transform.dirty &= ~Transform.TransformDirty.Translate;
             }
+            dirty &= ~DirtyFlag.Transform;
         }
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.FontProperties))
@@ -205,18 +211,18 @@ public class Style
                 computedStyles.FontSize = _fontSize;
                 FontProperties.dirty &= ~FontProperties.FontProperitesDirty.FontSize;
             }
+            dirty &= ~DirtyFlag.FontProperties;
         }
 
         return computedStyles;
 
         bool TryUpdateValue(UIUnit unit, Vector2D<float> size, out float value)
         {
-            if (updatePercentage && !unit.IsPercentage)
+            if ((updatePercentage && !unit.IsPercentage) || (!updatePercentage && unit.IsPercentage))
             {
                 value = default;
                 return false;
             }
-
             value = updatePercentage && unit.IsPercentage
                 ? unit.Resolve(size)
                 : unit.Resolve();

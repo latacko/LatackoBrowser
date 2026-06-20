@@ -77,23 +77,23 @@ public class BrowserUI
         //     .SetCursor(CursorType.text)
         // );
 
-        hellothere = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture2)
-        .SetStyle(new Style()
-            .SetLayout(layout => layout
-                .SetLeft(new(50, UnitType.lvw)).SetTop(new(0))
-                .SetWidth(new(50, UnitType.lvw)).SetHeight(new(100, UnitType.px))
-            )
-            .SetTransform(transform => transform
-                .SetTranslate(new UIUnit(25, UnitType.lvw), new())
-            )
-            .SetProperties(properties => properties
-                .SetBorderRadius(new(20, UnitType.px))
-            )
-        ).SetEvents(events => events
-            .AddOnClick((e) =>
-            {
-                Console.WriteLine("hello there");
-        }));
+        // hellothere = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture2)
+        // .SetStyle(new Style()
+        //     .SetLayout(layout => layout
+        //         .SetLeft(new(50, UnitType.lvw)).SetTop(new(0))
+        //         .SetWidth(new(50, UnitType.lvw)).SetHeight(new(100, UnitType.px))
+        //     )
+        //     .SetTransform(transform => transform
+        //         .SetTranslate(new UIUnit(25, UnitType.lvw), new())
+        //     )
+        //     .SetProperties(properties => properties
+        //         .SetBorderRadius(new(20, UnitType.px))
+        //     )
+        // ).SetEvents(events => events
+        //     .AddOnClick((e) =>
+        //     {
+        //         Console.WriteLine("hello there");
+        // }));
 
         // hellothereText = TextManager.AddText(@"Lorem ipsum dolor sit amet, adipiscing ea culpa laborum ipsum duis do. Proident reprehenderit id nostrud aliquip sit velit. Et in excepteur ipsum consequat. Nisi est nostrud nulla velit, ullamco nisi officia sit sunt. Sunt laboris occaecat culpa mollit. Sit nisi proident sunt cupidatat irure sunt dolore, reprehenderit ullamco dolore deserunt dolore ullamco culpa et.", hellothere)
         // .SetStyle(new Style()

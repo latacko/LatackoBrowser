@@ -84,6 +84,9 @@ public abstract class RuntimeModelData : IDisposable
         if (Parent != null)
         {
             ParentSize = Parent.GetLayoutSize();
+        } else
+        {
+            ParentSize = new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
         }
     }
 
