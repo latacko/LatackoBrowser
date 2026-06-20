@@ -169,6 +169,9 @@ public unsafe partial class BrowserWindow
         StylesManager.ComputeStyles();
 
         RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
+        StylesManager.SetFrameAsNotDirty(currentFrame);
+
+
         // UpdateUniformBufferPerspective(currentFrame);
 
         SubmitInfo submitInfo = new()

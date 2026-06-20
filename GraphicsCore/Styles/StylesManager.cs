@@ -42,7 +42,7 @@ public static class StylesManager
         bool _shouldForce = dirty.HasFlag(DirtyFlag.ScreenSize);
         // if (!_shouldForce)
         //     return;
-            
+
         // Console.WriteLine("Computing styles.");
         Parallel.ForEach(styles, item =>
         {
@@ -56,5 +56,19 @@ public static class StylesManager
         });
 
         dirty &= ~DirtyFlag.ScreenSize;
+    }
+
+    public static void SetFrameAsNotDirty(uint frame)
+    {
+        Parallel.ForEach(styles, item =>
+        {
+            item.Value.ShouldObjectUpdate[frame] = false;
+        });
+
+
+        Parallel.ForEach(inlineStyles, item =>
+        {
+            item.ShouldObjectUpdate[frame] = false;
+        });
     }
 }

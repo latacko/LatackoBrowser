@@ -17,6 +17,7 @@ public class Style
         FontProperties = 1 << 3,
     }
     DirtyFlag dirty;
+    public bool[] ShouldObjectUpdate = new bool[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     public Layout Layout = new();
     public Properties Properties = new();
@@ -24,6 +25,14 @@ public class Style
     public FontProperties FontProperties = new();
 
     internal ComputedStyle computedStyles;
+
+    void SetDirtyObjectFlag()
+    {
+        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            ShouldObjectUpdate[i] = true;
+        }
+    }
 
     public Style SetLayout(Func<Layout, Layout> setLayout)
     {
@@ -213,6 +222,9 @@ public class Style
             }
             dirty &= ~DirtyFlag.FontProperties;
         }
+
+        if (!_shouldForce)
+            SetDirtyObjectFlag();
 
         return computedStyles;
 

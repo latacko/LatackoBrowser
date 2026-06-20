@@ -106,7 +106,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
             AddFlag(RenderDirtyFlags.Matrix);
         }
 
-        UpdateObjectDirty();
+        UpdateObjectDirty(frame);
 
         if (renderDirty[frame] == RenderDirtyFlags.None)
         {
@@ -151,8 +151,11 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         return true;
     }
 
-    void UpdateObjectDirty()
+    void UpdateObjectDirty(uint frame)
     {
+        if (base.Style.ShouldObjectUpdate[frame])
+            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+
         if (objectDirty == DirtyFlags.None) return;
 
         if (objectDirty.HasFlag(DirtyFlags.Layout))
@@ -165,7 +168,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         if (objectDirty.HasFlag(DirtyFlags.Size))
         {
             Console.WriteLine("Size:");
-            UpdateMySize();
+            UpdateMySize(frame);
 
             objectDirty &= ~DirtyFlags.Size;
         }
@@ -200,10 +203,12 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         }
     }
 
-    void UpdateMySize()
+    void UpdateMySize(uint frame)
     {
         var _prevSize = computedStyle.Size;
-        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+        if (!base.Style.ShouldObjectUpdate[frame])
+            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+
         Console.WriteLine("Update my size: " + computedStyle.Size);
         if (_prevSize == computedStyle.Size) return;
         // Layout.UpdateChildrenLayout();
