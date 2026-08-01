@@ -28,7 +28,19 @@ public struct Layout
         Margin = 1 << 4,
     }
 
+
+    [Flags]
+    public enum WhereIsPercentage : byte
+    {
+        None,
+        Pos = 1 << 0,
+        Size = 1 << 1,
+        Padding = 1 << 2,
+        Margin = 1 << 3,
+    }
+
     internal LayoutDirty dirty;
+    internal WhereIsPercentage whereIsPercentage;
 
     #region Pos
     Bounds bounds = new();
@@ -93,12 +105,23 @@ public struct Layout
     //     }
     // }
 
+    void AddOrRemoveFlagByUnit(ref UIUnit unit, WhereIsPercentage flag)
+    {
+        if (unit.IsPercentage)
+            whereIsPercentage |= flag;
+        else
+            whereIsPercentage &= ~flag;
+    }
+
     public Layout SetLeft(UIUnit left, Align align = Align.Left)
     {
         if (Left == left) return this;
         Left = left;
         LeftAlign = align;
         dirty |= LayoutDirty.Position;
+
+        AddOrRemoveFlagByUnit(ref left, WhereIsPercentage.Pos);
+
         return this;
     }
 
@@ -108,6 +131,9 @@ public struct Layout
         Top = top;
         TopAlign = align;
         dirty |= LayoutDirty.Position;
+
+        AddOrRemoveFlagByUnit(ref top, WhereIsPercentage.Pos);
+
         return this;
     }
 
@@ -116,6 +142,9 @@ public struct Layout
         if (Width == width) return this;
         Width = width;
         dirty |= LayoutDirty.Size;
+
+        AddOrRemoveFlagByUnit(ref width, WhereIsPercentage.Size);
+
         return this;
     }
 
@@ -124,6 +153,9 @@ public struct Layout
         if (Height == height) return this;
         Height = height;
         dirty |= LayoutDirty.Size;
+
+        AddOrRemoveFlagByUnit(ref height, WhereIsPercentage.Size);
+
         return this;
     }
 

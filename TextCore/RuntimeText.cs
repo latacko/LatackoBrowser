@@ -175,10 +175,15 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         bounds.Height = textContainer.computedStyle.FontSize;
     }
 
+    const uint FLAG_FLIP_IF_END_CHAR = 1u << 31;
+
     public void GenerateQuad(TextVertex[] vertices, ushort[] indices, float width, Vector2D<float> UVMin, Vector2D<float> UVMax, float x, uint charAscii, ref int i, bool beginning)
     {
         int _vericesIndex = i * 2 + 2;
         int _indicesIndex = i * 2 + 2;
+
+        if (!beginning)
+            charAscii ^= FLAG_FLIP_IF_END_CHAR;
 
         vertices[_vericesIndex] = new TextVertex(new(x + width, 0, 0), beginning ? new(UVMin.X, UVMin.Y) : new(UVMax.X, UVMin.Y), (uint)charAscii);
         vertices[_vericesIndex + 1] = new TextVertex(new(x + width, 1, 0), beginning ? new(UVMin.X, UVMax.Y) : new(UVMax.X, UVMax.Y), (uint)charAscii);
@@ -220,7 +225,6 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         if (Swapchain.Instance.recreatedSwapChain)
         {
             // Console.WriteLine("Recreated");
-            ParentSizeUpdated();
             AddFlag(RenderDirtyFlags.Matrix);
         }
 
@@ -232,6 +236,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
         if (renderDirty[frame].HasFlag(RenderDirtyFlags.Matrix))
         {
+            Console.WriteLine("Text matrix " + textContainer.computedStyle);
             cachedModel =
                 Matrix4X4.CreateScale(textContainer.computedStyle.FontSize, textContainer.computedStyle.FontSize, 1f) *
                         // Matrix4X4.CreateScale(GetLayoutSize().X, GetLayoutSize().Y, 1f) *

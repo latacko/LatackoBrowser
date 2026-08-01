@@ -54,10 +54,13 @@ public class TextManager : BufferManager
     {
         uint objectIndex = LastCreatedIndex++;
         RuntimeTextContainer runtimeTextContainer = new(text, objectIndex, parent);
-        if (parent != null)
-            parent.AddChild(runtimeTextContainer);
+        parent?.AddChild(runtimeTextContainer);
 
-        TextShader.elements.Add(runtimeTextContainer);
+        RuntimeModelData.ObjectsToCompile.Add(new()
+        {
+            runtimeModel = runtimeTextContainer,
+            shader = TextShader
+        });
 
         Console.WriteLine("Adding text to the textShader." + TextShader.GetHashCode());
 
@@ -68,7 +71,7 @@ public class TextManager : BufferManager
     {
         vertexBuffer = new(10000, 2, BufferUsageFlags.VertexBufferBit);
         indicesBuffer = new(5000, 2, BufferUsageFlags.IndexBufferBit);
-        
+
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
 
@@ -80,8 +83,8 @@ public class TextManager : BufferManager
 
         TextShader.Init();
 
-        TextDefaultStyle = new Style()
-            .SetFontProperties((FontProperties)=>FontProperties
+        TextDefaultStyle = new Style("Default text style")
+            .SetFontProperties((FontProperties) => FontProperties
                 .SetFont("google-noto/NotoSerif-Regular.ttf")
                 .SetFontSize(new(16))
             );

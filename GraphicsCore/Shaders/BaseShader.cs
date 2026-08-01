@@ -266,6 +266,8 @@ public unsafe abstract class BaseShader : IDisposable
     }
     #endregion
 
+    public abstract void AddElement(RuntimeModelData runtimeModelData);
+
     public virtual void Dispose()
     {
         CreateVulkan.vk.DestroyPipeline(LogicalDevice.device, Pipeline, null);

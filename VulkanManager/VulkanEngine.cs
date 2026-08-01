@@ -130,7 +130,7 @@ public unsafe class VulkanEngine : IDisposable
         CreateVulkan.vk.GetPhysicalDeviceProperties(PhysicalDevice.physicalDevice, out var properties);
         _samplerCI.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
 
-        Console.WriteLine("Creating sampler");
+        // Console.WriteLine("Creating sampler");
         fixed (Sampler* samplerPtr = &sampler)
             CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
     }

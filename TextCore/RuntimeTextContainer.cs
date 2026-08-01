@@ -47,13 +47,6 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     public override bool TryGetObjectData(out TextContainerData data, uint frame)
     {
-        if (Swapchain.Instance.recreatedSwapChain)
-        {
-            // Console.WriteLine("Recreated");
-            ParentSizeUpdated();
-            AddFlag(RenderDirtyFlags.Matrix);
-        }
-
         if (renderDirty[frame] == RenderDirtyFlags.None || renderDirty[frame] == RenderDirtyFlags.Model)
         {
             data = default;
@@ -67,6 +60,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             TextureIndex = fontAtlas.id,
         };
 
+        Console.WriteLine("Text color: " + data.Color + " " + renderDirty[frame]);
 
 
         // Console.WriteLine(dirty[frame] + "frame: " + frame);
@@ -75,6 +69,12 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         RemoveFlag(RenderDirtyFlags.Data, frame);
 
         return true;
+    }
+
+    public override void Compile()
+    {
+        base.Compile();
+        AddFlag(RenderDirtyFlags.Data);
     }
 
     protected internal override float GetLayoutLeft()
@@ -107,7 +107,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
 
     protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
-        Console.WriteLine("Update layout width: " + width + "px");
+        Console.WriteLine("============================= Update layout width: " + width + "px =============================");
         stopwatch.Restart();
         ReadOnlySpan<char> _remainingText = Text.AsSpan();
         int _leftSlice = 0;
@@ -126,7 +126,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             }
 
             float _measuredTextWidth = RuntimeText.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], computedStyle.FontSize);
-            Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth);
+            Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth + " computet font size: " + computedStyle.FontSize);
             if (_measuredTextWidth > width - cursorX)
             {
                 Console.WriteLine("Too much slicing");
@@ -180,6 +180,8 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         }
     }
 
+
+    //NOTE - Line gap was removed idk what it does. Awaiting for testing with else fonts.
     void AddText(int runtimeTextToReuse, int leftSlice, int rightSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
     {
         lock (runtimeTexts)
@@ -203,7 +205,9 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
             var _size = _runtimeText.GetLayoutSize();
 
             _runtimeText.SetPosition(cursorX, cursorY);
-            updatedSizeOfLine(fontAtlas.lineGap + _size.Y);
+            Console.WriteLine("Line gap: " + fontAtlas.lineGap + " px font size: " + computedStyle.FontSize);
+            // updatedSizeOfLine.Invoke(fontAtlas.lineGap * computedStyle.FontSize + _size.Y);
+            updatedSizeOfLine.Invoke(computedStyle.FontSize);
 
             cursorX += _size.X;
         }
@@ -236,7 +240,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         {
             int breakPos = breakOpportunities[i];
             float segmentWidth = RuntimeText.GetTextWidth(fontAtlas, text[prevBreak..breakPos], computedStyle.FontSize);
-            Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + computedStyle.FontSize);
+            // Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + computedStyle.FontSize);
             prefixWidths[i] = (i == 0 ? 0f : prefixWidths[i - 1]) + segmentWidth;
             prevBreak = breakPos;
         }
@@ -246,7 +250,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         int _right = breakOpportunities.Count - 1;
         int _bestBreakPos = -1;
 
-        Console.WriteLine("Space for text is: " + space);
+        // Console.WriteLine("Space for text is: " + space);
 
         while (_left <= _right)
         {
@@ -261,7 +265,13 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
                 _right = _mid - 1;
             }
         }
-        Console.WriteLine("Finaly text is: " + text[0.._bestBreakPos].ToString());
+
+        if (_bestBreakPos == -1 && breakOpportunities.Count > 0)
+        {
+            _bestBreakPos = breakOpportunities[0];
+        }
+
+        // Console.WriteLine("Finaly text is: " + text[0.._bestBreakPos].ToString());
 
         return _bestBreakPos;
     }

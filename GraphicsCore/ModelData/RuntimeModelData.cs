@@ -9,8 +9,15 @@ using Vulkan;
 [assembly: InternalsVisibleTo("TextCore")]
 namespace GraphicCore;
 
+
 public abstract class RuntimeModelData : IDisposable
 {
+    public struct ObjectComileInfo
+    {
+        public RuntimeModelData runtimeModel;
+        public BaseShader shader;
+    }
+    public static HashSet<ObjectComileInfo> ObjectsToCompile = new();
     [Flags]
     internal protected enum RenderDirtyFlags : byte
     {
@@ -29,6 +36,7 @@ public abstract class RuntimeModelData : IDisposable
     internal protected Vector3D<float> relativePos;
     internal protected Vector3D<float> relativeRot;
     internal protected Vector3D<float> relativeTransformation;
+    internal protected bool[] mySizeHasChangedThisFrame = new bool[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     public Vector2D<float> ParentSize;
     public RuntimeModelData? Parent;
@@ -43,15 +51,13 @@ public abstract class RuntimeModelData : IDisposable
 
         if (parent != null)
             Parent = parent;
-
-        ParentSizeUpdated(true);
     }
 
     public void SetParent(RuntimeModelData? parent = null)
     {
         if (parent != null)
             Parent = parent;
-        ParentSizeUpdated(true);
+        OnParentSizeChanged(true);
     }
 
     protected internal void AddFlag(RenderDirtyFlags flags)
@@ -69,8 +75,8 @@ public abstract class RuntimeModelData : IDisposable
 
     protected internal abstract void UpdatePosition();
 
-    protected internal abstract float GetLayoutLeft();
-    protected internal abstract float GetLayoutTop();
+    protected internal virtual float GetLayoutLeft() => computedStyle.Pos.X;
+    protected internal virtual float GetLayoutTop() => computedStyle.Pos.Y;
     protected internal abstract Vector2D<float> GetLayoutSize();
     protected internal abstract void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
     protected internal abstract void UpdateChildrenLayout();
@@ -79,19 +85,38 @@ public abstract class RuntimeModelData : IDisposable
     public abstract CursorType GetCursorType();
     public abstract Bounds GetBounds();
 
-    protected internal virtual void ParentSizeUpdated(bool informChildren = false)
+    protected internal virtual void OnParentSizeChanged(bool informChildren = false)
     {
         if (Parent != null)
         {
             ParentSize = Parent.GetLayoutSize();
-        } else
+        }
+        else
         {
             ParentSize = new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
         }
+        Console.WriteLine("Updating my parent size: " + ParentSize);
     }
 
     public void Dispose()
     {
+    }
+
+    public void TestToUpdateStyle(uint frame)
+    {
+        var _prevSize = computedStyle.Size;
+        if (Style.ShouldObjectUpdate[frame])
+        {
+            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+        }
+
+        mySizeHasChangedThisFrame[frame] = _prevSize != computedStyle.Size;
+    }
+
+    public virtual void Compile()
+    {
+        OnParentSizeChanged();
+        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
     }
 }
 
@@ -122,6 +147,13 @@ public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : Runtime
     {
         Style = style;
         StylesManager.AddInlineStyle(style);
+        computedStyle = style.ComputeStyles(true, false, ParentSize, computedStyle.Size);
+        return (TSelf)this;
+    }
+
+    public TSelf SetStyle(string name)
+    {
+        Style = StylesManager.GetStyle(name);
         return (TSelf)this;
     }
 

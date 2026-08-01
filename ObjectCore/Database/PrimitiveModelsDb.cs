@@ -63,7 +63,7 @@ public class PrimitiveModelsDb : IDisposable
         }
 
 
-        Console.WriteLine("Created vertices buffer " + primitiveBuffer);
+        // Console.WriteLine("Created vertices buffer " + primitiveBuffer);
     }
 
     public unsafe void CreateVertexAndIndicesBuffer<TIndices>(ObjectVertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>

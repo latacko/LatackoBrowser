@@ -54,7 +54,6 @@ public unsafe partial class BrowserWindow
         }
 
 
-        OnStart?.Invoke();
     }
 
     #region Surface

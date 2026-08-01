@@ -1,4 +1,5 @@
-﻿using GraphicCore;
+﻿using System.Diagnostics;
+using GraphicCore;
 using GraphicsCore;
 using ObjectCore.Textures;
 using Silk.NET.Maths;
@@ -39,10 +40,10 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
 
 
-    protected internal override void ParentSizeUpdated(bool informChildren = false)
+    protected internal override void OnParentSizeChanged(bool informChildren = false)
     {
-        base.ParentSizeUpdated(informChildren);
-        Console.WriteLine("Parent size changed");
+        base.OnParentSizeChanged(informChildren);
+        // Console.WriteLine("Parent size changed");
         objectDirty |= DirtyFlags.Size;
     }
 
@@ -90,8 +91,6 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         }
     }
 
-    protected internal override float GetLayoutLeft() => computedStyle.Pos.X;
-    protected internal override float GetLayoutTop() => computedStyle.Pos.Y;
     protected internal override Vector2D<float> GetLayoutSize() => computedStyle.Size;
     public override Bounds GetBounds() => new();
     public override CursorType GetCursorType() => Style.Properties.Cursor;
@@ -151,26 +150,24 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
         return true;
     }
 
+
     void UpdateObjectDirty(uint frame)
     {
-        if (base.Style.ShouldObjectUpdate[frame])
-            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+        if ((objectDirty.HasFlag(DirtyFlags.Size) || base.Style.ShouldObjectUpdate[frame]) && mySizeHasChangedThisFrame[frame])
+        {
+            // Console.WriteLine("Size:" + computedStyle.Size);
+            UpdateMySize(frame);
 
-        if (objectDirty == DirtyFlags.None) return;
+            objectDirty &= ~DirtyFlags.Size;
+
+            objectDirty |= DirtyFlags.Layout;
+        }
 
         if (objectDirty.HasFlag(DirtyFlags.Layout))
         {
             UpdateArrangement();
 
             objectDirty &= ~DirtyFlags.Layout;
-        }
-
-        if (objectDirty.HasFlag(DirtyFlags.Size))
-        {
-            Console.WriteLine("Size:");
-            UpdateMySize(frame);
-
-            objectDirty &= ~DirtyFlags.Size;
         }
     }
 
@@ -205,20 +202,21 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
     void UpdateMySize(uint frame)
     {
-        var _prevSize = computedStyle.Size;
-        if (!base.Style.ShouldObjectUpdate[frame])
-            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
-
-        Console.WriteLine("Update my size: " + computedStyle.Size);
-        if (_prevSize == computedStyle.Size) return;
+        // Console.WriteLine("Update my size: " + computedStyle.Size);
         // Layout.UpdateChildrenLayout();
         if (Children != null)
         {
             foreach (var child in Children)
             {
-                child.ParentSizeUpdated();
+                child.OnParentSizeChanged();
             }
         }
+        AddFlag(RenderDirtyFlags.Matrix);
+    }
+
+    public override void Compile()
+    {
+        base.Compile();
         AddFlag(RenderDirtyFlags.Matrix);
     }
 }

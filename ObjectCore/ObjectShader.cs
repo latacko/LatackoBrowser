@@ -1,3 +1,4 @@
+using GraphicCore;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
@@ -35,6 +36,11 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
             ObjectsManager.Instance.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
+
+        Parallel.ForEach(elements, item =>
+        {
+            item.TestToUpdateStyle(currentFrame);
+        });
 
         RenderElements(commandBuffer, currentFrame);
     }
@@ -104,5 +110,10 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
     protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
     {
         return new ObjectVertex().GetAttributeDescriptions();
+    }
+
+    public override void AddElement(RuntimeModelData runtimeModelData)
+    {
+        elements.Add(runtimeModelData as RuntimeObject);
     }
 }

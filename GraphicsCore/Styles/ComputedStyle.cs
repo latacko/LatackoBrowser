@@ -3,7 +3,7 @@ using Silk.NET.Maths;
 
 namespace GraphicCore.Styles;
 
-public struct ComputedStyle
+public record struct ComputedStyle
 {
     public Vector2D<float> Pos;
     public Vector2D<float> Size;

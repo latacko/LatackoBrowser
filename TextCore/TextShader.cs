@@ -144,6 +144,11 @@ public unsafe class TextShader : BaseShader
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
 
+        Parallel.ForEach(elements, item =>
+        {
+            item.TestToUpdateStyle(currentFrame);
+        });
+
         RenderElements(commandBuffer, currentFrame);
     }
 
@@ -165,5 +170,10 @@ public unsafe class TextShader : BaseShader
     protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
     {
         return new TextVertex().GetAttributeDescriptions();
+    }
+
+    public override void AddElement(RuntimeModelData runtimeModelData)
+    {
+        elements.Add(runtimeModelData as RuntimeTextContainer);
     }
 }

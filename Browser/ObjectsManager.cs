@@ -13,11 +13,14 @@ public static class ObjectsManager
     {
         uint objectIndex = LastCreatedIndex++;
         RuntimeObject runtimeModelData = new(modelData, objectIndex, texture, parent);
-        if (parent != null)
+        parent?.AddChild(runtimeModelData);
+
+        RuntimeModelData.ObjectsToCompile.Add(new()
         {
-            parent.AddChild(runtimeModelData);
-        }
-        objectShader.elements.Add(runtimeModelData);
+            runtimeModel = runtimeModelData,
+            shader = objectShader
+        });
+
         Elements.Add(runtimeModelData);
 
         return runtimeModelData;

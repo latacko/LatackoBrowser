@@ -140,7 +140,7 @@ public unsafe class CreateVulkan : IDisposable
         {
             return Vk.False;
         }
-        Console.WriteLine($"validation layer:" + SilkMarshal.PtrToString((nint)pCallbackData->PMessage));
+        // Console.WriteLine($"validation layer:" + SilkMarshal.PtrToString((nint)pCallbackData->PMessage));
 
         return Vk.False;
     }

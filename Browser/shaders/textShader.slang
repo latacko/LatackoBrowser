@@ -13,7 +13,7 @@ struct VertexOutput
     nointerpolation float4 color;
 
     nointerpolation uint fontIndex;
-    float char;
+    nointerpolation uint char;
 };
 
 public struct PushConstants
@@ -109,18 +109,29 @@ float IsChar(uint ascii) {
 //     return output;
 // }
 
+static uint FLAG_FLIP_IF_END_CHAR = 1u << 31;
+
 [shader("fragment")]
 FragmentOutput FragmentMain(VertexOutput input)
 {
     FragmentOutput output;
 
-    if (input.char != uint(input.char)) {
-        output.color = float4(0, 0, 1, 0);
+
+    // if (input.char != uint(input.char)) {
+    //     output.color = float4(0, 0, 1, 1);
+    //     return output;
+    // }
+
+    bool isGapQuad = (input.char & FLAG_FLIP_IF_END_CHAR) != 0;
+
+    if (isGapQuad)
+    {
+        output.color = float4(0, 0, 1, 0); // blank space, no glyph to sample
         return output;
     }
 
-
-    CharacterData characterData = pc.characterDataPtr[uint(input.char)];
+    uint clearedChar = input.char &~FLAG_FLIP_IF_END_CHAR;
+    CharacterData characterData = pc.characterDataPtr[clearedChar];
 
     float2 scaledUV = input.UV;
 
@@ -137,8 +148,9 @@ FragmentOutput FragmentMain(VertexOutput input)
     scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
 
     float3 msd = textures[input.fontIndex].Sample(sampler, scaledUV).rgb;
-    float msdf = median(msd.x, msd.y, msd.z);
 
+    /// ==================  Poprzedni dobrze działający msdf (ale gorzej z wykrzyknikami)  ==================
+    float msdf = median(msd.x, msd.y, msd.z);
     float2 fwidthUV = float2(
         fwidth(input.UV.x),
         fwidth(input.UV.y) * characterData.Scale // korekta skali Y

@@ -67,7 +67,7 @@ public class FontManager : IDisposable
 
         path += name;
 
-        Console.WriteLine(path);
+        // Console.WriteLine(path);
         var face = new Face(library, path);
 
         uint renderSize = 64 * 4;

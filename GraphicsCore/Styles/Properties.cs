@@ -15,6 +15,14 @@ public struct Properties
 
     internal ProperitesDirty dirty;
 
+    [Flags]
+    public enum WhereIsPercentage : byte
+    {
+        None,
+        BorderRadius = 1 << 0,
+    }
+    internal WhereIsPercentage whereIsPercentage;
+
     public CursorType Cursor;
     public Vector4D<float> BackgroundColor = new(1, 1, 1, 1);
     public float Transition;
@@ -36,6 +44,14 @@ public struct Properties
         return this;
     }
 
+    void AddOrRemoveFlagByUnit(ref UIUnit unit, WhereIsPercentage flag)
+    {
+        if (unit.IsPercentage)
+            whereIsPercentage |= flag;
+        else
+            whereIsPercentage &= ~flag;
+    }
+
     #region Background Color
     public Properties SetBackgroundColor255(float r, float g, float b, float a)
     {
@@ -49,7 +65,7 @@ public struct Properties
         //     GraphicCore.ColorTransitionsHelper.StartTransition(runtimeObject, BackgroundColor, new(SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b), a), Transition, UpdateColorTransitionHelper);
         // }
         // else
-            SetBackgroundColorWithoutTransition(r, g, b, a);
+        SetBackgroundColorWithoutTransition(r, g, b, a);
         return this;
     }
 
@@ -93,6 +109,8 @@ public struct Properties
         borderRadiusBottomRight = borderRadius;
         borderRadiusBottomLeft = borderRadius;
 
+        AddOrRemoveFlagByUnit(ref borderRadius, WhereIsPercentage.BorderRadius);
+
         dirty |= ProperitesDirty.BorderRadius;
 
         return this;
@@ -104,12 +122,20 @@ public struct Properties
         // topRight.ConvertToPx(runtimeObject.Layout.GetSize());
         // bottomRight.ConvertToPx(runtimeObject.Layout.GetSize());
         // bottomLeft.ConvertToPx(runtimeObject.Layout.GetSize());
-
+        whereIsPercentage &= ~WhereIsPercentage.BorderRadius;
 
         borderRadiusTopLeft = topLeft;
         borderRadiusTopRight = topRight;
         borderRadiusBottomRight = bottomRight;
         borderRadiusBottomLeft = bottomLeft;
+
+        AddOrRemoveFlagByUnit(ref topLeft, WhereIsPercentage.BorderRadius);
+        if (!whereIsPercentage.HasFlag(WhereIsPercentage.BorderRadius))
+            AddOrRemoveFlagByUnit(ref topRight, WhereIsPercentage.BorderRadius);
+        if (!whereIsPercentage.HasFlag(WhereIsPercentage.BorderRadius))
+            AddOrRemoveFlagByUnit(ref bottomRight, WhereIsPercentage.BorderRadius);
+        if (!whereIsPercentage.HasFlag(WhereIsPercentage.BorderRadius))
+            AddOrRemoveFlagByUnit(ref bottomLeft, WhereIsPercentage.BorderRadius);
 
         dirty |= ProperitesDirty.BorderRadius;
 

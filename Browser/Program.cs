@@ -27,7 +27,7 @@ using Silk.NET.Windowing;
 // }
 // // Console.WriteLine(elements);
 
-Console.WriteLine(AppContext.BaseDirectory);
+// Console.WriteLine(AppContext.BaseDirectory);
 // const int iterations = 1000;
 
 // var context = BrowsingContext.New(Configuration.Default);

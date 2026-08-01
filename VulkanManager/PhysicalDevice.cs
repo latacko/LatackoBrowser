@@ -38,9 +38,9 @@ public unsafe class PhysicalDevice
         {
             CreateVulkan.vk.GetPhysicalDeviceProperties2(device, out PhysicalDeviceProperties2 _physicalDeviceProperties);
             CreateVulkan.vk.GetPhysicalDeviceFeatures2(device, out PhysicalDeviceFeatures2 _physicalDeviceFeatures);
-            Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is found");
+            // Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is found");
             if (!IsDeviceSuitable(device)) continue;
-            Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is suitable");
+            // Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is suitable");
 
             int _score = RateDeviceSuitability(_physicalDeviceProperties, _physicalDeviceFeatures);
             if (_score > _bestDeviceScore)
@@ -59,7 +59,7 @@ public unsafe class PhysicalDevice
         else
         {
             CreateVulkan.vk.GetPhysicalDeviceProperties2(physicalDevice, out PhysicalDeviceProperties2 _physicalDeviceProperties);
-            Console.WriteLine("Using " + SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " gpu");
+            // Console.WriteLine("Using " + SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " gpu");
         }
     }
 

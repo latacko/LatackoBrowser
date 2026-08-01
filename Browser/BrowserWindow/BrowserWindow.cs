@@ -6,6 +6,7 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 using Silk.NET.Input.Sdl;
 using ObjectCore;
 using GraphicCore.Styles;
+using System.Diagnostics;
 
 namespace Browser;
 
@@ -22,6 +23,7 @@ public unsafe partial class BrowserWindow
     uint currentFrame = 0;
 
     private double _fpsTimer = 0;
+    private double _fpsTimer2 = 0;
     private int _frameCount = 0;
 
     private BrowserUI browserUI = new();
@@ -39,11 +41,12 @@ public unsafe partial class BrowserWindow
     public void Run()
     {
         CreateWindow();
-        Console.WriteLine("Creating vulkan");
+        // Console.WriteLine("Creating vulkan");
         CreateVulkan();
-        Console.WriteLine("Created vulkan");
+        // Console.WriteLine("Created vulkan");
+        OnStart?.Invoke();
         MainLoop();
-        Console.WriteLine("Ended main loop");
+        // Console.WriteLine("Ended main loop");
         CleanUp();
     }
 
@@ -79,7 +82,7 @@ public unsafe partial class BrowserWindow
             mouse.MouseMove += OnMouseMove;
             mouse.Scroll += OnMouseScroll;
         }
-        Console.WriteLine($"Windowing backend: {window.GetType().Name}");
+        // Console.WriteLine($"Windowing backend: {window.GetType().Name}");
 
         if (window.VkSurface is null)
         {
@@ -104,24 +107,31 @@ public unsafe partial class BrowserWindow
     private void Start()
     {
         coreManager.Start();
+        Console.WriteLine("==============================  STARTING ADDING OBJECTS  ==============================");
         browserUI.Create();
-        Console.WriteLine("Create model on load");
     }
 
     float speed = 0.2f;
     float DegToRad(float deg) => deg * (MathF.PI / 180f);
     float timeFromStart = 0f;
+
+    int updateMicroseconds;
+    int renderMicroseconds;
+    int render2Microseconds;
+
+    Stopwatch diagnosticStopwatch = new();
     private void OnUpdate(double deltaTime)
     {
+        diagnosticStopwatch.Restart();
         timeFromStart += (float)deltaTime;
 
         coreManager.Update(deltaTime);
 
-        browserUI.TopBar.Style.SetLayout(browserUI.TopBar.Style.Layout
-            .SetTop(new(100 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-            .SetWidth(new(800 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-            .SetHeight(new(300 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-            );
+        // browserUI.TopBar.Style.SetLayout(browserUI.TopBar.Style.Layout
+        //     .SetTop(new(100 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
+        //     .SetWidth(new(800 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
+        //     .SetHeight(new(300 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
+        //     );
 
         // browserUI.hellothere.SetLayout(browserUI.hellothere.Layout
         // .SetTop(new(-100 + MathF.Sin(timeFromStart) * 200, Units.UnitType.px))
@@ -134,6 +144,24 @@ public unsafe partial class BrowserWindow
         // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
 
         // runtimeModelData.SetRotation((float)(runtimeModelData.RotationX + deltaTime * speed), 0, 0);
+
+        if (GraphicCore.RuntimeModelData.ObjectsToCompile.Count != 0)
+        {
+            Console.WriteLine("==============================  STARTING COMPILING OBJECTS  ==============================");
+            foreach (var item in GraphicCore.RuntimeModelData.ObjectsToCompile)
+            {
+                item.runtimeModel.Compile();
+                item.shader.AddElement(item.runtimeModel);
+                Console.WriteLine("Compiling " + item.runtimeModel + " " + item.shader);
+            }
+
+            GraphicCore.RuntimeModelData.ObjectsToCompile.Clear();
+
+            Console.WriteLine("==============================  ENDED COMPILING OBJECTS  ==============================");
+        }
+
+        diagnosticStopwatch.Stop();
+        updateMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
     }
 
     private void OnFramebufferResize(Vector2D<int> newSize)
@@ -141,8 +169,10 @@ public unsafe partial class BrowserWindow
         framebufferResized = true;
     }
 
+    int lastSecondFps = 0;
     private void OnRender(double deltaTime)
     {
+        diagnosticStopwatch.Restart();
         Vulkan.CreateVulkan.vk.WaitForFences(Vulkan.LogicalDevice.device, 1, in vulkanManager.fences[currentFrame], Vk.True, ulong.MaxValue);
 
 
@@ -231,15 +261,28 @@ public unsafe partial class BrowserWindow
             }
 
         }
+        diagnosticStopwatch.Stop();
+        if (currentFrame == 0)
+            renderMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
+        else
+            render2Microseconds = diagnosticStopwatch.Elapsed.Microseconds;
 
         _frameCount++;
+        _frameCount++;
         _fpsTimer += deltaTime;
+        _fpsTimer2 += deltaTime;
 
         if (_fpsTimer >= 1.0) // every second
         {
-            window.Title = $"FPS: {_frameCount}";
+            lastSecondFps = _frameCount;
             _frameCount = 0;
             _fpsTimer = 0;
+        }
+
+        if (_fpsTimer2 >= 0.25)
+        {
+            _fpsTimer2=0;
+            window.Title = $"FPS: {lastSecondFps} update: {updateMicroseconds}μs render: {renderMicroseconds}μs render2: {render2Microseconds}μs";
         }
     }
 

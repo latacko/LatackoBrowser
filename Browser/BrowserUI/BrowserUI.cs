@@ -24,12 +24,12 @@ public class BrowserUI
         var _texture2 = TexturesManager.LoadTexture("textures/hellothere.png");
 
 
-        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture)
-        .SetStyle(new Style()
+        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null)
+        .SetStyle(new Style("Background")
             .SetLayout(
                 (layout) => layout
                     .SetLeft(new(0)).SetTop(new(0))
-                    .SetWidth(new(100, UnitType.lvw)).SetHeight(new(100, UnitType.px))
+                    .SetWidth(new(100, UnitType.lvw)).SetHeight(new(20, UnitType.lvh))
             )
             .SetProperties(
                 (properties) => properties
@@ -40,15 +40,15 @@ public class BrowserUI
         );
 
         Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null, TopBar)
-        .SetStyle(new Style()
+        .SetStyle(new Style("Karta")
             .SetLayout(layout => layout
                 .SetLeft(new(-10)).SetTop(new(-10))
-                .SetWidth(new(100, UnitType.px)).SetHeight(new(100, UnitType.percentageHeight))
+                .SetWidth(new(10, UnitType.lvw)).SetHeight(new(100, UnitType.percentageHeight))
             )
             .SetProperties(properties => properties
                 .SetCursor(CursorType.pointer)
                 .SetBackgroundColor255(65, 68, 71, 255)
-                .SetBorderRadius(new(25))
+                .SetBorderRadius(new(20))
                 .SetTransition(2f)
             )
         ).SetEvents(
@@ -71,11 +71,13 @@ public class BrowserUI
                 })
         );
 
-        // TextTest = TextManager.AddText("OLIIIIIIIII tekst naprawiony w końcu!!!😅", null)
-        // .SetProperties(properties => properties
-        //     .SetFontSize(new(50))
-        //     .SetCursor(CursorType.text)
-        // );
+        TextTest = TextManager.AddText("OLIIIIIIIII tekst naprawiony w końcu!!!", Karta)
+        .SetStyle(new Style("Tekst style")
+            .SetFontProperties(properties => properties
+                .SetFontSize(new(100, UnitType.percentageHeight))
+                .SetCursor(CursorType.text)
+            )
+        );
 
         // hellothere = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), _texture2)
         // .SetStyle(new Style()

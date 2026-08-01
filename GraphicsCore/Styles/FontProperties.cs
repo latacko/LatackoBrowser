@@ -15,6 +15,16 @@ public struct FontProperties
     }
 
     internal FontProperitesDirty dirty;
+
+    [Flags]
+    public enum WhereIsPercentage : byte
+    {
+        None,
+        FontSize = 1 << 0,
+    }
+    internal WhereIsPercentage whereIsPercentage;
+
+
     public CursorType Cursor;
     public Vector4D<float> TextColor = new(1, 1, 1, 1);
     public float Transition;
@@ -23,6 +33,14 @@ public struct FontProperties
 
     public FontProperties()
     {
+    }
+
+    void AddOrRemoveFlagByUnit(ref UIUnit unit, WhereIsPercentage flag)
+    {
+        if (unit.IsPercentage)
+            whereIsPercentage |= flag;
+        else
+            whereIsPercentage &= ~flag;
     }
 
     public FontProperties SetCursor(CursorType cursor)
@@ -44,7 +62,7 @@ public struct FontProperties
         //     GraphicCore.ColorTransitionsHelper.StartTransition(runtimeText, TextColor, new(SrgbToLinear(r), SrgbToLinear(g), SrgbToLinear(b), a), Transition, UpdateColorTransitionHelper);
         // }
         // else
-            SetTextColorWithoutTransition(r, g, b, a);
+        SetTextColorWithoutTransition(r, g, b, a);
         return this;
     }
 
@@ -87,6 +105,9 @@ public struct FontProperties
     public FontProperties SetFontSize(UIUnit fontSize)
     {
         this.fontSize = fontSize;
+
+        AddOrRemoveFlagByUnit(ref fontSize, WhereIsPercentage.FontSize);
+
         dirty |= FontProperitesDirty.FontSize;
         return this;
     }

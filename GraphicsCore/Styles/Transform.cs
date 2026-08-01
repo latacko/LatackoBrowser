@@ -25,11 +25,28 @@ public struct Transform
 
     internal TransformDirty dirty;
 
+    [Flags]
+    public enum WhereIsPercentage : byte
+    {
+        None,
+        Translate = 1 << 0,
+    }
+    internal WhereIsPercentage whereIsPercentage;
+
+
     public BoxE Box;
     public UIUnit TranslateX;
     public UIUnit TranslateY;
     public Vector3D<float> Rotation;
     public Vector3D<float> Scale;
+
+    void AddOrRemoveFlagByUnit(ref UIUnit unit, WhereIsPercentage flag)
+    {
+        if (unit.IsPercentage)
+            whereIsPercentage |= flag;
+        else
+            whereIsPercentage &= ~flag;
+    }
 
     public Transform SetBox(BoxE box)
     {
@@ -41,6 +58,11 @@ public struct Transform
     {
         TranslateX = translateX;
         TranslateY = translateY;
+
+        AddOrRemoveFlagByUnit(ref translateX, WhereIsPercentage.Translate);
+        if (!whereIsPercentage.HasFlag(WhereIsPercentage.Translate))
+            AddOrRemoveFlagByUnit(ref translateY, WhereIsPercentage.Translate);
+            
         return this;
     }
 

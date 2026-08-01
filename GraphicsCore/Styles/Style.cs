@@ -17,6 +17,7 @@ public class Style
         FontProperties = 1 << 3,
     }
     DirtyFlag dirty;
+
     public bool[] ShouldObjectUpdate = new bool[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     public Layout Layout = new();
@@ -25,6 +26,12 @@ public class Style
     public FontProperties FontProperties = new();
 
     internal ComputedStyle computedStyles;
+    public string Name;
+
+    public Style(string name)
+    {
+        this.Name = name;
+    }
 
     void SetDirtyObjectFlag()
     {
@@ -43,6 +50,7 @@ public class Style
     {
         Layout = layout;
         dirty |= DirtyFlag.Layout;
+        // StylesManager.AddFlag(StylesManager.DirtyFlag.StylesDirty);
         return this;
     }
 
@@ -54,6 +62,7 @@ public class Style
     public Style SetTransform(Transform transform)
     {
         dirty |= DirtyFlag.Transform;
+        // StylesManager.AddFlag(StylesManager.DirtyFlag.StylesDirty);
         Transform = transform;
         return this;
     }
@@ -66,6 +75,7 @@ public class Style
     public Style SetProperties(Properties properties)
     {
         dirty |= DirtyFlag.Properties;
+        // StylesManager.AddFlag(StylesManager.DirtyFlag.StylesDirty);
         Properties = properties;
         return this;
     }
@@ -78,23 +88,26 @@ public class Style
     public Style SetFontProperties(FontProperties fontProperties)
     {
         dirty |= DirtyFlag.FontProperties;
+        // StylesManager.AddFlag(StylesManager.DirtyFlag.StylesDirty);
         FontProperties = fontProperties;
         return this;
     }
 
-    public ComputedStyle ComputeStyles(bool forceUpdate = false, bool updatePercentage = false, Vector2D<float> parentSize = default, Vector2D<float> objectSize = default)
+    public ComputedStyle ComputeStyles(bool forceUpdate = false, bool updatePercentage = false, Vector2D<float> parentSize = default, Vector2D<float> objectSize = default, bool shouldMarkAsDirty = false)
     {
         bool _shouldForce = forceUpdate || updatePercentage;
-
         if (dirty == DirtyFlag.None && !_shouldForce)
         {
             return computedStyles;
         }
         float pixels;
 
+        Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage);
+        // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + Environment.StackTrace);
+
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Layout))
         {
-            if (_shouldForce || Layout.dirty.HasFlag(Layout.LayoutDirty.Padding))
+            if (forceUpdate || Layout.dirty.HasFlag(Layout.LayoutDirty.Padding) || Layout.whereIsPercentage.HasFlag(Layout.WhereIsPercentage.Padding))
             {
                 var _padding = computedStyles.Padding;
 
@@ -114,7 +127,7 @@ public class Style
                 Layout.dirty &= ~Layout.LayoutDirty.Padding;
             }
 
-            if (_shouldForce || Layout.dirty.HasFlag(Layout.LayoutDirty.Margin))
+            if (forceUpdate || Layout.dirty.HasFlag(Layout.LayoutDirty.Margin) || Layout.whereIsPercentage.HasFlag(Layout.WhereIsPercentage.Margin))
             {
                 var _margin = computedStyles.Margin;
 
@@ -134,7 +147,7 @@ public class Style
                 Layout.dirty &= ~Layout.LayoutDirty.Margin;
             }
 
-            if (_shouldForce || Layout.dirty.HasFlag(Layout.LayoutDirty.Position))
+            if (forceUpdate || Layout.dirty.HasFlag(Layout.LayoutDirty.Position) || Layout.whereIsPercentage.HasFlag(Layout.WhereIsPercentage.Pos))
             {
                 var _position = computedStyles.Pos;
 
@@ -148,16 +161,16 @@ public class Style
                 Layout.dirty &= ~Layout.LayoutDirty.Position;
             }
 
-            if (_shouldForce || Layout.dirty.HasFlag(Layout.LayoutDirty.Size))
+            if (forceUpdate || Layout.dirty.HasFlag(Layout.LayoutDirty.Size) || Layout.whereIsPercentage.HasFlag(Layout.WhereIsPercentage.Size))
             {
                 var _size = computedStyles.Size;
-
+                // Console.WriteLine("Size is dirty parent size: " + parentSize);
                 if (TryUpdateValue(Layout.Width, parentSize, out pixels))
                     _size.X = pixels + computedStyles.Padding.X + computedStyles.Padding.Z;
 
                 if (TryUpdateValue(Layout.Height, parentSize, out pixels))
                     _size.Y = pixels + computedStyles.Padding.Y + computedStyles.Padding.W;
-
+                // Console.WriteLine("Size is : " + _size);
                 computedStyles.Size = _size;
                 objectSize = computedStyles.Size;
                 Layout.dirty &= ~Layout.LayoutDirty.Size;
@@ -168,7 +181,7 @@ public class Style
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Properties))
         {
-            if (_shouldForce || Properties.dirty.HasFlag(Properties.ProperitesDirty.BorderRadius))
+            if (forceUpdate || Properties.dirty.HasFlag(Properties.ProperitesDirty.BorderRadius) || Properties.whereIsPercentage.HasFlag(Properties.WhereIsPercentage.BorderRadius))
             {
                 var _borderRadius = computedStyles.BorderRadius;
 
@@ -187,12 +200,13 @@ public class Style
                 computedStyles.BorderRadius = _borderRadius;
                 Properties.dirty &= ~Properties.ProperitesDirty.BorderRadius;
             }
+
             dirty &= ~DirtyFlag.Properties;
         }
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Transform))
         {
-            if (_shouldForce || Transform.dirty.HasFlag(Transform.TransformDirty.Translate))
+            if (forceUpdate || Transform.dirty.HasFlag(Transform.TransformDirty.Translate) || Transform.whereIsPercentage.HasFlag(Transform.WhereIsPercentage.Translate))
             {
                 var _translate = computedStyles.Translate;
 
@@ -210,21 +224,28 @@ public class Style
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.FontProperties))
         {
-            if (_shouldForce || FontProperties.dirty.HasFlag(FontProperties.FontProperitesDirty.FontSize))
+            if (forceUpdate || FontProperties.dirty.HasFlag(FontProperties.FontProperitesDirty.FontSize) || FontProperties.whereIsPercentage.HasFlag(FontProperties.WhereIsPercentage.FontSize))
             {
                 var _fontSize = computedStyles.FontSize;
 
-                if (TryUpdateValue(FontProperties.fontSize, objectSize, out pixels))
+                if (TryUpdateValue(FontProperties.fontSize, parentSize, out pixels))
                     _fontSize = pixels;
 
+                Console.WriteLine("Font size has changed to: " + _fontSize + " original font size: " + FontProperties.fontSize + " object size: " + objectSize);
                 computedStyles.FontSize = _fontSize;
                 FontProperties.dirty &= ~FontProperties.FontProperitesDirty.FontSize;
             }
             dirty &= ~DirtyFlag.FontProperties;
         }
 
-        if (!_shouldForce)
+
+        // Console.WriteLine("Is forced: " + _shouldForce);
+
+        if (shouldMarkAsDirty)
+        {
+            // Console.WriteLine("Pokazuje że muszą zrobić update");
             SetDirtyObjectFlag();
+        }
 
         return computedStyles;
 
