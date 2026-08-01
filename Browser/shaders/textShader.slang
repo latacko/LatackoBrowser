@@ -158,6 +158,8 @@ FragmentOutput FragmentMain(VertexOutput input)
 
     float2 screenTexSize = 1.0 / fwidthUV;
 
+    // float2 screenTexSize = 1.0 / fwidth(scaledUV);
+
     float2 unitRange = float2(MSDF_RANGE / ATLAS_WIDTH, MSDF_RANGE / ATLAS_HEIGHT);
     float screenPxRange = max(0.5f * dot(unitRange, screenTexSize), 1.0f);
     float screenPxDistance = screenPxRange * (msdf - 0.5f);

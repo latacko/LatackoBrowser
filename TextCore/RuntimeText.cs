@@ -220,6 +220,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     public override CursorType GetCursorType() => Style.FontProperties.Cursor;
 
+    //FIXME - the text is diffrent between buffers when resizing
     public override bool TryGetObjectData(out ModelData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)

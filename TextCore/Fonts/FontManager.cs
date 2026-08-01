@@ -125,6 +125,8 @@ public class FontManager : IDisposable
                     float fromTop = glyphHeight - bearingY;
                     var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop, insideOut);
 
+                    float charHeight = (faceForThread.BBox.Top - faceForThread.BBox.Bottom) / unitsPerEm;
+
 
                     var _isValid = _characterShape.Validate();
                     if (!_isValid)
@@ -137,19 +139,19 @@ public class FontManager : IDisposable
 
 
                     var innerSize = glyphSize - FontAtlas.PADDING * 2;
-                    double _range = FontAtlas.RANGE * ((double)glyphWidth / innerSize);
 
                     // // Shift so the glyph bottom-left maps to (padding, padding)
+
+                    float _scaleByWidth = innerSize / glyphWidth;
+                    float _scaleByHeight = innerSize / glyphHeight;
+                    float _uniformScale = Math.Min(_scaleByHeight, _scaleByWidth);
                     var _translate = new Vector2(
                         FontAtlas.PADDING,           // X: bearingX=0 so no shift needed
-                        FontAtlas.PADDING            // Y: with InverseYAxis, row is flipped internally
+                        FontAtlas.PADDING + innerSize - glyphHeight * _uniformScale            // Y: with InverseYAxis, row is flipped internally
                     );
 
-                    var _scale = new Vector2(
-                        innerSize / glyphWidth,
-                        innerSize / glyphHeight
-                    );
-
+                    var _scale = new Vector2(_uniformScale, _uniformScale);
+                    double _range = FontAtlas.RANGE / _uniformScale;
 
                     double _left = 0;
                     double _right = 0;
@@ -170,6 +172,9 @@ public class FontManager : IDisposable
                         _pixels[k * 4 + 3] = 255;
                     }
 
+                    float _occupiedWidthPx = Math.Min(glyphWidth * _uniformScale + 1, innerSize);
+                    float _occupiedHeightPx = Math.Min(glyphHeight * _uniformScale + 1, innerSize);
+
                     GlyphData _glyphData = new()
                     {
                         Advance = AdvanceX / unitsPerEm,
@@ -178,6 +183,8 @@ public class FontManager : IDisposable
                         // Width = face.Glyph.Metrics.Width.Value / unitsPerEm,
                         Width = (float)_right / unitsPerEm,
                         Height = (float)_top / unitsPerEm,
+                        OccupiedWidthPx = _occupiedWidthPx,
+                        OccupiedHeightPx = _occupiedHeightPx,
                     };
 
                     // Console.WriteLine("Char: " + _character + " glyph: " + _glyphData);

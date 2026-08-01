@@ -15,4 +15,6 @@ internal record struct GlyphData
 
     public float Width; // visual size
     public float Height; // visual size
+    public float OccupiedWidthPx; // visual size
+    public float OccupiedHeightPx; // visual size
 }

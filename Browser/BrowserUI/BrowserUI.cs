@@ -74,7 +74,7 @@ public class BrowserUI
         TextTest = TextManager.AddText("OLIIIIIIIII tekst naprawiony w końcu!!!", Karta)
         .SetStyle(new Style("Tekst style")
             .SetFontProperties(properties => properties
-                .SetFontSize(new(100, UnitType.percentageHeight))
+                .SetFontSize(new(16, UnitType.px))
                 .SetCursor(CursorType.text)
             )
         );

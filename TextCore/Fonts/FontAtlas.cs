@@ -169,13 +169,18 @@ public class FontAtlas : IDisposable
         int visualSize = GLYPH_SIZE - PADDING * 2;
         if (index == -1)
         {
+
+            float _uvWidthPx = Math.Min(glyph.OccupiedWidthPx, visualSize);
+            float _uvHeightPx = Math.Min(glyph.OccupiedHeightPx, visualSize);
+
             glyph.UVMin = new Vector2D<float>(
                 (imageX * GLYPH_SIZE + PADDING) / (float)ATLAS_WIDTH,
                 (imageY * GLYPH_SIZE + PADDING) / (float)ATLAS_HEIGHT
             );
+
             glyph.UVMax = new Vector2D<float>(
-                (imageX * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_WIDTH,
-                (imageY * GLYPH_SIZE + PADDING + visualSize) / (float)ATLAS_HEIGHT
+                (imageX * GLYPH_SIZE + PADDING + _uvWidthPx) / (float)ATLAS_WIDTH,
+                (imageY * GLYPH_SIZE + PADDING + _uvHeightPx) / (float)ATLAS_HEIGHT
             );
             createdGlyphs += 1;
         }
