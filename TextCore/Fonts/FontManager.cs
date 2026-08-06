@@ -5,6 +5,7 @@ using Remora.MSDFGen;
 using Remora.MSDFGen.Graphics;
 using SharpFont;
 using Silk.NET.Vulkan;
+using TextCore.Fonts;
 
 namespace TextCore;
 
@@ -72,7 +73,6 @@ public class FontManager : IDisposable
 
         uint renderSize = 64 * 4;
         face.SetCharSize(0, 64 * 64, 72, 72);
-        int glyphSize = FontAtlas.GLYPH_SIZE;
         float unitsPerEm = face.UnitsPerEM;
 
         if (!loadedFonts.ContainsKey(name))
@@ -123,10 +123,9 @@ public class FontManager : IDisposable
                     float glyphWidth = faceForThread.Glyph.Metrics.Width.Value;
                     float AdvanceX = faceForThread.Glyph.Advance.X.Value;
                     float fromTop = glyphHeight - bearingY;
-                    var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop, insideOut);
-
                     float charHeight = (faceForThread.BBox.Top - faceForThread.BBox.Bottom) / unitsPerEm;
 
+                    var _characterShape = BuildShape(faceForThread, _character, bearingX, fromTop, insideOut);
 
                     var _isValid = _characterShape.Validate();
                     if (!_isValid)
@@ -134,24 +133,7 @@ public class FontManager : IDisposable
 
                     _characterShape.Normalize();
                     MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
-                    var _pixmap = new Pixmap<Color3>(glyphSize, glyphSize);
 
-
-
-                    var innerSize = glyphSize - FontAtlas.PADDING * 2;
-
-                    // // Shift so the glyph bottom-left maps to (padding, padding)
-
-                    float _scaleByWidth = innerSize / glyphWidth;
-                    float _scaleByHeight = innerSize / glyphHeight;
-                    float _uniformScale = Math.Min(_scaleByHeight, _scaleByWidth);
-                    var _translate = new Vector2(
-                        FontAtlas.PADDING,           // X: bearingX=0 so no shift needed
-                        FontAtlas.PADDING + innerSize - glyphHeight * _uniformScale            // Y: with InverseYAxis, row is flipped internally
-                    );
-
-                    var _scale = new Vector2(_uniformScale, _uniformScale);
-                    double _range = FontAtlas.RANGE / _uniformScale;
 
                     double _left = 0;
                     double _right = 0;
@@ -159,21 +141,53 @@ public class FontManager : IDisposable
                     double _bottom = 0;
                     _characterShape.GetBounds(ref _left, ref _bottom, ref _right, ref _top);
 
+                    byte[][] _mipmapPixels = new byte[FontAtlas.MIP_LAYERS][];
 
-                    MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
 
-                    byte[] _pixels = new byte[glyphSize * glyphSize * 4];
-                    for (int k = 0; k < glyphSize * glyphSize; k++)
+                    float _occupiedWidthPx = 0;
+                    float _occupiedHeightPx = 0;
+
+                    for (int miplevel = 0; miplevel < FontAtlas.MIP_LAYERS; miplevel++)
                     {
-                        var c = _pixmap[k % glyphSize, k / glyphSize];
-                        _pixels[k * 4 + 0] = (byte)Math.Clamp(c.R * 255f, 0, 255);
-                        _pixels[k * 4 + 1] = (byte)Math.Clamp(c.G * 255f, 0, 255);
-                        _pixels[k * 4 + 2] = (byte)Math.Clamp(c.B * 255f, 0, 255);
-                        _pixels[k * 4 + 3] = 255;
+                        var _glyphSize = (int)FontAtlas.MSDFMipLevelsData[miplevel].GlyphSize;
+                        var _padding = FontAtlas.MSDFMipLevelsData[miplevel].Padding;
+
+                        var innerSize = _glyphSize - _padding * 2;
+
+                        float _scaleByWidth = innerSize / glyphWidth;
+                        float _scaleByHeight = innerSize / glyphHeight;
+                        float _uniformScale = Math.Min(_scaleByHeight, _scaleByWidth);
+
+                        if (miplevel == 0)
+                        {
+                            _occupiedWidthPx = Math.Min(glyphWidth * _uniformScale + 1, innerSize);
+                            _occupiedHeightPx = Math.Min(glyphHeight * _uniformScale + 1, innerSize);
+                        }
+
+                        var _scale = new Vector2(_uniformScale, _uniformScale);
+                        double _range = FontAtlas.MSDFMipLevelsData[miplevel].Range / _uniformScale;
+
+                        var _pixmap = new Pixmap<Color3>(_glyphSize, _glyphSize);
+                        var _translate = new Vector2(
+                            _padding,           // X: bearingX=0 so no shift needed
+                            _padding + innerSize - glyphHeight * _uniformScale            // Y: with InverseYAxis, row is flipped internally
+                        );
+
+                        MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
+
+                        byte[] _pixels = new byte[_glyphSize * _glyphSize * 4];
+                        for (int k = 0; k < _glyphSize * _glyphSize; k++)
+                        {
+                            var c = _pixmap[k % _glyphSize, k / _glyphSize];
+                            _pixels[k * 4 + 0] = (byte)Math.Clamp(c.R * 255f, 0, 255);
+                            _pixels[k * 4 + 1] = (byte)Math.Clamp(c.G * 255f, 0, 255);
+                            _pixels[k * 4 + 2] = (byte)Math.Clamp(c.B * 255f, 0, 255);
+                            _pixels[k * 4 + 3] = 255;
+                        }
+
+                        _mipmapPixels[miplevel] = _pixels;
                     }
 
-                    float _occupiedWidthPx = Math.Min(glyphWidth * _uniformScale + 1, innerSize);
-                    float _occupiedHeightPx = Math.Min(glyphHeight * _uniformScale + 1, innerSize);
 
                     GlyphData _glyphData = new()
                     {
@@ -192,7 +206,7 @@ public class FontManager : IDisposable
 
                     lock (loadedFonts[name])
                     {
-                        loadedFonts[name].AddGlyph(_character, _pixels, ref _glyphData);
+                        loadedFonts[name].AddGlyph(_character, _mipmapPixels, ref _glyphData);
                         // Console.WriteLine($"Glyph '{_character}': Data= {_glyphData} ");
                         loadedFonts[name].Glyphs[_character] = _glyphData;
                     }

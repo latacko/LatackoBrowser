@@ -1,4 +1,3 @@
-using AngleSharp;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;

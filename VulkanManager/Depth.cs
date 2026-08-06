@@ -12,7 +12,7 @@ public unsafe class Depth : IDisposable
     {
         depthFormat = FindDepthFormat();
 
-        ImageHelper.CreateImage(width, height, depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, ref depthImage, ref depthImageMemory);
+        ImageHelper.CreateImage(width, height, depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref depthImage, ref depthImageMemory);
         depthImageView = ImageHelper.CreateImageView(depthImage, depthFormat, ImageAspectFlags.DepthBit);
     }
 

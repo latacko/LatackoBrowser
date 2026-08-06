@@ -5,7 +5,7 @@ namespace Vulkan;
 
 public unsafe class ImageHelper
 {
-    public static void CreateImage(uint width, uint height, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, ref Image image, ref DeviceMemory imageMemory)
+    public static void CreateImage(uint width, uint height, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, uint miplevels, ref Image image, ref DeviceMemory imageMemory)
     {
         ImageCreateInfo _imageInfo = new()
         {
@@ -18,7 +18,7 @@ public unsafe class ImageHelper
                 Height = height,
                 Depth = 1,
             },
-            MipLevels = 1,
+            MipLevels = miplevels,
             ArrayLayers = 1,
             Format = format,
             Tiling = tiling,
@@ -66,7 +66,7 @@ public unsafe class ImageHelper
         throw new Exception("Failed to find suitable memory type!");
     }
 
-    public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags = ImageAspectFlags.ColorBit)
+    public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags = ImageAspectFlags.ColorBit, uint mipLevels = 1)
     {
         ImageViewCreateInfo _viewInfo = new()
         {
@@ -80,7 +80,7 @@ public unsafe class ImageHelper
             {
                 AspectMask = aspectFlags,
                 BaseMipLevel = 0,
-                LevelCount = 1,
+                LevelCount = mipLevels,
                 BaseArrayLayer = 0,
                 LayerCount = 1
             }
@@ -117,7 +117,7 @@ public unsafe class ImageHelper
 
         CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
 
-        CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, ref textureImage, ref textureImageMemory);
+        CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref textureImage, ref textureImageMemory);
 
         var _barrierTexImage = TransitionImageLayout(textureImage, ImageLayout.Undefined, ImageLayout.TransferDstOptimal);
 
@@ -182,7 +182,7 @@ public unsafe class ImageHelper
         // CreateVulkan.vk.FreeMemory(LogicalDevice.device, _stagingBufferMemory, null);
     }
 
-    public static ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout)
+    public static ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout, uint mipLevels = 1)
     {
         ImageMemoryBarrier2 _barrier2 = new()
         {
@@ -196,7 +196,7 @@ public unsafe class ImageHelper
             SubresourceRange = new()
             {
                 AspectMask = ImageAspectFlags.ColorBit,
-                LevelCount = 1,
+                LevelCount = mipLevels,
                 LayerCount = 1,
             },
         };

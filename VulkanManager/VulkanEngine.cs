@@ -119,9 +119,9 @@ public unsafe class VulkanEngine : IDisposable
             MagFilter = Filter.Linear,
             MinFilter = Filter.Linear,
             MipmapMode = SamplerMipmapMode.Linear,
-            AnisotropyEnable = Vk.True,
+            AnisotropyEnable = false,
             MinLod = 0,
-            MaxLod = Vk.LodClampNone, // = 1000.0f, allows all mip levels
+            MaxLod = 0, // = 1000.0f, allows all mip levels
             AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
             AddressModeV = SamplerAddressMode.ClampToEdge,
             AddressModeW = SamplerAddressMode.ClampToEdge,

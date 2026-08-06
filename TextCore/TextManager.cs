@@ -33,6 +33,8 @@ public class TextManager : BufferManager
 
     internal static Style TextDefaultStyle;
 
+    Sampler fontSampler;
+
     public TextManager()
     {
         Instance = this;
@@ -78,6 +80,8 @@ public class TextManager : BufferManager
             textModelDataBuffer[i] = new(256, 0);
             textContainerDataBuffer[i] = new(256, 0);
         }
+
+        CreateFontSampler();
         CreateDescriptorsPool();
         RegisterDescriptor();
 
@@ -88,6 +92,27 @@ public class TextManager : BufferManager
                 .SetFont("google-noto/NotoSerif-Regular.ttf")
                 .SetFontSize(new(16))
             );
+    }
+
+    unsafe void CreateFontSampler()
+    {
+        SamplerCreateInfo _samplerCI = new()
+        {
+            SType = StructureType.SamplerCreateInfo,
+            MagFilter = Filter.Linear,
+            MinFilter = Filter.Linear,
+            MipmapMode = SamplerMipmapMode.Linear,
+            AnisotropyEnable = false,
+            MinLod = 0,
+            MaxLod = FontAtlas.MIP_LAYERS-1, // = 1000.0f, allows all mip levels
+            AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
+            AddressModeV = SamplerAddressMode.ClampToEdge,
+            AddressModeW = SamplerAddressMode.ClampToEdge,
+        };
+
+        // Console.WriteLine("Creating sampler");
+        fixed (Sampler* samplerPtr = &fontSampler)
+            CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
     }
 
     public unsafe void RegisterDescriptor()
@@ -133,7 +158,7 @@ public class TextManager : BufferManager
 
         DescriptorImageInfo _samplerInfo = new()
         {
-            Sampler = VulkanEngine.Instance.sampler,
+            Sampler = fontSampler,
         };
 
         WriteDescriptorSet _descriptorWrites = new()

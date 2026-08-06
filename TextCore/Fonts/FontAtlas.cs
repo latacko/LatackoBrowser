@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
+using TextCore.Fonts;
 using Vulkan;
 using VulkanManager.BufferManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
@@ -18,28 +19,45 @@ public class FontAtlas : IDisposable
         internal ulong endOffset;
         internal ulong size;
         internal ulong timelineValue;
+        internal uint miplevel;
     }
 
     public struct WaitingCharacter
     {
         public char character;
-        public byte[] pixels;
+        public byte[][] pixels;
         public int index;
     }
     #region CONSTS
-    public const int GLYPH_SIZE = 64;
-    public const int PADDING = 8;
-    public const int RANGE = 6;
-
     public const int GLYPHD_IN_LINE = 16;
-    public const int ATLAS_WIDTH = 1024;
-    public const int ATLAS_HEIGHT = 1024;
-    public const ulong ATLAS_SIZE = ATLAS_WIDTH * ATLAS_HEIGHT * 4;
-
     public const uint STAGING_BUFFER_GLYPH_COUNT = 10;
+    public const uint MIP_LAYERS = 3;
 
-    const int BUFFER_GLYPH_SIZE = GLYPH_SIZE * GLYPH_SIZE * 4;
-    const ulong BUFFER_SIZE = STAGING_BUFFER_GLYPH_COUNT * BUFFER_GLYPH_SIZE;
+    public readonly static MSDFMipLevelData MainMSDFMipLevelData = new()
+    {
+        AtlasSize = 1024,
+        Padding = 8,
+        Range = 6,
+        GlyphSize = 64,
+    };
+
+    public readonly static MSDFMipLevelData[] MSDFMipLevelsData = [
+        MainMSDFMipLevelData,
+        new MSDFMipLevelData()
+        {
+            AtlasSize = 512,
+            Padding = 4,
+            Range = 3,
+            GlyphSize = 32,
+        },
+        new MSDFMipLevelData()
+        {
+            AtlasSize = 256,
+            Padding = 2,
+            Range = 1,
+            GlyphSize = 16,
+        }
+    ];
     #endregion
 
     internal readonly Dictionary<char, GlyphData> Glyphs = new();
@@ -59,12 +77,7 @@ public class FontAtlas : IDisposable
     ulong timelineValue = 0;
 
 
-    Buffer stagingBuffer = new();
-    DeviceMemory stagingBufferMemory = new();
-    nint bufferData;
-
-    ulong ringOffset = 0;
-    ulong gpuSafeOffset = 0;
+    readonly AtlasRingBuffer stagingBuffer = new(STAGING_BUFFER_GLYPH_COUNT, MSDFMipLevelsData);
 
     List<UploadRegion> inFlight = new();
 
@@ -84,8 +97,8 @@ public class FontAtlas : IDisposable
         this.name = name;
 
         charactersBuffer = new(1114111, 0);
-        ImageHelper.CreateImage(ATLAS_WIDTH, ATLAS_HEIGHT, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, ref atlasImage, ref atlasMemory);
-        imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit);
+        ImageHelper.CreateImage(MainMSDFMipLevelData.AtlasSize, MainMSDFMipLevelData.AtlasSize, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, MIP_LAYERS, ref atlasImage, ref atlasMemory);
+        imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit, MIP_LAYERS);
 
         SemaphoreTypeCreateInfo _typeInfo = new()
         {
@@ -102,10 +115,7 @@ public class FontAtlas : IDisposable
 
         CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &_semCI, null, out timelineSemaphore);
 
-        BufferHelper.CreateBuffer(BUFFER_SIZE, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref stagingBuffer, ref stagingBufferMemory);
-        nint _data;
-        CreateVulkan.vk!.MapMemory(LogicalDevice.device, stagingBufferMemory, 0, BUFFER_SIZE, 0, (void**)&_data);
-        bufferData = _data;
+        stagingBuffer.Init();
 
         TextManager.Instance.RegisterTexture(imageView, id);
     }
@@ -138,16 +148,6 @@ public class FontAtlas : IDisposable
         }
     }
 
-    ulong Allocate()
-    {
-        ulong aligned = (ringOffset + 15) & ~15UL; // optional alignment
-
-        if (aligned + BUFFER_GLYPH_SIZE > BUFFER_SIZE)
-            aligned = 0; // wrap
-
-        return aligned;
-    }
-
     public unsafe void StartRecording(int glyphCount)
     {
         if (glyphCount > STAGING_BUFFER_GLYPH_COUNT)
@@ -156,17 +156,14 @@ public class FontAtlas : IDisposable
         uploadList.Clear();
     }
 
-    internal unsafe bool AddGlyph(char character, byte[] pixels, ref GlyphData glyph, int index = -1)
+    internal unsafe bool AddGlyph(char character, byte[][] pixels, ref GlyphData glyph, int index = -1)
     {
-        ulong _offset = Allocate();
-        bool _isBlocked = inFlight.Any(r => _offset >= r.startOffset && _offset < r.endOffset);
-
         int _glyphIndex = index == -1 ? createdGlyphs : index;
 
         int imageX = _glyphIndex % GLYPHD_IN_LINE;
         int imageY = _glyphIndex / GLYPHD_IN_LINE;
 
-        int visualSize = GLYPH_SIZE - PADDING * 2;
+        uint visualSize = MainMSDFMipLevelData.GlyphSize - MainMSDFMipLevelData.Padding * 2;
         if (index == -1)
         {
 
@@ -174,16 +171,19 @@ public class FontAtlas : IDisposable
             float _uvHeightPx = Math.Min(glyph.OccupiedHeightPx, visualSize);
 
             glyph.UVMin = new Vector2D<float>(
-                (imageX * GLYPH_SIZE + PADDING) / (float)ATLAS_WIDTH,
-                (imageY * GLYPH_SIZE + PADDING) / (float)ATLAS_HEIGHT
+                (imageX * MainMSDFMipLevelData.GlyphSize + MainMSDFMipLevelData.Padding) / (float)MainMSDFMipLevelData.AtlasSize,
+                (imageY * MainMSDFMipLevelData.GlyphSize + MainMSDFMipLevelData.Padding) / (float)MainMSDFMipLevelData.AtlasSize
             );
 
             glyph.UVMax = new Vector2D<float>(
-                (imageX * GLYPH_SIZE + PADDING + _uvWidthPx) / (float)ATLAS_WIDTH,
-                (imageY * GLYPH_SIZE + PADDING + _uvHeightPx) / (float)ATLAS_HEIGHT
+                (imageX * MainMSDFMipLevelData.GlyphSize + MainMSDFMipLevelData.Padding + _uvWidthPx) / (float)MainMSDFMipLevelData.AtlasSize,
+                (imageY * MainMSDFMipLevelData.GlyphSize + MainMSDFMipLevelData.Padding + _uvHeightPx) / (float)MainMSDFMipLevelData.AtlasSize
             );
             createdGlyphs += 1;
         }
+
+        ulong _offset = stagingBuffer.GetOffset(0);
+        bool _isBlocked = inFlight.Any(r => _offset >= r.startOffset && _offset < r.endOffset);
 
         if (_isBlocked)
         {
@@ -196,58 +196,16 @@ public class FontAtlas : IDisposable
             return false;
         }
 
-        ringOffset = _offset + BUFFER_GLYPH_SIZE;
+        stagingBuffer.UploadPixels(pixels, uploadList, imageX, imageY);
 
-        pixels.AsSpan().CopyTo(new Span<byte>((void*)(bufferData + (nint)_offset), BUFFER_GLYPH_SIZE));
-
-        // Console.WriteLine($"First 12 bytes of '{character}': " + 
-        // string.Join(",", pixels.Take(12)));
-
-        byte* ptr = (byte*)(bufferData + (nint)_offset);
-
-        // for (int i = 0; i < BUFFER_GLYPH_SIZE; i += 4)
-        // {
-        //     ptr[i + 0] = 255;   // R
-        //     ptr[i + 1] = 255; // G
-        //     ptr[i + 2] = 255;   // B
-        //     ptr[i + 3] = 255; // A
-        // }
-
-
-
-        uploadList.Add(new()
-        {
-            BufferOffset = _offset,
-            BufferRowLength = GLYPH_SIZE,
-            BufferImageHeight = GLYPH_SIZE,
-
-            ImageSubresource = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                MipLevel = 0,
-                BaseArrayLayer = 0,
-                LayerCount = 1,
-            },
-            ImageOffset = new(imageX * GLYPH_SIZE, imageY * GLYPH_SIZE, 0),
-            ImageExtent = new()
-            {
-                Width = GLYPH_SIZE,
-                Height = GLYPH_SIZE,
-                Depth = 1,
-            },
-        });
-
-
-
-
-
-        // Console.WriteLine("Attempting to write on: " + (uint)character + " char: " + character);
         ((CharacterDataGPU*)charactersBuffer.Mapped)[(uint)character] = new()
         {
             UV = new Vector2D<float>(glyph.UVMin.Y, glyph.UVMax.Y),
             Scale = height / glyph.Height,
             BearingY = (baseline - glyph.BearingY) / height
         };
+
+        // Console.WriteLine("Attempting to write on: " + (uint)character + " char: " + character);
 
         // Console.WriteLine("Glyph for " + character + " ascii " + (uint)character + " is: " + glyph);
         // Console.WriteLine("Scale for " +character + " ascii " + (uint)character +" is: " + height/glyph.Height);
@@ -266,7 +224,7 @@ public class FontAtlas : IDisposable
         var srcLayout = !_atlasInitialized
             ? ImageLayout.Undefined
             : ImageLayout.ShaderReadOnlyOptimal;
-        var _barrierTexImage = ImageHelper.TransitionImageLayout(atlasImage, srcLayout, ImageLayout.TransferDstOptimal);
+        var _barrierTexImage = ImageHelper.TransitionImageLayout(atlasImage, srcLayout, ImageLayout.TransferDstOptimal, MIP_LAYERS);
         DependencyInfo _barrierTexInfo = new()
         {
             SType = StructureType.DependencyInfo,
@@ -277,9 +235,9 @@ public class FontAtlas : IDisposable
 
 
         fixed (BufferImageCopy* uploadPtr = uploadList.ToArray())
-            CreateVulkan.vk.CmdCopyBufferToImage(actualCommandBuffer, stagingBuffer, atlasImage, ImageLayout.TransferDstOptimal, (uint)uploadList.Count, uploadPtr);
+            CreateVulkan.vk.CmdCopyBufferToImage(actualCommandBuffer, stagingBuffer.Buffer, atlasImage, ImageLayout.TransferDstOptimal, (uint)uploadList.Count, uploadPtr);
 
-        var _barrierTexRead = ImageHelper.TransitionImageLayout(atlasImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
+        var _barrierTexRead = ImageHelper.TransitionImageLayout(atlasImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal, MIP_LAYERS);
 
         _barrierTexInfo = new()
         {
@@ -294,12 +252,12 @@ public class FontAtlas : IDisposable
         timelineValue++; // e.g. 1 after first upload, 2 after second...
         ulong _signalValue = timelineValue;
 
-        inFlight.Add(new UploadRegion
-        {
-            endOffset = ringOffset,
-            size = (ulong)(BUFFER_GLYPH_SIZE * uploadList.Count),
-            timelineValue = timelineValue
-        });
+        // inFlight.Add(new UploadRegion
+        // {
+        //     endOffset = ringOffset,
+        //     size = (ulong)(BUFFER_GLYPH_SIZE * uploadList.Count),
+        //     timelineValue = timelineValue
+        // });
 
         var _cb = actualCommandBuffer;
         var _timelineSemaphore = timelineSemaphore;
@@ -349,9 +307,7 @@ public class FontAtlas : IDisposable
     {
         CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, timelineSemaphore, null);
         charactersBuffer.Dispose();
-
-        CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
-        BufferHelper.DestroyBuffer(stagingBuffer, stagingBufferMemory);
+        stagingBuffer.Dispose();
 
         if (imageView.Handle != 0)
             CreateVulkan.vk.DestroyImageView(LogicalDevice.device, imageView, null);

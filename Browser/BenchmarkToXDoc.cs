@@ -1,5 +1,4 @@
 using System.Xml.Linq;
-using AngleSharp;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;

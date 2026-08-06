@@ -11,6 +11,8 @@ public unsafe class TextShader : BaseShader
     public List<RuntimeTextContainer> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
 
+    public static bool ShowMSDF;
+    public static bool ShowLOD;
     public override void Init()
     {
         base.Init();
@@ -61,7 +63,7 @@ public unsafe class TextShader : BaseShader
         new()
         {
             StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-            Size       = sizeof(ulong)*4 + sizeof(uint)  // camera ubo & text data & objects ubo
+            Size       = sizeof(ulong)*4 + sizeof(uint) * 3  // camera ubo & text data & objects ubo
         },
     ];
 
@@ -81,6 +83,9 @@ public unsafe class TextShader : BaseShader
         ulong _lastFontAtlasAddress = 0;
         ulong vOffset = 0;
 
+        uint _shouldShowMSDF = ShowMSDF ? 1u : 0;
+        uint _shouldShowLOD = ShowLOD ? 1u : 0;
+
         foreach (var element in elements)
         {
             if (element.TryGetObjectData(out var textData, currentFrame))
@@ -90,6 +95,9 @@ public unsafe class TextShader : BaseShader
 
             fixed (uint* objectIndexPtr = &element.ObjectIndex)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), objectIndexPtr);
+            
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _shouldShowMSDF);
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint)*2, sizeof(uint), ref ShowLOD);
 
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);

@@ -13,8 +13,8 @@ public struct TextData
     public float4 color;
 
     public uint fontIndex;
-    public float pad0;
-    public float pad1;
+    public uint range;
+    public float atlas_size;
     public float pad2;
 };
 
@@ -28,4 +28,13 @@ public struct CharacterData
     public float2 UV;
     public float BearingY;
     public float Scale;
+};
+
+public struct S_MSDFMipLevelData
+{
+    public uint AtlasSize;
+    public uint GlyphSize;
+    public float Range;
+    public uint Padding;
+    public float CharMargin;
 };

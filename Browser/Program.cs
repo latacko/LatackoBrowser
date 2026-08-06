@@ -2,7 +2,6 @@
 using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
-using AngleSharp;
 using BenchmarkDotNet.Running;
 using Browser;
 using HTMLParser;
@@ -65,8 +64,6 @@ return;
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
 // Environment.SetEnvironmentVariable("socket","x11");
-
-
 
 BrowserWindow window = new();
 window.Run();

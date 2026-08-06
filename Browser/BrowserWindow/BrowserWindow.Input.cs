@@ -1,6 +1,7 @@
 using System.Numerics;
 using GraphicCore;
 using Silk.NET.Input;
+using TextCore;
 
 namespace Browser;
 
@@ -14,6 +15,12 @@ public partial class BrowserWindow
         if (key == Key.W)
         {
             wireFrameRendering = !wireFrameRendering;
+        } else if (key == Key.M)
+        {
+            TextShader.ShowMSDF = !TextShader.ShowMSDF;
+        } else if (key == Key.L)
+        {
+            TextShader.ShowLOD = !TextShader.ShowLOD;
         }
     }
 

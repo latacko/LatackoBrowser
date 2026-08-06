@@ -11,8 +11,8 @@ public record struct TextContainerData
     
     // -------- 16 start ---------
     public uint TextureIndex; // 4
-    public uint pad0; // 4
-    public uint pad1; // 4
+    public uint range; // 4
+    public uint atlasSize; // 4
     public uint pad2; // 4
     // -------- 16 end ---------
 }
