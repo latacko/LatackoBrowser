@@ -7,20 +7,27 @@ public unsafe class LogicalDevice : IDisposable
 {
     public static Device device;
 
+    QueueFamilyIndices indices;
     internal static Queue graphicsQueue;
     internal static Queue presentQueue;
 
-    internal readonly static string[] deviceExtensions = new[]
+    readonly string[] deviceExtensions;
+
+    public LogicalDevice(string[] deviceExtensions)
     {
-        KhrSwapchain.ExtensionName,
-    };
+        this.deviceExtensions = deviceExtensions;
+    }
+
+    public uint[] GetIndices()
+    {
+        indices = Vulkan.PhysicalDevice.Instance.FindQueueFamilies(Vulkan.PhysicalDevice.physicalDevice);
+
+        return [indices.GraphicsFamily!.Value, indices.PresentFamily!.Value];
+    }
 
     public void Create()
     {
-        QueueFamilyIndices indices = PhysicalDevice.Instance.FindQueueFamilies(PhysicalDevice.physicalDevice);
-
-        var uniqueQueueFamilies = new[] { indices.GraphicsFamily!.Value, indices.PresentFamily!.Value };
-        uniqueQueueFamilies = uniqueQueueFamilies.Distinct().ToArray();
+        var uniqueQueueFamilies = GetIndices().Distinct().ToArray();
 
         DeviceQueueCreateInfo[] _queueCreateInfos = new DeviceQueueCreateInfo[uniqueQueueFamilies.Length];
 
@@ -31,7 +38,7 @@ public unsafe class LogicalDevice : IDisposable
             _queueCreateInfos[i] = new()
             {
                 SType = StructureType.DeviceQueueCreateInfo,
-                QueueFamilyIndex = indices.GraphicsFamily!.Value,
+                QueueFamilyIndex = uniqueQueueFamilies[i],
                 QueueCount = 1,
                 PQueuePriorities = &queuePriority,
                 PNext = null
@@ -95,13 +102,17 @@ public unsafe class LogicalDevice : IDisposable
                 throw new Exception("Failed to create logical device!");
             }
 
-            CreateVulkan.vk.GetDeviceQueue(device, indices.GraphicsFamily.Value, 0, out graphicsQueue);
-            CreateVulkan.vk.GetDeviceQueue(device, indices.PresentFamily.Value, 0, out presentQueue);
+            GetDeviceQueue();
 
             SilkMarshal.Free((nint)_createInfo.PpEnabledLayerNames);
             SilkMarshal.Free((nint)_createInfo.PpEnabledExtensionNames);
         }
+    }
 
+    protected void GetDeviceQueue()
+    {
+        CreateVulkan.vk.GetDeviceQueue(device, indices.GraphicsFamily!.Value, 0, out graphicsQueue);
+        CreateVulkan.vk.GetDeviceQueue(device, indices.PresentFamily!.Value, 0, out presentQueue);
     }
 
     public static void DestroyImageView(ImageView imageView, AllocationCallbacks* pAllocator)

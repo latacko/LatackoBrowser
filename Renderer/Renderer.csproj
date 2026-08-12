@@ -1,29 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../CoreManager/CoreManager.csproj" />
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
-    <ProjectReference Include="../HTMLParser/HTMLParser.csproj" />
     <ProjectReference Include="../ObjectCore/ObjectCore.csproj" />
-    <ProjectReference Include="../Renderer/Renderer.csproj" />
-    <ProjectReference Include="../SvgLoader/SvgLoader.csproj" />
     <ProjectReference Include="../TextCore/TextCore.csproj" />
-    <ProjectReference Include="../Units/Units.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
+    <ProjectReference Include="../Units/Units.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Silk.NET.Assimp" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Input" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Input.Sdl" Version="2.23.0" />
@@ -34,20 +27,6 @@
     <PackageReference Include="Silk.NET.Vulkan.Extensions.KHR" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Windowing" Version="2.23.0" />
     <PackageReference Include="Silk.NET.Windowing.Sdl" Version="2.23.0" />
-    <PackageReference Include="Slangc.NET" Version="2026.7.0" />
-    <PackageReference Include="SpaceWizards.SharpFont" Version="1.1.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="BrowserWindow/" />
-    <None Update="shaders/Compiled/*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="models/*" CopyToOutputDirectory="PreserveNewest" />
-    <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <Target Name="CompileShaders" BeforeTargets="Build">
-    <Exec Command="bash compile.sh" WorkingDirectory="$(ProjectDir)shaders" />
-  </Target>
 
 </Project>

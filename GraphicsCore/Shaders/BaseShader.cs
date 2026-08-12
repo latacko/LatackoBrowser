@@ -33,9 +33,9 @@ public unsafe abstract class BaseShader : IDisposable
 
     public abstract DescriptorSetLayout[] GetLayouts();
 
-    public abstract unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
+    public abstract void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
 
-    protected abstract void RenderElements(CommandBuffer commandBuffer, uint currentFrame);
+    protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame);
 
     #region Graphic pipeline
     protected virtual PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
@@ -266,7 +266,8 @@ public unsafe abstract class BaseShader : IDisposable
     }
     #endregion
 
-    public abstract void AddElement(RuntimeModelData runtimeModelData);
+    public abstract void AddElement(uint siteId, RuntimeModelData runtimeModelData);
+    public abstract void AddSite(uint siteId);
 
     public virtual void Dispose()
     {

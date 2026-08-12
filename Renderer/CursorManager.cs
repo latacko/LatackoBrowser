@@ -1,5 +1,7 @@
 using Silk.NET.SDL;
 
+namespace Renderer;
+
 public static class CursorManager
 {
     private static Sdl _sdl;

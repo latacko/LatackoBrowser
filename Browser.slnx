@@ -3,9 +3,9 @@
   <Project Path="CoreManager/CoreManager.csproj" />
   <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
-  <Project Path="ImGUI/ImGUI.csproj" />
   <Project Path="ObjectCore/ObjectCore.csproj" />
   <Project Path="Remora.MSDFGen/Remora.MSDFGen.csproj" />
+  <Project Path="Renderer/Renderer.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />
   <Project Path="TextCore/TextCore.csproj" />
   <Project Path="Units/Units.csproj" />

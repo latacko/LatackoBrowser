@@ -18,45 +18,22 @@ namespace Browser;
 
 public unsafe partial class BrowserWindow
 {
-    bool framebufferResized;
-    Vulkan.CreateVulkan createVulkan = new();
     Vulkan.VulkanEngine vulkanManager = new();
+    bool framebufferResized;
+
     Vulkan.Swapchain swapchain;
-    Vulkan.PhysicalDevice physicalDevice;
-    Vulkan.LogicalDevice logicalDevice = new();
+    internal KhrSurface khrSurface;
+    internal SurfaceKHR surface;
 
-
-    KhrSurface khrSurface;
-    SurfaceKHR surface;
-
-    internal static GraphicCore.BaseShader[] loadedShaders = [
-        new ObjectShader(),
-    ];
-
-    void CreateVulkan()
+    void SetupVulkan()
     {
-        createVulkan.Create(window.VkSurface.GetRequiredExtensions(out uint count), count);
         CreateSurface();
 
-        physicalDevice = new(khrSurface, surface);
         swapchain = new(window.FramebufferSize, khrSurface, surface);
-        physicalDevice.Pick();
-        logicalDevice.Create();
-
         swapchain.CreateSwapChain();
         swapchain.CreateImageViews();
-
         vulkanManager.Init();
-
-        foreach (var shader in loadedShaders)
-        {
-            shader.Init();
-        }
-
-
     }
-
-    #region Surface
 
     void CreateSurface()
     {
@@ -67,9 +44,6 @@ public unsafe partial class BrowserWindow
 
         surface = window!.VkSurface!.Create<AllocationCallbacks>(Vulkan.CreateVulkan.vulkanInstance.ToHandle(), null).ToSurface();
     }
-
-    #endregion
-
 
     void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex)
     {
@@ -250,22 +224,10 @@ public unsafe partial class BrowserWindow
         }
     }
 
-    private void CleanUpVulcan()
+    void Dispose()
     {
         swapchain.Dispose();
-
         vulkanManager.Dispose();
-
-
-        foreach (var shader in loadedShaders)
-        {
-            shader.Dispose();
-        }
-
-        logicalDevice.Dispose();
-
-
         khrSurface.DestroySurface(Vulkan.CreateVulkan.vulkanInstance, surface, null);
-        createVulkan.Dispose();
     }
 }

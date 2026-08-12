@@ -71,8 +71,8 @@ static uint FLAG_FLIP_IF_END_CHAR = 1u << 31;
 
 static S_MSDFMipLevelData MSDFMipLevelData[3] = {
     { 1024, 64, 6, 8, 0.1 },
-    { 512, 32, 3, 4, 0.2 },
-    { 256, 16, 1, 2, 0.3 },
+    { 512, 32, 4, 4, 0.4 },
+    { 256, 16, 3, 2, 0.4 },
 };
 
 S_MSDFMipLevelData GetMSDFData(VertexOutput input, float2 uv) {
@@ -81,8 +81,6 @@ S_MSDFMipLevelData GetMSDFData(VertexOutput input, float2 uv) {
 
 
     int lowMip = (int)floor(mipLevel);
-    int highMip = min(lowMip + 1, 2);
-    float frac = mipLevel - lowMip;
 
     return MSDFMipLevelData[lowMip];
 }
@@ -134,17 +132,22 @@ FragmentOutput FragmentMain(VertexOutput input)
     t -= characterData.BearingY;
     t *= characterData.Scale;
 
-    S_MSDFMipLevelData msdfMipLevelData = GetMSDFData(input, scaledUV);
+    S_MSDFMipLevelData msdfMipLevelData = GetMSDFData(input, input.UV);
 
     if (t < -msdfMipLevelData.CharMargin || t > 1 + msdfMipLevelData.CharMargin)
     {
-        output.color = float4(1, 0, 0, 0);
+        output.color = float4(1, 0, 0, 0.2);
         return output;
     }
 
+    float mipLevel = textures[input.fontIndex].CalculateLevelOfDetail(sampler, input.UV);
+
     scaledUV.y = lerp(characterData.UV.x, characterData.UV.y, t);
 
-    float3 msd = textures[input.fontIndex].SampleLevel(sampler, scaledUV, 2).rgb;
+
+    int lowMip = (int)floor(mipLevel);
+
+    float3 msd = textures[input.fontIndex].SampleLevel(sampler, scaledUV, lowMip).rgb;
     // float3 msd = textures[input.fontIndex].Sample(sampler, scaledUV).rgb;
 
     /// ==================  Poprzedni dobrze działający msdf (ale gorzej z wykrzyknikami)  ==================
@@ -156,7 +159,7 @@ FragmentOutput FragmentMain(VertexOutput input)
 
     // float2 screenTexSize = 1.0 / fwidthUV;
 
-    float2 screenTexSize = 1.0 / max(fwidth(scaledUV), 1e-6);
+    float2 screenTexSize = 1.0 / max(fwidth(input.UV), 1e-6);
 
     // float2 screenTexSize = 1.0 / fwidth(scaledUV);
 

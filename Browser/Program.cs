@@ -5,8 +5,12 @@ using System.Xml.Linq;
 using BenchmarkDotNet.Running;
 using Browser;
 using HTMLParser;
+using ObjectCore;
+using Renderer;
 using Silk.NET.Maths;
+using Silk.NET.Vulkan.Extensions.KHR;
 using Silk.NET.Windowing;
+using TextCore;
 
 // HttpClient httpClient = new();
 
@@ -55,18 +59,27 @@ using Silk.NET.Windowing;
 // Console.WriteLine("Time of my parsing: " + (stopwatch.Elapsed.TotalMilliseconds / iterations) + "ms");
 // Console.WriteLine("My parser is " + anglesharpPerformance/myPerformance + "x faster");
 
-#if RELEASE
-// BenchmarkRunner.Run<ParserBenchmark>();
-BenchmarkRunner.Run<BenchmarkToXDoc>();
-return;
-#endif
+// #if RELEASE
+// // BenchmarkRunner.Run<ParserBenchmark>();
+// BenchmarkRunner.Run<BenchmarkToXDoc>();
+// return;
+// #endif
 
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
 // Environment.SetEnvironmentVariable("socket","x11");
+BrowserWindow browserWindow = new();
 
-BrowserWindow window = new();
-window.Run();
+RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
+renderEngine.RegisterShader(new ObjectShader());
+renderEngine.RegisterShader(new TextShader());
+unsafe
+{
+    renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);
+}
+
+browserWindow.Run();
+
 
 // SvgLoader.Loader.Parse(_document);
 

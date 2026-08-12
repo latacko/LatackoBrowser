@@ -5,15 +5,18 @@ namespace Vulkan;
 
 public unsafe class PhysicalDevice
 {
-    internal static PhysicalDevice Instance {get; private set; }
+    internal static PhysicalDevice Instance { get; private set; }
     internal static Silk.NET.Vulkan.PhysicalDevice physicalDevice;
+    readonly string[] deviceExtensions;
 
     KhrSurface khrSurface;
     SurfaceKHR surfaceKHR;
 
-    public PhysicalDevice(KhrSurface khrSurface, SurfaceKHR surfaceKHR)
+
+    public PhysicalDevice(string[] deviceExtensions, KhrSurface khrSurface, SurfaceKHR surfaceKHR)
     {
         Instance = this;
+        this.deviceExtensions = deviceExtensions;
         this.khrSurface = khrSurface;
         this.surfaceKHR = surfaceKHR;
     }
@@ -110,7 +113,7 @@ public unsafe class PhysicalDevice
         }
 
         var availableExtensionsNames = _extensionProperties.Select(layer => SilkMarshal.PtrToString((IntPtr)layer.ExtensionName)).ToHashSet();
-        return LogicalDevice.deviceExtensions.All(availableExtensionsNames.Contains);
+        return deviceExtensions.All(availableExtensionsNames.Contains);
     }
 
     internal QueueFamilyIndices FindQueueFamilies(Silk.NET.Vulkan.PhysicalDevice physicalDevice)
@@ -149,6 +152,4 @@ public unsafe class PhysicalDevice
 
         return indices;
     }
-
-
 }

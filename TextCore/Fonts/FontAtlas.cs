@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Remora.MSDFGen;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using TextCore.Fonts;
@@ -47,14 +48,14 @@ public class FontAtlas : IDisposable
         {
             AtlasSize = 512,
             Padding = 4,
-            Range = 3,
+            Range = 4,
             GlyphSize = 32,
         },
         new MSDFMipLevelData()
         {
             AtlasSize = 256,
             Padding = 2,
-            Range = 1,
+            Range = 3,
             GlyphSize = 16,
         }
     ];

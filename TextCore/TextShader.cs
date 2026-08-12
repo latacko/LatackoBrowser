@@ -8,7 +8,7 @@ namespace TextCore;
 
 public unsafe class TextShader : BaseShader
 {
-    public List<RuntimeTextContainer> elements = new();
+    public Dictionary<uint, List<RuntimeTextContainer>> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
 
     public static bool ShowMSDF;
@@ -74,9 +74,44 @@ public unsafe class TextShader : BaseShader
         PrimitiveRestartEnable = Vk.False,
     };
 
-    bool isWireFrameRendering = false;
+    protected internal override VertexInputBindingDescription GetBindingDescription()
+    {
+        return new TextVertex().GetBindingDescription();
+    }
 
-    protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
+    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        return new TextVertex().GetAttributeDescriptions();
+    }
+
+
+    public override void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    {
+        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
+
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
+
+        ulong vOffset = 0;
+        // CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
+        // CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
+
+        ulong* addresses = stackalloc ulong[3]
+        {
+            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
+            TextManager.Instance.textContainerDataBuffer[currentFrame].DeviceAddress,
+            TextManager.Instance.textModelDataBuffer[currentFrame].DeviceAddress,
+        };
+        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
+
+        // Parallel.ForEach(elements, item =>
+        // {
+        //     item.TestToUpdateStyle(currentFrame);
+        // });
+
+        RenderElements(siteId, commandBuffer, currentFrame);
+    }
+
+    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
     {
         Silk.NET.Vulkan.Buffer _lastVertexBuffer = default;
         Silk.NET.Vulkan.Buffer _lastIndexBuffer = default;
@@ -86,7 +121,7 @@ public unsafe class TextShader : BaseShader
         uint _shouldShowMSDF = ShowMSDF ? 1u : 0;
         uint _shouldShowLOD = ShowLOD ? 1u : 0;
 
-        foreach (var element in elements)
+        foreach (var element in elements[siteId])
         {
             if (element.TryGetObjectData(out var textData, currentFrame))
             {
@@ -95,9 +130,9 @@ public unsafe class TextShader : BaseShader
 
             fixed (uint* objectIndexPtr = &element.ObjectIndex)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), objectIndexPtr);
-            
+
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _shouldShowMSDF);
-            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint)*2, sizeof(uint), ref ShowLOD);
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint) * 2, sizeof(uint), ref ShowLOD);
 
             fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
@@ -133,55 +168,31 @@ public unsafe class TextShader : BaseShader
         }
     }
 
-    public override void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    /// <summary>
+    /// Remember to register the site first
+    /// </summary>
+    /// <param name="siteId"></param>
+    /// <param name="runtimeModelData"></param>
+    public override void AddElement(uint siteId, RuntimeModelData runtimeModelData)
     {
-        this.isWireFrameRendering = wireFrameRendering;
-        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
+        elements[siteId].Add(runtimeModelData as RuntimeTextContainer);
+    }
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
-
-        ulong vOffset = 0;
-        // CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
-        // CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
-
-        ulong* addresses = stackalloc ulong[3]
-        {
-            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
-            TextManager.Instance.textContainerDataBuffer[currentFrame].DeviceAddress,
-            TextManager.Instance.textModelDataBuffer[currentFrame].DeviceAddress,
-        };
-        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
-
-        Parallel.ForEach(elements, item =>
-        {
-            item.TestToUpdateStyle(currentFrame);
-        });
-
-        RenderElements(commandBuffer, currentFrame);
+    public override void AddSite(uint siteId)
+    {
+        elements.Add(siteId, []);
     }
 
     public override void Dispose()
     {
-        foreach (var element in elements)
+        foreach (var siteElements in elements)
         {
-            element.Dispose();
+            foreach (var element in siteElements.Value)
+            {
+                element.Dispose();
+            }
         }
 
         base.Dispose();
-    }
-
-    protected internal override VertexInputBindingDescription GetBindingDescription()
-    {
-        return new TextVertex().GetBindingDescription();
-    }
-
-    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
-    {
-        return new TextVertex().GetAttributeDescriptions();
-    }
-
-    public override void AddElement(RuntimeModelData runtimeModelData)
-    {
-        elements.Add(runtimeModelData as RuntimeTextContainer);
     }
 }

@@ -174,7 +174,7 @@ public class FontManager : IDisposable
                         );
 
                         MSDF.GenerateMSDF(_pixmap, _characterShape, _range, _scale, _translate);
-
+                        // SDF.GenerateSDF()
                         byte[] _pixels = new byte[_glyphSize * _glyphSize * 4];
                         for (int k = 0; k < _glyphSize * _glyphSize; k++)
                         {

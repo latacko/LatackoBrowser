@@ -7,13 +7,14 @@ using Silk.NET.Input.Sdl;
 using ObjectCore;
 using GraphicCore.Styles;
 using System.Diagnostics;
+using Vulkan;
 
 namespace Browser;
 
 public unsafe partial class BrowserWindow
 {
-    public static BrowserWindow Instance;
-    private static IWindow window;
+    public BrowserWindow Instance;
+    internal IWindow window;
     private IInputContext inputContext;
 
     internal PrimitiveModelsDb primitiveModelsDb = new();
@@ -40,9 +41,9 @@ public unsafe partial class BrowserWindow
 
     public void Run()
     {
+        SetupVulkan();
         CreateWindow();
         // Console.WriteLine("Creating vulkan");
-        CreateVulkan();
         // Console.WriteLine("Created vulkan");
         OnStart?.Invoke();
         MainLoop();
@@ -52,20 +53,14 @@ public unsafe partial class BrowserWindow
 
     void CreateWindow()
     {
-        Window.PrioritizeSdl();
-        Silk.NET.Windowing.Sdl.SdlWindowing.Use();
-        SdlInput.RegisterPlatform();
-
         var options = WindowOptions.DefaultVulkan;
         // options.WindowBorder = WindowBorder.Hidden;
         options.Size = new Vector2D<int>(WIDTH, HEIGHT);
         options.Title = "LearnOpenGL with Silk.NET";
-        options.UpdatesPerSecond = 0;
-        options.FramesPerSecond = 0;
+        options.UpdatesPerSecond = 30;
+        options.FramesPerSecond = 30;
 
         window = Window.Create(options);
-        CursorManager.Init(Silk.NET.SDL.Sdl.GetApi());
-
 
         window.Initialize();
         inputContext = window.CreateInput();
@@ -173,11 +168,11 @@ public unsafe partial class BrowserWindow
     private void OnRender(double deltaTime)
     {
         diagnosticStopwatch.Restart();
-        Vulkan.CreateVulkan.vk.WaitForFences(Vulkan.LogicalDevice.device, 1, in vulkanManager.fences[currentFrame], Vk.True, ulong.MaxValue);
+        Vulkan.CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame], Vk.True, ulong.MaxValue);
 
 
         uint imageIndex;
-        var _result = swapchain.khrSwapChain!.AcquireNextImage(Vulkan.LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, vulkanManager.imageAcquiredSemaphores[currentFrame], default, &imageIndex);
+        var _result = swapchain.khrSwapChain!.AcquireNextImage(LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, vulkanManager.imageAcquiredSemaphores[currentFrame], default, &imageIndex);
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
@@ -188,7 +183,7 @@ public unsafe partial class BrowserWindow
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
 
-        Vulkan.CreateVulkan.vk.ResetFences(Vulkan.LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
+        Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
 
         Vulkan.CreateVulkan.vk.ResetCommandBuffer(vulkanManager.commandBuffers[currentFrame], 0);
 
@@ -227,7 +222,7 @@ public unsafe partial class BrowserWindow
             submitInfo.SignalSemaphoreCount = 1;
             submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
 
-            if (Vulkan.CreateVulkan.vk.QueueSubmit(Vulkan.LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanManager.fences[currentFrame]) != Result.Success)
+            if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanManager.fences[currentFrame]) != Result.Success)
             {
                 throw new Exception("Failed to submit command buffer!");
             }
@@ -247,7 +242,7 @@ public unsafe partial class BrowserWindow
                 PImageIndices = &imageIndex
             };
 
-            _result = swapchain.khrSwapChain.QueuePresent(Vulkan.LogicalDevice.presentQueue, &presentInfo);
+            _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.presentQueue, &presentInfo);
 
             if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
             {
@@ -327,14 +322,14 @@ public unsafe partial class BrowserWindow
     {
         window.Run();
 
-        Vulkan.CreateVulkan.vk.DeviceWaitIdle(Vulkan.LogicalDevice.device);
+        Vulkan.CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
     }
 
     void CleanUp()
     {
         coreManager.Dispose();
         primitiveModelsDb.Dispose();
-        CleanUpVulcan();
+        Dispose();
         window.Dispose();
     }
 }

@@ -7,7 +7,7 @@ namespace ObjectCore;
 
 public unsafe class ObjectShader : GraphicCore.BaseShader
 {
-    public List<RuntimeObject> elements = new();
+    public Dictionary<uint, List<RuntimeObject>> elements = new();
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
     public override void Init()
@@ -20,7 +20,17 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         return [ObjectManager.Instance.objectDescriptorLayout];
     }
 
-    public override unsafe void Render(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    protected internal override VertexInputBindingDescription GetBindingDescription()
+    {
+        return new ObjectVertex().GetBindingDescription();
+    }
+
+    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        return new ObjectVertex().GetAttributeDescriptions();
+    }
+
+    public override unsafe void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
@@ -37,12 +47,12 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
 
-        Parallel.ForEach(elements, item =>
-        {
-            item.TestToUpdateStyle(currentFrame);
-        });
+        // Parallel.ForEach(elements, item =>
+        // {
+        //     item.TestToUpdateStyle(currentFrame);
+        // });
 
-        RenderElements(commandBuffer, currentFrame);
+        RenderElements(siteId, commandBuffer, currentFrame);
     }
 
     // // override depth — UI has no depth test
@@ -81,9 +91,9 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         DepthBiasEnable = Vk.False,
     };
 
-    protected override void RenderElements(CommandBuffer commandBuffer, uint currentFrame)
+    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
     {
-        foreach (var element in elements)
+        foreach (var element in elements[siteId])
         {
             if (element.TryGetObjectData(out var data, currentFrame))
             {
@@ -93,27 +103,30 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
         }
     }
 
+    /// <summary>
+    /// Remember to register the site first
+    /// </summary>
+    /// <param name="siteId"></param>
+    /// <param name="runtimeModelData"></param>
+    public override void AddElement(uint siteId, RuntimeModelData runtimeModelData)
+    {
+        elements[siteId].Add(runtimeModelData as RuntimeObject);
+    }
+
+    public override void AddSite(uint siteId)
+    {
+        elements.Add(siteId, []);
+    }
+
     public override void Dispose()
     {
-        foreach (var element in elements)
+        foreach (var siteElements in elements)
         {
-            element.Dispose();
+            foreach (var element in siteElements.Value)
+            {
+                element.Dispose();
+            }
         }
         base.Dispose();
-    }
-
-    protected internal override VertexInputBindingDescription GetBindingDescription()
-    {
-        return new ObjectVertex().GetBindingDescription();
-    }
-
-    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
-    {
-        return new ObjectVertex().GetAttributeDescriptions();
-    }
-
-    public override void AddElement(RuntimeModelData runtimeModelData)
-    {
-        elements.Add(runtimeModelData as RuntimeObject);
     }
 }

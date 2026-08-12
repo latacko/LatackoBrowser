@@ -1,5 +1,6 @@
 using System.Numerics;
 using GraphicCore;
+using Renderer;
 using Silk.NET.Input;
 using TextCore;
 
@@ -8,6 +9,7 @@ namespace Browser;
 public partial class BrowserWindow
 {
     bool wireFrameRendering = false;
+    float fontSize = 16;
     private void OnKeyDown(IKeyboard keyboard, Key key, int arg3)
     {
         Console.WriteLine("Key down: " + key);
@@ -21,6 +23,12 @@ public partial class BrowserWindow
         } else if (key == Key.L)
         {
             TextShader.ShowLOD = !TextShader.ShowLOD;
+        } else if (key == Key.Right)
+        {
+            browserUI.TextTest.Style.SetFontProperties(fontProperties=>fontProperties.SetFontSize(new(++fontSize)));
+        } else if (key == Key.Left)
+        {
+            browserUI.TextTest.Style.SetFontProperties(fontProperties=>fontProperties.SetFontSize(new(--fontSize)));
         }
     }
 
