@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace GraphicCore.Styles;
 
-public static class StylesManager
+public class StylesManager
 {
     [Flags]
     public enum DirtyFlag
@@ -12,46 +12,46 @@ public static class StylesManager
         ScreenSize = 1 << 0,
         StylesDirty = 1 << 1,
     }
-    static DirtyFlag dirty = DirtyFlag.None;
-    static readonly Dictionary<string, Style> styles = new();
-    static readonly HashSet<Style> inlineStyles = new();
+    DirtyFlag dirty = DirtyFlag.None;
+    readonly Dictionary<string, Style> styles = new();
+    readonly HashSet<Style> inlineStyles = new();
 
-    public static void SetStyle(string styleKey, Style style)
+    public void SetStyle(string styleKey, Style style)
     {
         styles[styleKey] = style;
         styles[styleKey].computedStyles = styles[styleKey].ComputeStyles();
     }
 
-    public static void UpdateStyle(string styleKey, Func<Style, Style> updatedStyle)
+    public void UpdateStyle(string styleKey, Func<Style, Style> updatedStyle)
     {
         styles[styleKey] = updatedStyle.Invoke(styles[styleKey]);
         // styles[styleKey].computedStyles = styles[styleKey].ComputeStyles();
     }
 
-    public static void AddInlineStyle(Style style)
+    public void AddInlineStyle(Style style)
     {
         inlineStyles.Add(style);
         // style.computedStyles = style.ComputeStyles();
     }
 
-    public static void AddFlag(DirtyFlag dirty)
+    public void AddFlag(DirtyFlag flag)
     {
-        StylesManager.dirty |= dirty;
+        dirty |= flag;
     }
 
-    public static void ClearFlags()
+    public void ClearFlags()
     {
         dirty = DirtyFlag.None;
     }
 
-    public static Style GetStyle(string styleKey)
+    public Style GetStyle(string styleKey)
     {
         return styles[styleKey];
     }
 
     static Stopwatch stopwatch = new();
 
-    public static void ComputeStyles()
+    public void ComputeStyles()
     {
         bool _shouldForce = dirty.HasFlag(DirtyFlag.ScreenSize) || dirty.HasFlag(DirtyFlag.StylesDirty);
         if (!_shouldForce)
@@ -88,7 +88,7 @@ public static class StylesManager
         dirty = DirtyFlag.None;
     }
 
-    public static void SetFrameAsNotDirty(uint frame)
+    public void SetFrameAsNotDirty(uint frame)
     {
         Parallel.ForEach(styles, item =>
         {

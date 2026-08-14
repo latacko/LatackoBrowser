@@ -12,7 +12,6 @@ namespace Vulkan;
 
 public unsafe class VulkanEngine : IDisposable
 {
-    public static VulkanEngine Instance;
     public const int MAX_FRAMES_IN_FLIGHT = 2;
 
     public CommandBuffer[] commandBuffers = new CommandBuffer[MAX_FRAMES_IN_FLIGHT];
@@ -31,7 +30,6 @@ public unsafe class VulkanEngine : IDisposable
 
     public VulkanEngine()
     {
-        Instance = this;
     }
 
     internal void Init()
