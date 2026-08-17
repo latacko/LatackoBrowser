@@ -68,7 +68,8 @@ using TextCore;
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
 // Environment.SetEnvironmentVariable("socket","x11");
-BrowserWindow browserWindow = new();
+SiteRenderer mainBrowser = new(1920, 1080);
+BrowserWindow browserWindow = new(mainBrowser);
 
 RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
 renderEngine.RegisterShader(new ObjectShader());
@@ -78,7 +79,7 @@ unsafe
     renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);
 }
 
-browserWindow.Run();
+browserWindow.Run("Browser");
 
 
 // SvgLoader.Loader.Parse(_document);

@@ -18,12 +18,17 @@ namespace Browser;
 
 public unsafe partial class BrowserWindow
 {
-    Vulkan.VulkanEngine vulkanManager = new();
     bool framebufferResized;
 
     Vulkan.Swapchain swapchain;
     internal KhrSurface khrSurface;
     internal SurfaceKHR surface;
+
+    readonly CommandBuffer[] commandBuffers = new CommandBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly Fence[] fences = new Fence[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly Semaphore[] renderCompleteSemaphores = new Semaphore[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly Semaphore[] imageAcquiredSemaphores = new Semaphore[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+
 
     void SetupVulkan()
     {
@@ -32,7 +37,38 @@ public unsafe partial class BrowserWindow
         swapchain = new(window.FramebufferSize, khrSurface, surface);
         swapchain.CreateSwapChain();
         swapchain.CreateImageViews();
-        vulkanManager.Init();
+
+        CreateSynchronizationObjects();
+    }
+
+    void CreateSynchronizationObjects()
+    {
+        SemaphoreCreateInfo semaphoreCI = new()
+        {
+            SType = StructureType.SemaphoreCreateInfo,
+        };
+
+        FenceCreateInfo fenceCI = new()
+        {
+            SType = StructureType.FenceCreateInfo,
+            Flags = FenceCreateFlags.SignaledBit,
+        };
+
+        fixed (Fence* fencesPtr = fences)
+        fixed (Semaphore* renderCompleteSemaphoresPtr = renderCompleteSemaphores)
+        fixed (Semaphore* imgSemaphorePtr = imageAcquiredSemaphores)
+        {
+            for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+            {
+                CreateVulkan.vk.CreateFence(LogicalDevice.device, &fenceCI, null, &fencesPtr[i]);
+                CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, &imgSemaphorePtr[i]);
+            }
+
+            for (int i = 0; i < renderCompleteSemaphores.Length; i++)
+            {
+                CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, &renderCompleteSemaphoresPtr[i]);
+            }
+        }
     }
 
     void CreateSurface()
@@ -45,7 +81,7 @@ public unsafe partial class BrowserWindow
         surface = window!.VkSurface!.Create<AllocationCallbacks>(Vulkan.CreateVulkan.vulkanInstance.ToHandle(), null).ToSurface();
     }
 
-    void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex)
+    void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex, Image siteRendererImg)
     {
         CommandBufferBeginInfo _beginInfo = new()
         {
@@ -57,7 +93,7 @@ public unsafe partial class BrowserWindow
 
 
 
-        if (Vulkan.CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
+        if (CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
         {
             throw new Exception("Failed to begin recording command buffer!");
         }
@@ -83,26 +119,6 @@ public unsafe partial class BrowserWindow
                     LayerCount = 1,
                 },
             },
-            new()
-            {
-                SType = StructureType.ImageMemoryBarrier2,
-                SrcStageMask = PipelineStageFlags2.LateFragmentTestsBit,
-                SrcAccessMask = AccessFlags2.DepthStencilAttachmentWriteBit,
-
-                DstStageMask = PipelineStageFlags2.EarlyFragmentTestsBit,
-                DstAccessMask = AccessFlags2.DepthStencilAttachmentWriteBit,
-
-                OldLayout = ImageLayout.Undefined,
-                NewLayout = ImageLayout.AttachmentOptimal,
-
-                Image = swapchain.GetDepthImage(),
-                SubresourceRange = new()
-                {
-                    AspectMask = ImageAspectFlags.DepthBit,
-                    LevelCount = 1,
-                    LayerCount = 1,
-                },
-            },
         ];
 
         fixed (ImageMemoryBarrier2* _outputBarriersPtr = _outputBarriers)
@@ -116,77 +132,33 @@ public unsafe partial class BrowserWindow
             Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
         }
 
-        RenderingAttachmentInfo _colorAttachmentInfo = new()
+        var copyRegion = new ImageCopy
         {
-            SType = StructureType.RenderingAttachmentInfo,
-            ImageView = swapchain.swapChainImageViews[imageIndex],
-            ImageLayout = ImageLayout.AttachmentOptimal,
-            LoadOp = AttachmentLoadOp.Clear,
-            StoreOp = AttachmentStoreOp.Store,
-            ClearValue = new()
+            SrcSubresource = new ImageSubresourceLayers
             {
-                Color = new(0, 0, 0, 1),
-            }
-        };
-
-        RenderingAttachmentInfo _depthAttachmentInfo = new()
-        {
-            SType = StructureType.RenderingAttachmentInfo,
-            ImageView = swapchain.GetDepthImageView(),
-            ImageLayout = ImageLayout.AttachmentOptimal,
-            LoadOp = AttachmentLoadOp.Clear,
-            StoreOp = AttachmentStoreOp.DontCare,
-            ClearValue = new()
-            {
-                DepthStencil = new(1, 0),
-            }
-        };
-
-        RenderingInfo _renderingInfo = new()
-        {
-            SType = StructureType.RenderingInfo,
-            RenderArea = new()
-            {
-                Offset = new(0, 0),
-                Extent = swapchain.swapChainExtent
+                AspectMask = ImageAspectFlags.ColorBit,
+                MipLevel = 0,
+                BaseArrayLayer = 0,
+                LayerCount = 1
             },
-            LayerCount = 1,
-            ColorAttachmentCount = 1,
-            PColorAttachments = &_colorAttachmentInfo,
-            PDepthAttachment = &_depthAttachmentInfo
+            SrcOffset = new Offset3D(0, 0, 0),
+            DstSubresource = new ImageSubresourceLayers
+            {
+                AspectMask = ImageAspectFlags.ColorBit,
+                MipLevel = 0,
+                BaseArrayLayer = 0,
+                LayerCount = 1
+            },
+            DstOffset = new Offset3D(0, 0, 0),
+            Extent = new Extent3D(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height, 1)
         };
 
-        Vulkan.CreateVulkan.vk.CmdBeginRendering(commandBuffer, &_renderingInfo);
+        CreateVulkan.vk.CmdCopyImage(
+            commandBuffer,
+            siteRendererImg, ImageLayout.TransferSrcOptimal,
+            swapchain.swapChainImages[imageIndex], ImageLayout.TransferDstOptimal,
+            1, &copyRegion);
 
-        Viewport _vp = new()
-        {
-            X = 0,
-            Y = 0,
-            Width = swapchain.swapChainExtent.Width,
-            Height = swapchain.swapChainExtent.Height,
-            MinDepth = 0,
-            MaxDepth = 1,
-        };
-        Vulkan.CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
-        Rect2D _scissors = new()
-        {
-            Offset = new(0, 0),
-            Extent = swapchain.swapChainExtent
-        };
-        Vulkan.CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
-
-
-        foreach (var shader in loadedShaders)
-        {
-            shader.Render(commandBuffer, currentFrame, wireFrameRendering);
-        }
-
-        coreManager.RenderShader(commandBuffer, currentFrame, wireFrameRendering);
-
-        if (swapchain.recreatedSwapChain)
-            swapchain.recreatedSwapChain = false;
-
-        Vulkan.CreateVulkan.vk.CmdEndRendering(commandBuffer);
 
         ImageMemoryBarrier2 _barrierPresent = new()
         {
@@ -227,7 +199,12 @@ public unsafe partial class BrowserWindow
     void Dispose()
     {
         swapchain.Dispose();
-        vulkanManager.Dispose();
         khrSurface.DestroySurface(Vulkan.CreateVulkan.vulkanInstance, surface, null);
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, imageAcquiredSemaphores[i], null);
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, renderCompleteSemaphores[i], null);
+            CreateVulkan.vk.DestroyFence(LogicalDevice.device, fences[i], null);
+        }
     }
 }

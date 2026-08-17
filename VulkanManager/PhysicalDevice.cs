@@ -131,24 +131,40 @@ public unsafe class PhysicalDevice
         uint i = 0;
         foreach (var queueFamily in _queueFamilyProperties)
         {
-            if (queueFamily.QueueFlags.HasFlag(QueueFlags.GraphicsBit))
-            {
-                indices.GraphicsFamily = i;
-            }
+            bool _hasGraphics = queueFamily.QueueFlags.HasFlag(QueueFlags.GraphicsBit);
+            bool _hasTransfer = queueFamily.QueueFlags.HasFlag(QueueFlags.TransferBit);
+            bool _hasCompute = queueFamily.QueueFlags.HasFlag(QueueFlags.ComputeBit);
 
             khrSurface!.GetPhysicalDeviceSurfaceSupport(physicalDevice, i, surfaceKHR, out var presentSupport);
-            if (presentSupport)
+
+            if (_hasGraphics && presentSupport)
             {
+                // Ideal: same family does both — always prefer this, overwrite freely
+                indices.GraphicsFamily = i;
                 indices.PresentFamily = i;
             }
-
-            if (indices.IsComplete())
+            else
             {
-                break;
+                if (_hasGraphics && !indices.GraphicsFamily.HasValue)
+                    indices.GraphicsFamily = i;
+
+                if (presentSupport && !indices.PresentFamily.HasValue)
+                    indices.PresentFamily = i;
             }
 
+            if (_hasTransfer && !_hasGraphics && !_hasCompute)
+            {
+                indices.TransferFamily = i;
+            }
+            
             i++;
         }
+
+        if (!indices.TransferFamily.HasValue && indices.GraphicsFamily.HasValue)
+        {
+            indices.TransferFamily = indices.GraphicsFamily;
+        }
+
 
         return indices;
     }

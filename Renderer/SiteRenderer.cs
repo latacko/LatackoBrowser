@@ -3,12 +3,13 @@ using GraphicCore.Styles;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager;
 using VulkanManager.Structs;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace Renderer;
 
-public class SiteRenderer : IDisposable
+public class SiteRenderer : TextureRenderer, IDisposable
 {
     [Flags]
     public enum DirtyFlag
@@ -32,32 +33,40 @@ public class SiteRenderer : IDisposable
     #region Vulkan elements
     readonly ImageData[] imagesData = new ImageData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly Depth depth = new();
-    Image image;
-    DeviceMemory deviceMemory;
-    ImageView imageView;
 
     DirtyFlag dirty;
 
 
     internal uint CurrentFrame { get; private set; } = 0;
-    readonly VulkanEngine vulkanEngine = new();
+    VulkanEngine? vulkanEngine;
+
+    public CameraBuffers cameraBuffers = new();
+
+    internal CommandBuffer[] commandBuffers = new CommandBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     #endregion
 
     #region Sub site renderers (e.g. iframes)
-    SiteRenderer parentSiteRenderer;
-    SiteRenderer[] subSiteRenderers;
+    SiteRenderer? parentSiteRenderer;
+    SiteRenderer[]? subSiteRenderers;
 
+    CommandBufferSubmitInfo[]? subSiteCommandBuffers;
     #endregion
 
-    public SiteRenderer(uint width, uint height)
+    public SiteRenderer()
     {
         UniqueId = LastUniqueId++;
+    }
 
-        UpdateSize(width, height);
+    #region Setup
+    public override void Init(uint width, uint height)
+    {
+
+        CreateResources(width, height);
+        cameraBuffers.CreateBuffers();
     }
 
     //TODO - Clear prev image and render to new texture
-    public void UpdateSize(uint width, uint height)
+    public override void Resize(uint width, uint height)
     {
         dirty |= DirtyFlag.Size;
         this.width = width;
@@ -65,6 +74,11 @@ public class SiteRenderer : IDisposable
         screenExtent = new(width, height);
 
         DisposeImages();
+        CreateResources(width, height);
+    }
+
+    void CreateResources(uint width, uint height)
+    {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             ImageData _imageData = new();
@@ -84,20 +98,48 @@ public class SiteRenderer : IDisposable
         depth.Dispose();
     }
 
+    unsafe void CreateCommandBuffers(VulkanEngine vulkanEngine)
+    {
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            CommandBufferAllocateInfo commandBufferCI = new()
+            {
+                SType = StructureType.CommandBufferAllocateInfo,
+                CommandPool = vulkanEngine.commandPools[i],
+                CommandBufferCount = 1
+            };
+
+            fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
+                CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
+        }
+    }
+
+    public override void CreateVulkanEngine()
+    {
+        vulkanEngine = new();
+        CreateCommandBuffers(vulkanEngine);
+        subSiteCommandBuffers = new CommandBufferSubmitInfo[1];
+    }
+
+    public override void DestroyVulkanEngine()
+    {
+        vulkanEngine.Dispose();
+    }
+
+    public override VulkanEngine GetVulkanEngine()=>vulkanEngine;
+
+    #endregion
+
     #region Rendering
     //TODO - Render to texture
     public unsafe uint GetCommandBuffer()
     {
-        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in vulkanEngine.fences[CurrentFrame], Vk.True, ulong.MaxValue);
-        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanEngine.fences[CurrentFrame]);
-        CreateVulkan.vk.ResetCommandBuffer(vulkanEngine.commandBuffers[CurrentFrame], 0);
-
         UpdateCameraUBO(CurrentFrame);
 
         // coreManager.OnRender(CurrentFrame);
         stylesManager.ComputeStyles();
 
-        RecordCommandBuffer(vulkanEngine.commandBuffers[CurrentFrame], CurrentFrame);
+        RecordCommandBuffer(commandBuffers[CurrentFrame], CurrentFrame);
         stylesManager.SetFrameAsNotDirty(CurrentFrame);
 
         CurrentFrame = (CurrentFrame + 1) % Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT;
@@ -189,51 +231,51 @@ public class SiteRenderer : IDisposable
     }
 
     //TODO - Rendering do zrobienia coding vibe o 2:45
-    public unsafe void Render()
+    public unsafe uint Render()
     {
-        SubmitInfo submitInfo = new()
+        SubmitInfo2 submitInfo = new()
         {
-            SType = StructureType.SubmitInfo,
+            SType = StructureType.SubmitInfo2,
+            WaitSemaphoreInfoCount = 0,
         };
 
-        PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
+        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[CurrentFrame], CommandPoolResetFlags.None);
 
-        uint _counts = (uint)(subSiteRenderers.Length + 1);
+        uint _currentFrame = GetCommandBuffer();
+        subSiteCommandBuffers![0].CommandBuffer = commandBuffers[_currentFrame];
 
-        // Semaphore* _renderSemaphores = stackalloc Semaphore[siteRenderers.Count+1];
-        CommandBuffer* _renderCBs = stackalloc CommandBuffer[subSiteRenderers.Length + 1];
-
-        // _renderSemaphores[0] = vulkanEngine.renderCompleteSemaphores[CurrentFrame];
-        _renderCBs[0] = vulkanEngine.commandBuffers[GetCommandBuffer()];
-
-        int i = 1;
-        foreach (var siteRenderer in subSiteRenderers)
+        if (subSiteRenderers != null)
         {
-            // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.CurrentFrame];
-            _renderCBs[i] = siteRenderer.vulkanEngine.commandBuffers[siteRenderer.GetCommandBuffer()];
+            int i = 1;
+            foreach (var siteRenderer in subSiteRenderers)
+            {
+                // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.CurrentFrame];
+                subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[siteRenderer.GetCommandBuffer()];
 
-            i++;
+                i++;
+            }
         }
 
 
-        submitInfo.WaitSemaphoreCount = 0;
-        submitInfo.PWaitSemaphores = null;
+        submitInfo.CommandBufferInfoCount = (uint)subSiteCommandBuffers.Length;
+        fixed (CommandBufferSubmitInfo* ptrCB = subSiteCommandBuffers)
+            submitInfo.PCommandBufferInfos = ptrCB;
 
-        submitInfo.PWaitDstStageMask = &waitStages;
-
-        submitInfo.CommandBufferCount = _counts;
-        submitInfo.PCommandBuffers = _renderCBs;
-
-        fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanEngine.renderCompleteSemaphores[CurrentFrame])
+        SemaphoreSubmitInfo _signalSemaphoreInfo = new()
         {
-            submitInfo.SignalSemaphoreCount = 1;
-            submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
-        }
+            SType = StructureType.SemaphoreSubmitInfo,
+            Semaphore = vulkanEngine.renderCompleteSemaphores[CurrentFrame],
+        };
 
-        if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanEngine.fences[CurrentFrame]) != Result.Success)
+        submitInfo.SignalSemaphoreInfoCount = 1;
+        submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
+
+        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.graphicsQueue, 1, &submitInfo, default) != Result.Success)
         {
             throw new Exception("Failed to submit command buffer!");
         }
+
+        return _currentFrame;
     }
 
     unsafe void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex)
@@ -425,22 +467,43 @@ public class SiteRenderer : IDisposable
             Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, width, 0, height, -1000, 1000),
         };
 
-        vulkanEngine.UpdateCameraBuffer(currentImage, ubo.Proj);
+        cameraBuffers.Update(currentImage, ubo.Proj);
     }
 
+    #endregion
+
+    #region Texture Renderer
+    public override void Update(double deltaTime)
+    {
+
+    }
+
+    public override (Image, Semaphore) GetImage()
+    {
+        uint _currentFrame = Render();
+        return (imagesData[_currentFrame].image, vulkanEngine.renderCompleteSemaphores[_currentFrame]);
+    }
     #endregion
 
     #region Sub renderer
     public void AddSubSiteRenderer(SiteRenderer siteRenderer)
     {
+
         siteRenderer.parentSiteRenderer = this;
         SiteRenderer _siteRendererWhichParentsAll = GetParentingSiteRenderer();
         _siteRendererWhichParentsAll.subSiteRenderers ??= new SiteRenderer[1];
+
+        siteRenderer.CreateCommandBuffers(_siteRendererWhichParentsAll.vulkanEngine);
 
         var _subSiteRenderes = _siteRendererWhichParentsAll.subSiteRenderers;
         _siteRendererWhichParentsAll.subSiteRenderers = new SiteRenderer[_subSiteRenderes.Length + 1];
         Array.Copy(_subSiteRenderes, 0, _siteRendererWhichParentsAll.subSiteRenderers, 1, _subSiteRenderes.Length);
         _siteRendererWhichParentsAll.subSiteRenderers[0] = siteRenderer;
+        _siteRendererWhichParentsAll.subSiteCommandBuffers = new CommandBufferSubmitInfo[_siteRendererWhichParentsAll.subSiteRenderers.Length + 1];
+        Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new()
+        {
+            SType = StructureType.CommandBufferSubmitInfo
+        });
     }
 
     SiteRenderer GetParentingSiteRenderer()
@@ -463,12 +526,18 @@ public class SiteRenderer : IDisposable
         _siteRendererWhichParentsAll.subSiteRenderers = new SiteRenderer[_subSiteRenderes.Length - 1];
 
         Array.Copy(_subSiteRenderes, 0, _siteRendererWhichParentsAll.subSiteRenderers, 0, _index);
-        Array.Copy(_subSiteRenderes, _index+1, _siteRendererWhichParentsAll.subSiteRenderers, _index, _subSiteRenderes.Length-_index);
+        Array.Copy(_subSiteRenderes, _index + 1, _siteRendererWhichParentsAll.subSiteRenderers, _index, _subSiteRenderes.Length - _index);
+        _siteRendererWhichParentsAll.subSiteCommandBuffers = new CommandBufferSubmitInfo[_siteRendererWhichParentsAll.subSiteRenderers.Length + 1];
+        Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new()
+        {
+            SType = StructureType.CommandBufferSubmitInfo
+        });
     }
     #endregion
 
     public void Dispose()
     {
+        cameraBuffers.Dispose();
         DisposeImages();
     }
 }

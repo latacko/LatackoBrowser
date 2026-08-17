@@ -20,8 +20,6 @@ public unsafe class Swapchain : IDisposable
     internal ImageView[] swapChainImageViews;
     // Framebuffer[] swapChainFrameBuffers;
 
-    Depth depth = new();
-
     KhrSurface khrSurface;
     SurfaceKHR surface;
 
@@ -183,8 +181,6 @@ public unsafe class Swapchain : IDisposable
         swapChainImageFormat = _surfaceFormat.Format;
         swapChainExtent = _extent;
         UnitsConverter.Update(swapChainExtent.Width, swapChainExtent.Height);
-
-        depth.CreateDepthResources(swapChainExtent.Width, swapChainExtent.Height);
     }
 
     internal void RecreateSwapChain(Func<Vector2D<int>> GetFrameBufferSize, Action? OnMinimized = null)
@@ -220,17 +216,6 @@ public unsafe class Swapchain : IDisposable
         {
             swapChainImageViews[i] = ImageHelper.CreateImageView(swapChainImages[i], swapChainImageFormat);
         }
-    }
-
-    public Image GetDepthImage()
-    {
-        return depth.depthImage;
-    }
-
-
-    public ImageView GetDepthImageView()
-    {
-        return depth.depthImageView;
     }
 
     // void CreateFrameBuffers()
@@ -269,7 +254,6 @@ public unsafe class Swapchain : IDisposable
 
     void CleanUpSwapChain(bool destroySwapchain = true)
     {
-        depth.Dispose();
 
         // foreach (var framebuffer in swapChainFrameBuffers)
         // {
@@ -281,20 +265,6 @@ public unsafe class Swapchain : IDisposable
             LogicalDevice.DestroyImageView(imageView, null);
         }
 
-        foreach (var item in VulkanEngine.Instance.renderCompleteSemaphores)
-        {
-            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, item, null);
-        }
-
-        SemaphoreCreateInfo semaphoreCI = new()
-        {
-            SType = StructureType.SemaphoreCreateInfo,
-        };
-
-        for (int i = 0; i < VulkanEngine.Instance.renderCompleteSemaphores.Length; i++)
-        {
-            CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &semaphoreCI, null, out VulkanEngine.Instance.renderCompleteSemaphores[i]);
-        }
         if (destroySwapchain)
             khrSwapChain?.DestroySwapchain(LogicalDevice.device, swapChain, null);
     }

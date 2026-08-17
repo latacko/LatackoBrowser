@@ -8,57 +8,48 @@ using ObjectCore;
 using GraphicCore.Styles;
 using System.Diagnostics;
 using Vulkan;
+using VulkanManager;
 
 namespace Browser;
 
 public unsafe partial class BrowserWindow
 {
-    public BrowserWindow Instance;
     internal IWindow window;
     private IInputContext inputContext;
 
-    internal PrimitiveModelsDb primitiveModelsDb = new();
     private const int WIDTH = 800;
     private const int HEIGHT = 800;
 
     uint currentFrame = 0;
 
-    private double _fpsTimer = 0;
-    private double _fpsTimer2 = 0;
-    private int _frameCount = 0;
-
-    private BrowserUI browserUI = new();
-
     public Action OnStart;
 
-    CoreManager.CoreManager coreManager = new();
+    TextureRenderer textureRenderer;
 
-
-    public BrowserWindow()
+    public BrowserWindow(TextureRenderer textureRenderer)
     {
-        Instance = this;
+        this.textureRenderer = textureRenderer;
     }
 
-    public void Run()
+    public void Run(string title)
     {
+        textureRenderer.CreateVulkanEngine();
+        CreateCommandBuffers(textureRenderer.GetVulkanEngine());
         SetupVulkan();
-        CreateWindow();
-        // Console.WriteLine("Creating vulkan");
-        // Console.WriteLine("Created vulkan");
+        CreateWindow(title);
         OnStart?.Invoke();
         MainLoop();
-        // Console.WriteLine("Ended main loop");
         CleanUp();
     }
 
-    void CreateWindow()
+    void CreateWindow(string title)
     {
         var options = WindowOptions.DefaultVulkan;
         // options.WindowBorder = WindowBorder.Hidden;
         options.Size = new Vector2D<int>(WIDTH, HEIGHT);
-        options.Title = "LearnOpenGL with Silk.NET";
-        options.UpdatesPerSecond = 30;
-        options.FramesPerSecond = 30;
+        options.Title = title;
+        options.UpdatesPerSecond = 60;
+        options.FramesPerSecond = 60;
 
         window = Window.Create(options);
 
@@ -84,79 +75,40 @@ public unsafe partial class BrowserWindow
             throw new Exception("Windowing platform doesn't support Vulkan.");
         }
 
-        Vulkan.VulkanEngine.Instance.CreateBuffers += CreateBuffers;
+        // Vulkan.VulkanEngine.Instance.CreateBuffers += CreateBuffers;
 
         //Assign events.
         OnStart += Start;
-        window.Update += OnUpdate;
+        window.Update += textureRenderer.Update;
         window.Render += OnRender;
         window.FramebufferResize += OnFramebufferResize;
     }
 
-    private void CreateBuffers()
+    public void SetTitle(string title)
     {
-        coreManager.InitBuffers();
-        primitiveModelsDb.CreateBuffers();
+        window.Title = title;
     }
 
+    unsafe void CreateCommandBuffers(VulkanEngine vulkanEngine)
+    {
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            CommandBufferAllocateInfo commandBufferCI = new()
+            {
+                SType = StructureType.CommandBufferAllocateInfo,
+                CommandPool = vulkanEngine.commandPools[i],
+                CommandBufferCount = 1
+            };
+
+            fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
+                CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
+        }
+    }
     private void Start()
     {
-        coreManager.Start();
+        // coreManager.Start();
         Console.WriteLine("==============================  STARTING ADDING OBJECTS  ==============================");
-        browserUI.Create();
-    }
-
-    float speed = 0.2f;
-    float DegToRad(float deg) => deg * (MathF.PI / 180f);
-    float timeFromStart = 0f;
-
-    int updateMicroseconds;
-    int renderMicroseconds;
-    int render2Microseconds;
-
-    Stopwatch diagnosticStopwatch = new();
-    private void OnUpdate(double deltaTime)
-    {
-        diagnosticStopwatch.Restart();
-        timeFromStart += (float)deltaTime;
-
-        coreManager.Update(deltaTime);
-
-        // browserUI.TopBar.Style.SetLayout(browserUI.TopBar.Style.Layout
-        //     .SetTop(new(100 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-        //     .SetWidth(new(800 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-        //     .SetHeight(new(300 + MathF.Sin(timeFromStart) * 100, Units.UnitType.px))
-        //     );
-
-        // browserUI.hellothere.SetLayout(browserUI.hellothere.Layout
-        // .SetTop(new(-100 + MathF.Sin(timeFromStart) * 200, Units.UnitType.px))
-        // );
-
-        // browserUI.TopBar.SetTransform(browserUI.TopBar.Transform
-        //     .SetRotationZ());
-        // browserUI.TopBar?.Style.SetTransform(browserUI.TopBar.Style.Transform.SetRotationZ(browserUI.TopBar.Style.Transform.Rotation.Z + (float)deltaTime));
-        // browserUI.BottomBar?.SetTransform(browserUI.BottomBar.Transform.SetRotationZ(browserUI.BottomBar.Transform.Rotation.Z + (float)deltaTime));
-        // runtimeModelData.SetBackgroundColor(0, 0, (float)(runtimeModelData.BackgroundColor.Z + deltaTime) % 1, 1);
-
-        // runtimeModelData.SetRotation((float)(runtimeModelData.RotationX + deltaTime * speed), 0, 0);
-
-        if (GraphicCore.RuntimeModelData.ObjectsToCompile.Count != 0)
-        {
-            Console.WriteLine("==============================  STARTING COMPILING OBJECTS  ==============================");
-            foreach (var item in GraphicCore.RuntimeModelData.ObjectsToCompile)
-            {
-                item.runtimeModel.Compile();
-                item.shader.AddElement(item.runtimeModel);
-                Console.WriteLine("Compiling " + item.runtimeModel + " " + item.shader);
-            }
-
-            GraphicCore.RuntimeModelData.ObjectsToCompile.Clear();
-
-            Console.WriteLine("==============================  ENDED COMPILING OBJECTS  ==============================");
-        }
-
-        diagnosticStopwatch.Stop();
-        updateMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
+        // browserUI.Create();
     }
 
     private void OnFramebufferResize(Vector2D<int> newSize)
@@ -167,69 +119,87 @@ public unsafe partial class BrowserWindow
     int lastSecondFps = 0;
     private void OnRender(double deltaTime)
     {
-        diagnosticStopwatch.Restart();
-        Vulkan.CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame], Vk.True, ulong.MaxValue);
+        // diagnosticStopwatch.Restart();
+        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in fences[currentFrame], Vk.True, ulong.MaxValue);
+        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in fences[currentFrame]);
 
 
         uint imageIndex;
-        var _result = swapchain.khrSwapChain!.AcquireNextImage(LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, vulkanManager.imageAcquiredSemaphores[currentFrame], default, &imageIndex);
+        var _result = swapchain.khrSwapChain!.AcquireNextImage(LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, imageAcquiredSemaphores[currentFrame], default, &imageIndex);
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
             swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
-            StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
+            // StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
             return;
         }
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
 
-        Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
+        // Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
 
-        Vulkan.CreateVulkan.vk.ResetCommandBuffer(vulkanManager.commandBuffers[currentFrame], 0);
+        CreateVulkan.vk.ResetCommandBuffer(commandBuffers[currentFrame], 0);
 
 
 
-        UpdateUniformBuffer(currentFrame);
-        coreManager.OnRender(currentFrame);
-        StylesManager.ComputeStyles();
-
-        RecordCommandBuffer(vulkanManager.commandBuffers[currentFrame], imageIndex);
-        StylesManager.SetFrameAsNotDirty(currentFrame);
+        // UpdateUniformBuffer(currentFrame);
+        // coreManager.OnRender(currentFrame);
+        // StylesManager.ComputeStyles();
+        var _imageData = textureRenderer.GetImage();
+        RecordCommandBuffer(commandBuffers[currentFrame], imageIndex, _imageData.image);
+        // StylesManager.SetFrameAsNotDirty(currentFrame);
 
 
         // UpdateUniformBufferPerspective(currentFrame);
 
-        SubmitInfo submitInfo = new()
+        SubmitInfo2 submitInfo = new()
         {
             SType = StructureType.SubmitInfo,
         };
 
-        PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
-
-        fixed (Semaphore* waitSemaphoresPtr = &vulkanManager.imageAcquiredSemaphores[currentFrame])
-        fixed (CommandBuffer* commandBufferPtr = &vulkanManager.commandBuffers[currentFrame])
-        fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanManager.renderCompleteSemaphores[imageIndex])
-        fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
+        submitInfo.WaitSemaphoreInfoCount = 2;
+        SemaphoreSubmitInfo* waitSemaphores = stackalloc SemaphoreSubmitInfo[]
         {
-            submitInfo.WaitSemaphoreCount = 1;
-            submitInfo.PWaitSemaphores = waitSemaphoresPtr;
-
-            submitInfo.PWaitDstStageMask = &waitStages;
-
-            submitInfo.CommandBufferCount = 1;
-            submitInfo.PCommandBuffers = commandBufferPtr;
-
-            submitInfo.SignalSemaphoreCount = 1;
-            submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
-
-            if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanManager.fences[currentFrame]) != Result.Success)
+            new()
             {
-                throw new Exception("Failed to submit command buffer!");
+                SType = StructureType.SemaphoreSubmitInfo,
+                Semaphore = imageAcquiredSemaphores[currentFrame],
+                StageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
+            },
+            new()
+            {
+                SType = StructureType.SemaphoreSubmitInfo,
+                Semaphore = _imageData.semaphore,
+                StageMask = PipelineStageFlags2.FragmentShaderBit,
             }
+        };
+        submitInfo.PWaitSemaphoreInfos = waitSemaphores;
 
-            currentFrame = (currentFrame + 1) % Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT;
+        submitInfo.CommandBufferInfoCount = 1;
+
+        CommandBufferSubmitInfo _cbSubmitInfo = new()
+        {
+            CommandBuffer = commandBuffers[currentFrame],
+        };
+        submitInfo.PCommandBufferInfos = &_cbSubmitInfo;
+
+        submitInfo.SignalSemaphoreInfoCount = 1;
+
+        SemaphoreSubmitInfo _signalRenderComplete = new()
+        {
+            Semaphore = renderCompleteSemaphores[currentFrame]
+        };
+        submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;
+
+        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.graphicsQueue, 1, &submitInfo, fences[currentFrame]) != Result.Success)
+        {
+            throw new Exception("Failed to submit command buffer!");
+        }
 
 
+        fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
+        fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[currentFrame])
+        {
             PresentInfoKHR presentInfo = new()
             {
                 SType = StructureType.PresentInfoKhr,
@@ -248,37 +218,13 @@ public unsafe partial class BrowserWindow
             {
                 framebufferResized = false;
                 swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
-                StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
             }
             else if (_result != Result.Success)
             {
                 throw new Exception("failed to present swap chain image!");
             }
-
         }
-        diagnosticStopwatch.Stop();
-        if (currentFrame == 0)
-            renderMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
-        else
-            render2Microseconds = diagnosticStopwatch.Elapsed.Microseconds;
-
-        _frameCount++;
-        _frameCount++;
-        _fpsTimer += deltaTime;
-        _fpsTimer2 += deltaTime;
-
-        if (_fpsTimer >= 1.0) // every second
-        {
-            lastSecondFps = _frameCount;
-            _frameCount = 0;
-            _fpsTimer = 0;
-        }
-
-        if (_fpsTimer2 >= 0.25)
-        {
-            _fpsTimer2=0;
-            window.Title = $"FPS: {lastSecondFps} update: {updateMicroseconds}μs render: {renderMicroseconds}μs render2: {render2Microseconds}μs";
-        }
+        currentFrame = (currentFrame + 1) % VulkanEngine.MAX_FRAMES_IN_FLIGHT;
     }
 
     Vector2D<int> GetFrameBufferSize()
@@ -291,33 +237,6 @@ public unsafe partial class BrowserWindow
         window.DoEvents();
     }
 
-    void UpdateUniformBuffer(uint currentImage)
-    {
-        var time = (float)window!.Time;
-
-        Vulkan.UICameraUBO ubo = new()
-        {
-            Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, swapchain.swapChainExtent.Width, 0, swapchain.swapChainExtent.Height, -1000, 1000),
-        };
-
-        vulkanManager.UpdateCameraBuffer(currentImage, ubo.Proj);
-    }
-
-    void UpdateUniformBufferPerspective(uint currentImage)
-    {
-        var time = (float)window!.Time;
-
-        Vulkan.UICameraUBO ubo = new()
-        {
-            Proj = Matrix4X4.CreatePerspectiveFieldOfView(Radians(45.0f), (float)swapchain.swapChainExtent.Width / swapchain.swapChainExtent.Height, 0.1f, 10.0f),
-        };
-        ubo.Proj.M22 *= -1;
-
-        vulkanManager.UpdateCameraBuffer(currentImage, ubo.Proj);
-
-        static float Radians(float angle) => angle * MathF.PI / 180f;
-    }
-
     void MainLoop()
     {
         window.Run();
@@ -327,8 +246,9 @@ public unsafe partial class BrowserWindow
 
     void CleanUp()
     {
-        coreManager.Dispose();
-        primitiveModelsDb.Dispose();
+        textureRenderer.DestroyVulkanEngine();
+        // coreManager.Dispose();
+        // primitiveModelsDb.Dispose();
         Dispose();
         window.Dispose();
     }

@@ -94,7 +94,7 @@ public unsafe class ImageHelper
         return imageView;
     }
 
-    public static void CreateTextureImage(string path, ref Image textureImage, ref DeviceMemory textureImageMemory, ulong id, Semaphore timelineSemaphore, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory)
+    public static void CreateTextureImage(CommandPool commandPool, string path, ref Image textureImage, ref DeviceMemory textureImageMemory, ulong id, Semaphore timelineSemaphore, out Buffer stagingBuffer, out DeviceMemory stagingBufferMemory)
     {
         using var img = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(path);
 
@@ -115,7 +115,7 @@ public unsafe class ImageHelper
         img.CopyPixelDataTo(new Span<byte>(data, (int)_imageSize));
         CreateVulkan.vk!.UnmapMemory(LogicalDevice.device, stagingBufferMemory);
 
-        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
+        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands(commandPool);
 
         CreateImage((uint)img.Width, (uint)img.Height, Format.R8G8B8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferDstBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref textureImage, ref textureImageMemory);
 
@@ -230,9 +230,9 @@ public unsafe class ImageHelper
         return _barrier2;
     }
 
-    internal static void CopyBufferToImage(Buffer buffer, Image image, uint width, uint height)
+    internal static void CopyBufferToImage(CommandPool commandPool, Buffer buffer, Image image, uint width, uint height)
     {
-        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands();
+        CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands(commandPool);
 
         BufferImageCopy region = new()
         {

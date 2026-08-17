@@ -44,9 +44,9 @@ static public class BufferHelper
         CreateVulkan.vk.BindBufferMemory(LogicalDevice.device, buffer, bufferMemory, 0);
     }
 
-    public static unsafe void CopyBuffer(Buffer srcBuffer, Buffer dstBuffer, ulong size)
+    public static unsafe void CopyBuffer(CommandPool commandPool, Buffer srcBuffer, Buffer dstBuffer, ulong size)
     {
-        CommandBuffer _commandBuffer = CmdHelper.BeginSingleTimeCommands();
+        CommandBuffer _commandBuffer = CmdHelper.BeginSingleTimeCommands(commandPool);
 
         BufferCopy copyRegion = new()
         {
@@ -57,7 +57,7 @@ static public class BufferHelper
 
         CreateVulkan.vk.CmdCopyBuffer(_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-        CmdHelper.EndSingleTimeCommandsIdle(_commandBuffer);
+        CmdHelper.EndSingleTimeCommandsIdle(commandPool, _commandBuffer);
     }
 
     public static uint FindMemoryType(Vk vk, Silk.NET.Vulkan.PhysicalDevice device, uint typeFilter, MemoryPropertyFlags properties)
