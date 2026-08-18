@@ -1,5 +1,5 @@
-﻿using GraphicCore;
-using GraphicCore.Styles;
+﻿using GraphicsCore;
+using GraphicsCore.Styles;
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;

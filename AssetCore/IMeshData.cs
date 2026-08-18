@@ -1,10 +1,8 @@
-using System.Numerics;
-using Units;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace GraphicCore;
+namespace AssetCore;
 
-public abstract class IModelData
+public abstract class IMeshData
 {
     public Buffer vertexBuffer;
     public uint vertexOffset;

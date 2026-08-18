@@ -1,5 +1,5 @@
 using System.Drawing;
-using GraphicCore;
+using GraphicsCore;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
@@ -125,10 +125,10 @@ public unsafe class TextShader : BaseShader
         {
             if (element.TryGetObjectData(out var textData, currentFrame))
             {
-                TextManager.Instance.Update(currentFrame, element.ObjectIndex, textData);
+                TextManager.Instance.Update(currentFrame, element.InstanceIndex, textData);
             }
 
-            fixed (uint* objectIndexPtr = &element.ObjectIndex)
+            fixed (uint* objectIndexPtr = &element.InstanceIndex)
                 CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), objectIndexPtr);
 
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _shouldShowMSDF);
@@ -144,7 +144,7 @@ public unsafe class TextShader : BaseShader
 
                     if (runtimeText.TryGetObjectData(out var modelData, currentFrame))
                     {
-                        TextManager.Instance.Update(currentFrame, runtimeText.ObjectIndex, modelData);
+                        TextManager.Instance.Update(currentFrame, runtimeText.InstanceIndex, modelData);
                         // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
                     }
 
@@ -162,7 +162,7 @@ public unsafe class TextShader : BaseShader
                         _lastIndexBuffer = _indexBuffer;
                         CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, IndexType.Uint16);
                     }
-                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.IndicesSlotData.GetDataCount(), 1, runtimeText.IndicesSlotData.GetSlot().Offset, (int)runtimeText.VertexSlotData.GetSlot().Offset, runtimeText.ObjectIndex);
+                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.IndicesSlotData.GetDataCount(), 1, runtimeText.IndicesSlotData.GetSlot().Offset, (int)runtimeText.VertexSlotData.GetSlot().Offset, runtimeText.InstanceIndex);
                 }
             }
         }

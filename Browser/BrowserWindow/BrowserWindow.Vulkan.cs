@@ -1,6 +1,6 @@
 using System.Runtime.Serialization;
 using Iced.Intel;
-using ObjectCore;
+using PrimitiveCore;
 using Silk.NET.Assimp;
 using Silk.NET.Core;
 using Silk.NET.Core.Native;

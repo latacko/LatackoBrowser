@@ -1,5 +1,5 @@
 using System;
-using GraphicCore;
+using GraphicsCore;
 
 namespace GraphicsCore;
 

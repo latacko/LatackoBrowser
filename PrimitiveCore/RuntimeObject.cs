@@ -1,13 +1,13 @@
 ﻿using System.Diagnostics;
-using GraphicCore;
 using GraphicsCore;
-using ObjectCore.Textures;
+using GraphicsCore;
+using PrimitiveCore.Textures;
 using Silk.NET.Maths;
 using Vulkan;
 
-namespace ObjectCore;
+namespace PrimitiveCore;
 
-public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectModelData<ushort>>
+public class RuntimeObject : RuntimeModelData<RuntimeObject, ModelGPUData, ModelData<ushort>>
 {
     [Flags]
     internal protected enum DirtyFlags : byte
@@ -23,7 +23,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public List<RuntimeModelData> Children;
     public Texture texture;
 
-    public RuntimeObject(ObjectModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
+    public RuntimeObject(ModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
     {
         Events = new(this);
 
@@ -74,7 +74,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
 
         switch (Style.Layout.Display)
         {
-            case GraphicCore.Styles.Layout.DisplayType.inline:
+            case GraphicsCore.Styles.Layout.DisplayType.inline:
                 if (cursorX + computedStyle.Size.X > width)
                     newLine.Invoke();
 
@@ -82,7 +82,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
                 cursorX += computedStyle.Size.X;
 
                 break;
-            case GraphicCore.Styles.Layout.DisplayType.block:
+            case GraphicsCore.Styles.Layout.DisplayType.block:
                 newLine.Invoke();
 
                 worldPosition = new(cursorX, cursorY);
@@ -96,7 +96,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
     public override CursorType GetCursorType() => Style.Properties.Cursor;
 
 
-    public override bool TryGetObjectData(out ObjectData data, uint frame)
+    public override bool TryGetObjectData(out ModelGPUData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
@@ -131,7 +131,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ObjectData, ObjectM
             RemoveFlag(RenderDirtyFlags.Matrix, frame);
         }
 
-        data = new ObjectData
+        data = new ModelGPUData
         {
             Model = cachedModel,
             Color = Style.Properties.BackgroundColor,

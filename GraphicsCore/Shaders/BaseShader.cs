@@ -4,9 +4,10 @@ using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Units;
 using Vulkan;
+using VulkanManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace GraphicCore;
+namespace GraphicsCore;
 
 public unsafe abstract class BaseShader : IDisposable
 {
@@ -33,7 +34,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     public abstract DescriptorSetLayout[] GetLayouts();
 
-    public abstract void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
+    public abstract void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
 
     protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame);
 
@@ -266,8 +267,8 @@ public unsafe abstract class BaseShader : IDisposable
     }
     #endregion
 
-    public abstract void AddElement(uint siteId, RuntimeModelData runtimeModelData);
-    public abstract void AddSite(uint siteId);
+    public abstract void AddElement(TextureRenderer textureRenderer, RuntimeModelData runtimeModelData);
+    public abstract void AddSite(TextureRenderer textureRenderer);
 
     public virtual void Dispose()
     {

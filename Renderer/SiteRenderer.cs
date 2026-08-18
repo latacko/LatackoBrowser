@@ -1,5 +1,5 @@
 using System;
-using GraphicCore.Styles;
+using GraphicsCore.Styles;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
@@ -127,6 +127,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
     }
 
     public override VulkanEngine GetVulkanEngine()=>vulkanEngine;
+
+    public override uint GetId()=>UniqueId;
+    public override ulong GetCameraBufferDeviceAddress()=>cameraBuffers.shaderDataBuffersForCamera[CurrentFrame].DeviceAddress;
 
     #endregion
 

@@ -4,7 +4,7 @@ using Silk.NET.Vulkan;
 namespace Vulkan;
 
 [StructLayout(LayoutKind.Sequential)]
-public struct ObjectData // pad 16
+public struct ModelGPUData // pad 16
 {
     public Matrix4X4<float> Model; //64
     public Vector4D<float> Color; //16

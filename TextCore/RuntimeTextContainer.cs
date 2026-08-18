@@ -1,13 +1,13 @@
 using System;
 using System.Diagnostics;
-using GraphicCore;
+using GraphicsCore;
 using GraphicsCore;
 using Silk.NET.Maths;
 using Vulkan;
 
 namespace TextCore;
 
-public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextContainerData, IModelData>
+public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextContainerData, IMeshData>
 {
     internal FontAtlas fontAtlas;
     public string Text;

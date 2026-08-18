@@ -1,11 +1,11 @@
 using System.Numerics;
-using GraphicCore;
+using GraphicsCore;
 using Units;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace TextCore;
 
-public class TextModelData<TIndex> : IModelData where TIndex : unmanaged, IBinaryInteger<TIndex>
+public class TextModelData<TIndex> : IMeshData where TIndex : unmanaged, IBinaryInteger<TIndex>
 {
     public TextVertex[] Vertices;
     public TIndex[] Indices;

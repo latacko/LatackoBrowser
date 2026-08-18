@@ -14,11 +14,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../AssetCore/AssetCore.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Events/" />
     <Folder Include="Styles/" />
   </ItemGroup>
 

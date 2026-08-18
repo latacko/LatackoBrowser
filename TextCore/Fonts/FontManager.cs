@@ -19,7 +19,7 @@ public class FontManager : IDisposable
     // const string preload = "WITAJ DME";
     // const string preload = "TAKSI CZUJE";
     const string preload = "ABCDEFGHIJKLMNOPRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
-
+    
 
     public FontManager()
     {

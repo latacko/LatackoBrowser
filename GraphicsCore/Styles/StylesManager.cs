@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 
-namespace GraphicCore.Styles;
+namespace GraphicsCore.Styles;
 
 public class StylesManager
 {

@@ -4,9 +4,9 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Units;
 
-namespace ObjectCore
+namespace PrimitiveCore.Model
 {
-    public struct ObjectVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVertex
+    public struct MeshVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVertex
     {
         public Vector3D<float> Pos = pos;
         public Vector2D<float> TextCoord = textCoord;
@@ -16,7 +16,7 @@ namespace ObjectCore
             VertexInputBindingDescription bindingDescription = new()
             {
                 Binding = 0,
-                Stride = (uint)Unsafe.SizeOf<ObjectVertex>(),
+                Stride = (uint)Unsafe.SizeOf<MeshVertex>(),
                 InputRate = VertexInputRate.Vertex,
             };
 
@@ -32,14 +32,14 @@ namespace ObjectCore
                     Binding = 0,
                     Location = 0,
                     Format = Format.R32G32B32Sfloat,
-                    Offset = (uint)Marshal.OffsetOf<ObjectVertex>(nameof(Pos)),
+                    Offset = (uint)Marshal.OffsetOf<MeshVertex>(nameof(Pos)),
                 },
                 new VertexInputAttributeDescription()
                 {
                     Binding = 0,
                     Location = 1,
                     Format = Format.R32G32Sfloat,
-                    Offset = (uint)Marshal.OffsetOf<ObjectVertex>(nameof(TextCoord)),
+                    Offset = (uint)Marshal.OffsetOf<MeshVertex>(nameof(TextCoord)),
                 }
             };
 

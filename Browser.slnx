@@ -1,9 +1,11 @@
 <Solution>
+  <Project Path="AssetCore/AssetCore.csproj" />
   <Project Path="Browser/Browser.csproj" />
   <Project Path="CoreManager/CoreManager.csproj" />
+  <Project Path="EventCore/EventCore.csproj" />
   <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
-  <Project Path="ObjectCore/ObjectCore.csproj" />
+  <Project Path="PrimitiveCore/PrimitiveCore.csproj" />
   <Project Path="Remora.MSDFGen/Remora.MSDFGen.csproj" />
   <Project Path="Renderer/Renderer.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />

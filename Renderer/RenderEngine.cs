@@ -1,5 +1,5 @@
 using System;
-using GraphicCore;
+using GraphicsCore;
 using Silk.NET.Input.Sdl;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;

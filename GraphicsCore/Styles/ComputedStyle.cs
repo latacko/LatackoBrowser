@@ -1,7 +1,7 @@
 using System;
 using Silk.NET.Maths;
 
-namespace GraphicCore.Styles;
+namespace GraphicsCore.Styles;
 
 public record struct ComputedStyle
 {

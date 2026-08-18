@@ -1,5 +1,5 @@
 using System;
-using GraphicCore;
+using GraphicsCore;
 using GraphicsCore;
 using Silk.NET.Maths;
 using TextCore.Slots;

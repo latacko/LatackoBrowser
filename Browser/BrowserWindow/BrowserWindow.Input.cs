@@ -1,5 +1,5 @@
 using System.Numerics;
-using GraphicCore;
+using GraphicsCore;
 using Renderer;
 using Silk.NET.Input;
 using TextCore;

@@ -2,8 +2,9 @@ using System.Runtime.CompilerServices;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager.BufferManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
-namespace ObjectCore;
+namespace PrimitiveCore;
 
 public unsafe class ObjectsManager
 {
@@ -18,7 +19,7 @@ public unsafe class ObjectsManager
 
     public void RegisterBuffers()
     {
-        ulong _bufferSize = (ulong)Unsafe.SizeOf<ObjectData>()*MAX_OBJECTS;
+        ulong _bufferSize = (ulong)Unsafe.SizeOf<ModelGPUData>()*MAX_OBJECTS;
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffersForObjects[i].Buffer, ref shaderDataBuffersForObjects[i].Memory);
@@ -36,9 +37,9 @@ public unsafe class ObjectsManager
         }
     }
 
-    public void Update(uint currentFrame, uint objectIndex, ObjectData objectData)
+    public void Update(uint currentFrame, uint objectIndex, ModelGPUData objectData)
     {
-        new Span<ObjectData>(shaderDataBuffersForObjects[currentFrame].Mapped, MAX_OBJECTS)[(int)objectIndex] = objectData;
+        new Span<ModelGPUData>(shaderDataBuffersForObjects[currentFrame].Mapped, MAX_OBJECTS)[(int)objectIndex] = objectData;
     }
 
     public void Dispose()

@@ -1,5 +1,5 @@
-﻿using ObjectCore;
-using ObjectCore.Textures;
+﻿using PrimitiveCore;
+using PrimitiveCore.Textures;
 using Silk.NET.Vulkan;
 using TextCore;
 
@@ -36,7 +36,7 @@ public class CoreManager : IDisposable
     uint _ticksToReset = 0;
     public void Update(double deltaTime)
     {
-        GraphicCore.ColorTransitionsHelper.Update((float)deltaTime);
+        GraphicsCore.ColorTransitionsHelper.Update((float)deltaTime);
         _ticksToReset++;
 
         fontManager.Tick();

@@ -1,6 +1,6 @@
 using Silk.NET.Maths;
 
-namespace GraphicCore;
+namespace GraphicsCore;
 
 public static class ColorTransitionsHelper
 {

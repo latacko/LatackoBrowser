@@ -1,6 +1,6 @@
 using Units;
 
-namespace GraphicCore;
+namespace GraphicsCore;
 
 public class Events<T>: EventsBase where T : RuntimeModelData
 {

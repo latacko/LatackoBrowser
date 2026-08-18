@@ -1,9 +1,9 @@
 using Browser;
-using GraphicCore;
-using GraphicCore.Styles;
 using GraphicsCore;
-using ObjectCore;
-using ObjectCore.Textures;
+using GraphicsCore.Styles;
+using GraphicsCore;
+using PrimitiveCore;
+using PrimitiveCore.Textures;
 using Silk.NET.Vulkan;
 using TextCore;
 using Units;

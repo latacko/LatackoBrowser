@@ -1,20 +1,20 @@
 using System;
-using GraphicCore;
+using GraphicsCore;
 using Silk.NET.Vulkan;
 using Vulkan;
 using VulkanManager.Helpers;
 
-namespace ObjectCore;
+namespace PrimitiveCore;
 
-public class ObjectManager : BufferManager
+public class PrimitiveInstancesManager : BufferManager
 {
-    public static ObjectManager Instance;
+    public static PrimitiveInstancesManager Instance;
 
     public DescriptorAllocatorGrowable ObjectDescriptorAllocatorGrowable = new();
     internal DescriptorSetLayout objectDescriptorLayout;
     internal DescriptorSet objectDescriptorSet = new();
 
-    public ObjectManager()
+    public PrimitiveInstancesManager()
     {
         Instance = this;
     }
@@ -68,7 +68,7 @@ public class ObjectManager : BufferManager
 
         DescriptorImageInfo _samplerInfo = new()
         {
-            Sampler = VulkanEngine.Instance.sampler,
+            // Sampler = VulkanEngine.Instance.sampler,
         };
 
         WriteDescriptorSet _descriptorWrites = new()

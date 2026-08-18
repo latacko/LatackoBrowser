@@ -5,7 +5,7 @@ using System.Xml.Linq;
 using BenchmarkDotNet.Running;
 using Browser;
 using HTMLParser;
-using ObjectCore;
+using PrimitiveCore;
 using Renderer;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan.Extensions.KHR;

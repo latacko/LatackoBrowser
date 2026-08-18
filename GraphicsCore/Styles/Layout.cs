@@ -1,8 +1,8 @@
-using GraphicCore;
+using GraphicsCore;
 using Silk.NET.Maths;
 using Units;
 
-namespace GraphicCore.Styles;
+namespace GraphicsCore.Styles;
 
 public struct Layout
 {

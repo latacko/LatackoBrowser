@@ -1,13 +1,14 @@
-using GraphicCore;
+using GraphicsCore;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
+using VulkanManager;
 
-namespace ObjectCore;
+namespace PrimitiveCore;
 
-public unsafe class ObjectShader : GraphicCore.BaseShader
+public unsafe class ObjectShader : GraphicsCore.BaseShader
 {
-    public Dictionary<uint, List<RuntimeObject>> elements = new();
+    public Dictionary<uint, Dictionary<uint, List<RuntimeObject>>> elements = [];
     protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
 
     public override void Init()
@@ -17,24 +18,24 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
 
     public override DescriptorSetLayout[] GetLayouts()
     {
-        return [ObjectManager.Instance.objectDescriptorLayout];
+        return [PrimitiveInstancesManager.Instance.objectDescriptorLayout];
     }
 
     protected internal override VertexInputBindingDescription GetBindingDescription()
     {
-        return new ObjectVertex().GetBindingDescription();
+        return new ModelVertex().GetBindingDescription();
     }
 
     protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
     {
-        return new ObjectVertex().GetAttributeDescriptions();
+        return new ModelVertex().GetAttributeDescriptions();
     }
 
-    public override unsafe void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    public override unsafe void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref ObjectManager.Instance.objectDescriptorSet, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref PrimitiveInstancesManager.Instance.objectDescriptorSet, 0, null);
 
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
@@ -42,7 +43,7 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
 
         ulong* addresses = stackalloc ulong[2]
         {
-            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
+            textureRenderer.GetCameraBufferDeviceAddress(),
             ObjectsManager.Instance.shaderDataBuffersForObjects[currentFrame].DeviceAddress,
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong) * 2, addresses);
@@ -108,14 +109,14 @@ public unsafe class ObjectShader : GraphicCore.BaseShader
     /// </summary>
     /// <param name="siteId"></param>
     /// <param name="runtimeModelData"></param>
-    public override void AddElement(uint siteId, RuntimeModelData runtimeModelData)
+    public override void AddElement(TextureRenderer textureRenderer, RuntimeModelData runtimeModelData)
     {
-        elements[siteId].Add(runtimeModelData as RuntimeObject);
+        elements[textureRenderer.GetId()].Add(runtimeModelData as RuntimeObject);
     }
 
-    public override void AddSite(uint siteId)
+    public override void AddSite(TextureRenderer textureRenderer)
     {
-        elements.Add(siteId, []);
+        elements.Add(textureRenderer.GetId(), []);
     }
 
     public override void Dispose()

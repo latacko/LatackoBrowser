@@ -1,4 +1,4 @@
-namespace GraphicCore;
+namespace GraphicsCore;
 
 public abstract class BufferManager : IDisposable {
     public abstract void RegisterBuffer();

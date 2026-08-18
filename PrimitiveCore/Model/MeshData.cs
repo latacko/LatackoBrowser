@@ -1,16 +1,16 @@
 using System.Numerics;
-using GraphicCore;
+using GraphicsCore;
 using Units;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
-namespace ObjectCore;
+namespace PrimitiveCore.Model;
 
-public class ObjectModelData<TIndex> : IModelData where TIndex : unmanaged, IBinaryInteger<TIndex>
+public class MeshData<TIndex> : IMeshData where TIndex : unmanaged, IBinaryInteger<TIndex>
 {
-    public ObjectVertex[] Vertices;
+    public MeshVertex[] Vertices;
     public TIndex[] Indices;
 
-    public ObjectModelData(ObjectVertex[] vertices, TIndex[] indices)
+    public MeshData(MeshVertex[] vertices, TIndex[] indices)
     {
         if (typeof(TIndex) != typeof(byte) &&
             typeof(TIndex) != typeof(ushort) &&

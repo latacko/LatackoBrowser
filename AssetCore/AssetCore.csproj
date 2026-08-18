@@ -8,15 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Silk.NET.Maths" Version="2.23.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Textures/" />
+    <PackageReference Include="Silk.NET" Version="2.23.0" />
   </ItemGroup>
 
 </Project>

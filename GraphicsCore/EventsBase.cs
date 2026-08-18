@@ -1,6 +1,6 @@
 using System;
 
-namespace GraphicCore;
+namespace GraphicsCore;
 
 public abstract class EventsBase
 {

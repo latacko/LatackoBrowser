@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
-using GraphicCore.Styles;
+using AssetCore;
+using GraphicsCore.Styles;
 using GraphicsCore;
 using Silk.NET.Maths;
 using Units;
@@ -7,7 +8,7 @@ using Vulkan;
 
 [assembly: InternalsVisibleTo("ObjectCore")]
 [assembly: InternalsVisibleTo("TextCore")]
-namespace GraphicCore;
+namespace GraphicsCore;
 
 
 public abstract class RuntimeModelData : IDisposable
@@ -18,6 +19,10 @@ public abstract class RuntimeModelData : IDisposable
         public BaseShader shader;
     }
     public static HashSet<ObjectComileInfo> ObjectsToCompile = new();
+
+    public readonly IMeshData MeshData;
+    public uint InstanceIndex;
+
     [Flags]
     internal protected enum RenderDirtyFlags : byte
     {
@@ -26,12 +31,11 @@ public abstract class RuntimeModelData : IDisposable
         Data = 1 << 1,
         Model = 1 << 2,
     }
-    public IModelData ModelData;
-    public uint ObjectIndex;
+    internal protected RenderDirtyFlags[] renderDirty = new RenderDirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+
 
     public EventsBase Events;
 
-    internal protected RenderDirtyFlags[] renderDirty = new RenderDirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     internal protected Matrix4X4<float> cachedModel;
     internal protected Vector3D<float> relativePos;
     internal protected Vector3D<float> relativeRot;
@@ -44,10 +48,10 @@ public abstract class RuntimeModelData : IDisposable
     public Style Style;
     internal protected ComputedStyle computedStyle;
 
-    public RuntimeModelData(IModelData modelData, uint objectIndex, RuntimeModelData? parent = null)
+    public RuntimeModelData(uint modelId, uint objectIndex, RuntimeModelData? parent = null)
     {
-        ModelData = modelData;
-        ObjectIndex = objectIndex;
+        this.MeshData = AssetManager.GetModel(modelId);
+        InstanceIndex = objectIndex;
 
         if (parent != null)
             Parent = parent;
@@ -75,15 +79,19 @@ public abstract class RuntimeModelData : IDisposable
 
     protected internal abstract void UpdatePosition();
 
+    #region Layout
     protected internal virtual float GetLayoutLeft() => computedStyle.Pos.X;
     protected internal virtual float GetLayoutTop() => computedStyle.Pos.Y;
     protected internal abstract Vector2D<float> GetLayoutSize();
+
     protected internal abstract void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
     protected internal abstract void UpdateChildrenLayout();
+    public abstract Bounds GetBounds();
+    #endregion
+
     public abstract void AddChild(RuntimeModelData runtimeModelData);
 
     public abstract CursorType GetCursorType();
-    public abstract Bounds GetBounds();
 
     protected internal virtual void OnParentSizeChanged(bool informChildren = false)
     {
@@ -96,10 +104,6 @@ public abstract class RuntimeModelData : IDisposable
             ParentSize = new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
         }
         Console.WriteLine("Updating my parent size: " + ParentSize);
-    }
-
-    public void Dispose()
-    {
     }
 
     public void TestToUpdateStyle(uint frame)
@@ -118,12 +122,16 @@ public abstract class RuntimeModelData : IDisposable
         OnParentSizeChanged();
         computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
     }
+
+    public void Dispose()
+    {
+    }
 }
 
 public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : RuntimeModelData
     where TSelf : RuntimeModelData<TSelf, TObjectData, TModelData>
     where TObjectData : unmanaged
-    where TModelData : IModelData
+    where TModelData : IMeshData
 {
     public new Events<TSelf> Events
     {
@@ -146,14 +154,14 @@ public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : Runtime
     public TSelf SetStyle(Style style)
     {
         Style = style;
-        StylesManager.AddInlineStyle(style);
+        // StylesManager.AddInlineStyle(style);
         computedStyle = style.ComputeStyles(true, false, ParentSize, computedStyle.Size);
         return (TSelf)this;
     }
 
     public TSelf SetStyle(string name)
     {
-        Style = StylesManager.GetStyle(name);
+        // Style = StylesManager.GetStyle(name);
         return (TSelf)this;
     }
 

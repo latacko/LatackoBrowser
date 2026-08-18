@@ -5,7 +5,7 @@ using Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
-namespace ObjectCore.Textures;
+namespace PrimitiveCore.Textures;
 
 public class TexturesManager : IDisposable
 {
@@ -55,7 +55,7 @@ public class TexturesManager : IDisposable
         texturesStagingBuffer.Add(_textureStagingBuffer);
 
         _texture.imageView = ImageHelper.CreateImageView(_texture.Image, Format.R8G8B8A8Srgb, ImageAspectFlags.ColorBit);
-        ObjectManager.Instance.RegisterTexture(_texture.imageView, id);
+        PrimitiveInstancesManager.Instance.RegisterTexture(_texture.imageView, id);
 
         id++;
         textures.Add(path, _texture);

@@ -2,7 +2,7 @@ using System;
 using Silk.NET.Vulkan;
 using Vulkan;
 
-namespace ObjectCore.Textures;
+namespace PrimitiveCore.Textures;
 
 public class Texture : IDisposable
 {

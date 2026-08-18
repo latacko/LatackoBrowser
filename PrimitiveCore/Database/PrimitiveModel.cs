@@ -1,4 +1,4 @@
-namespace ObjectCore;
+namespace PrimitiveCore;
 
 public enum PrimitiveUIModel
 {

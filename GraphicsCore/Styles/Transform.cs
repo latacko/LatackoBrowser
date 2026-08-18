@@ -3,7 +3,7 @@ using Silk.NET.Maths;
 using Units;
 using Vulkan;
 
-namespace GraphicCore.Styles;
+namespace GraphicsCore.Styles;
 
 public struct Transform
 {
