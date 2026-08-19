@@ -12,7 +12,7 @@ public class CoreManager : IDisposable
 
     internal FontManager fontManager = new();
     internal TextManager textManager = new();
-    internal ObjectsManager objectsManager = new();
+    internal NodesManager objectsManager = new();
     public ObjectManager objectManager = new();
     public TexturesManager texturesManager = new();
 

@@ -11,9 +11,9 @@ using Vulkan;
 
 public class BrowserUI
 {
-    public RuntimeObject TopBar;
-    public RuntimeObject Karta;
-    public RuntimeObject hellothere;
+    public Node TopBar;
+    public Node Karta;
+    public Node hellothere;
     public RuntimeTextContainer hellothereText;
     public RuntimeTextContainer TextTest;
 
@@ -24,7 +24,7 @@ public class BrowserUI
         var _texture2 = TexturesManager.LoadTexture("textures/hellothere.png");
 
 
-        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null)
+        TopBar = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as NodeShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null)
         .SetStyle(new Style("Background")
             .SetLayout(
                 (layout) => layout
@@ -39,7 +39,7 @@ public class BrowserUI
             )
         );
 
-        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as ObjectShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null, TopBar)
+        Karta = ObjectsManager.AddObject(BrowserWindow.loadedShaders[0] as NodeShader, BrowserWindow.Instance.primitiveModelsDb.Get(PrimitiveUIModel.Quad), null, TopBar)
         .SetStyle(new Style("Karta")
             .SetLayout(layout => layout
                 .SetLeft(new(-10)).SetTop(new(-10))

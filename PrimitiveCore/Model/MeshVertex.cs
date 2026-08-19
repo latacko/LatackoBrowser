@@ -1,3 +1,4 @@
+using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
@@ -11,7 +12,7 @@ namespace PrimitiveCore.Model
         public Vector3D<float> Pos = pos;
         public Vector2D<float> TextCoord = textCoord;
 
-        public VertexInputBindingDescription GetBindingDescription()
+        public static VertexInputBindingDescription GetBindingDescription()
         {
             VertexInputBindingDescription bindingDescription = new()
             {
@@ -23,7 +24,7 @@ namespace PrimitiveCore.Model
             return bindingDescription;
         }
 
-        public VertexInputAttributeDescription[] GetAttributeDescriptions()
+        public static VertexInputAttributeDescription[] GetAttributeDescriptions()
         {
             var attributeDescriptions = new[]
             {

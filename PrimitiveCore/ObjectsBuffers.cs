@@ -1,4 +1,7 @@
 using System.Runtime.CompilerServices;
+using AssetCore;
+using PrimitiveCore.Buffer;
+using PrimitiveCore.Model;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
@@ -6,48 +9,38 @@ using VulkanManager.BufferManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
 namespace PrimitiveCore;
 
-public unsafe class ObjectsManager
+public unsafe class NodesManager
 {
-    public static ObjectsManager Instance;
+    public static NodesManager Instance;
     public const int MAX_OBJECTS = 1000;
-    public ShaderDataBuffer[] shaderDataBuffersForObjects = new ShaderDataBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-
-    public ObjectsManager()
+    public Dictionary<ulong, NodesBuffer> shaderDataBuffersForObjects = [];
+    public static ulong MakeKey(uint siteId, uint modelId) => ((ulong)siteId << 32) | modelId;
+    public NodesManager()
     {
         Instance = this;
     }
 
-    public void RegisterBuffers()
+    public void RegisterBuffers(uint siteId)
     {
-        ulong _bufferSize = (ulong)Unsafe.SizeOf<ModelGPUData>()*MAX_OBJECTS;
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        uint[] _idsOfModels = AssetManager.GetIdsOfModelType<MeshData<ushort>>();
+
+        foreach (var modelId in _idsOfModels)
         {
-            BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref shaderDataBuffersForObjects[i].Buffer, ref shaderDataBuffersForObjects[i].Memory);
-            void* data;
-            CreateVulkan.vk.MapMemory(LogicalDevice.device, shaderDataBuffersForObjects[i].Memory, 0, _bufferSize, 0, &data);
-            shaderDataBuffersForObjects[i].Mapped = data;
-
-            BufferDeviceAddressInfo addrInfo = new()
-            {
-                SType = StructureType.BufferDeviceAddressInfo,
-                Buffer = shaderDataBuffersForObjects[i].Buffer
-            };
-
-            shaderDataBuffersForObjects[i].DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
+            shaderDataBuffersForObjects[MakeKey(siteId, modelId)] = new();
         }
     }
 
-    public void Update(uint currentFrame, uint objectIndex, ModelGPUData objectData)
+    public Span<byte> GetDestinationSpan(ulong siteModelKey, uint currentFrame, uint objectIndex, int structSize)
     {
-        new Span<ModelGPUData>(shaderDataBuffersForObjects[currentFrame].Mapped, MAX_OBJECTS)[(int)objectIndex] = objectData;
+        byte* basePtr = (byte*)shaderDataBuffersForObjects[siteModelKey].GetBuffer(currentFrame).Mapped;
+        return new Span<byte>(basePtr + objectIndex * structSize, structSize);
     }
 
     public void Dispose()
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        foreach (var (_, modelBuffers) in shaderDataBuffersForObjects)
         {
-            CreateVulkan.vk.UnmapMemory(LogicalDevice.device, shaderDataBuffersForObjects[i].Memory);
-            BufferHelper.DestroyBuffer(shaderDataBuffersForObjects[i].Buffer, shaderDataBuffersForObjects[i].Memory);
+            modelBuffers.Dispose();
         }
     }
 }

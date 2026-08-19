@@ -72,7 +72,7 @@ SiteRenderer mainBrowser = new(1920, 1080);
 BrowserWindow browserWindow = new(mainBrowser);
 
 RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
-renderEngine.RegisterShader(new ObjectShader());
+renderEngine.RegisterShader(new NodeShader());
 renderEngine.RegisterShader(new TextShader());
 unsafe
 {

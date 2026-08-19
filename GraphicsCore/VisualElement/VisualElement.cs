@@ -5,22 +5,24 @@ using GraphicsCore;
 using Silk.NET.Maths;
 using Units;
 using Vulkan;
+using GraphicsCore.Events;
+using System.Runtime.InteropServices;
 
-[assembly: InternalsVisibleTo("ObjectCore")]
+[assembly: InternalsVisibleTo("PrimitiveCore")]
 [assembly: InternalsVisibleTo("TextCore")]
 namespace GraphicsCore;
 
 
-public abstract class RuntimeModelData : IDisposable
+public abstract class VisualElement : IDisposable
 {
     public struct ObjectComileInfo
     {
-        public RuntimeModelData runtimeModel;
+        public VisualElement runtimeModel;
         public BaseShader shader;
     }
     public static HashSet<ObjectComileInfo> ObjectsToCompile = new();
 
-    public readonly IMeshData MeshData;
+    public readonly uint ModelId;
     public uint InstanceIndex;
 
     [Flags]
@@ -34,7 +36,6 @@ public abstract class RuntimeModelData : IDisposable
     internal protected RenderDirtyFlags[] renderDirty = new RenderDirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
 
-    public EventsBase Events;
 
     internal protected Matrix4X4<float> cachedModel;
     internal protected Vector3D<float> relativePos;
@@ -43,21 +44,25 @@ public abstract class RuntimeModelData : IDisposable
     internal protected bool[] mySizeHasChangedThisFrame = new bool[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
     public Vector2D<float> ParentSize;
-    public RuntimeModelData? Parent;
+    public VisualElement? Parent;
 
-    public Style Style;
+    public readonly EventHelper Events;
+
+    public Style? Style;
     internal protected ComputedStyle computedStyle;
 
-    public RuntimeModelData(uint modelId, uint objectIndex, RuntimeModelData? parent = null)
+    public VisualElement(uint modelId, uint objectIndex, EventSystem eventSystem, VisualElement? parent = null)
     {
-        this.MeshData = AssetManager.GetModel(modelId);
+        ModelId = modelId;
         InstanceIndex = objectIndex;
+
+        Events = new(eventSystem, this);
 
         if (parent != null)
             Parent = parent;
     }
 
-    public void SetParent(RuntimeModelData? parent = null)
+    public void SetParent(VisualElement? parent = null)
     {
         if (parent != null)
             Parent = parent;
@@ -89,7 +94,7 @@ public abstract class RuntimeModelData : IDisposable
     public abstract Bounds GetBounds();
     #endregion
 
-    public abstract void AddChild(RuntimeModelData runtimeModelData);
+    public abstract void AddChild(VisualElement runtimeModelData);
 
     public abstract CursorType GetCursorType();
 
@@ -108,6 +113,8 @@ public abstract class RuntimeModelData : IDisposable
 
     public void TestToUpdateStyle(uint frame)
     {
+        if (Style == null) return;
+
         var _prevSize = computedStyle.Size;
         if (Style.ShouldObjectUpdate[frame])
         {
@@ -120,53 +127,41 @@ public abstract class RuntimeModelData : IDisposable
     public virtual void Compile()
     {
         OnParentSizeChanged();
-        computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+
+        if (Style != null)
+            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
     }
 
-    public void Dispose()
+    public VisualElement SetEvents(Action<EventHelper> setEvents)
     {
-    }
-}
-
-public abstract class RuntimeModelData<TSelf, TObjectData, TModelData> : RuntimeModelData
-    where TSelf : RuntimeModelData<TSelf, TObjectData, TModelData>
-    where TObjectData : unmanaged
-    where TModelData : IMeshData
-{
-    public new Events<TSelf> Events
-    {
-        get => (Events<TSelf>)base.Events;
-        protected set => base.Events = value;
+        setEvents.Invoke(Events);
+        return this;
     }
 
-    public new TModelData ModelData
-    {
-        get => (TModelData)base.ModelData;
-        protected set => base.ModelData = value;
-    }
-
-    public TSelf SetEvents(Func<Events<TSelf>, Events<TSelf>> setEvents)
-    {
-        Events = setEvents.Invoke(Events);
-        return (TSelf)this;
-    }
-
-    public TSelf SetStyle(Style style)
+    public VisualElement SetStyle(Style style)
     {
         Style = style;
         // StylesManager.AddInlineStyle(style);
         computedStyle = style.ComputeStyles(true, false, ParentSize, computedStyle.Size);
-        return (TSelf)this;
+        return this;
     }
 
-    public TSelf SetStyle(string name)
+    public VisualElement SetStyle(string name)
     {
         // Style = StylesManager.GetStyle(name);
-        return (TSelf)this;
+        return this;
     }
 
-    protected RuntimeModelData(TModelData modelData, uint objectIndex, RuntimeModelData? parent = null)
-        : base(modelData, objectIndex, parent) { }
+    protected internal abstract bool TryWriteObjectData(Span<byte> destination, uint frame);
+    protected internal abstract int ObjectDataSize { get; }
 
-    public abstract bool TryGetObjectData(out TObjectData data, uint frame);
+    protected static bool WriteStruct<T>(in T data, Span<byte> destination) where T : unmanaged
+    {
+        if (destination.Length < Unsafe.SizeOf<T>()) return false;
+        MemoryMarshal.Write(destination, in data);
+        return true;
+    }
+    public void Dispose()
+    {
+    }
 }

@@ -14,7 +14,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
     ReadOnlyMemory<char> TextMemory;
     internal List<RuntimeText> runtimeTexts = new();
 
-    public RuntimeTextContainer(string text, uint objectIndex, RuntimeModelData? parent = null) : base(null, objectIndex, parent)
+    public RuntimeTextContainer(string text, uint objectIndex, VisualElement? parent = null) : base(null, objectIndex, parent)
     {
         SetStyle(TextManager.TextDefaultStyle);
 
@@ -24,7 +24,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         fontAtlas.ScanText(Text);
     }
 
-    public override void AddChild(RuntimeModelData runtimeModelData)
+    public override void AddChild(VisualElement runtimeModelData)
     {
         throw new Exception("You can't add children to this container. It's children are managed internaly");
     }

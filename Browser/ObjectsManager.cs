@@ -7,15 +7,15 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 public static class ObjectsManager
 {
-    public static readonly List<RuntimeModelData> Elements = [];
+    public static readonly List<VisualElement> Elements = [];
     public static uint LastCreatedIndex = 0;
-    public static RuntimeObject AddObject(ObjectShader objectShader, ModelData<ushort> modelData, Texture texture, RuntimeModelData? parent = null)
+    public static Node AddObject(NodeShader objectShader, ModelData<ushort> modelData, Texture texture, VisualElement? parent = null)
     {
         uint objectIndex = LastCreatedIndex++;
-        RuntimeObject runtimeModelData = new(modelData, objectIndex, texture, parent);
+        Node runtimeModelData = new(modelData, objectIndex, texture, parent);
         parent?.AddChild(runtimeModelData);
 
-        RuntimeModelData.ObjectsToCompile.Add(new()
+        VisualElement.ObjectsToCompile.Add(new()
         {
             runtimeModel = runtimeModelData,
             shader = objectShader

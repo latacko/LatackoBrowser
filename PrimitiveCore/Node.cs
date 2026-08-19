@@ -1,13 +1,14 @@
 ﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using GraphicsCore;
-using GraphicsCore;
+using GraphicsCore.Events;
 using PrimitiveCore.Textures;
 using Silk.NET.Maths;
 using Vulkan;
 
 namespace PrimitiveCore;
 
-public class RuntimeObject : RuntimeModelData<RuntimeObject, ModelGPUData, ModelData<ushort>>
+public class Node : VisualElement
 {
     [Flags]
     internal protected enum DirtyFlags : byte
@@ -20,25 +21,23 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ModelGPUData, Model
     DirtyFlags objectDirty;
     Vector2D<float> worldPosition;
 
-    public List<RuntimeModelData> Children;
+    public List<VisualElement>? Children;
     public Texture texture;
 
-    public RuntimeObject(ModelData<ushort> modelData, uint objectIndex, Texture texture, RuntimeModelData? parent = null) : base(modelData, objectIndex, parent)
-    {
-        Events = new(this);
+    protected internal override int ObjectDataSize => Unsafe.SizeOf<ModelGPUData>();
 
+    public Node(uint modelId, uint objectIndex, Texture texture, EventSystem eventSystem, VisualElement? parent = null) : base(modelId, objectIndex, eventSystem, parent)
+    {
         this.texture = texture;
     }
 
-    public override void AddChild(RuntimeModelData runtimeModelData)
+    public override void AddChild(VisualElement runtimeModelData)
     {
-        Children ??= new();
+        Children ??= [];
         Children.Add(runtimeModelData);
 
         objectDirty |= DirtyFlags.Layout;
     }
-
-
 
     protected internal override void OnParentSizeChanged(bool informChildren = false)
     {
@@ -95,8 +94,7 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ModelGPUData, Model
     public override Bounds GetBounds() => new();
     public override CursorType GetCursorType() => Style.Properties.Cursor;
 
-
-    public override bool TryGetObjectData(out ModelGPUData data, uint frame)
+    bool TryGetObjectData(out ModelGPUData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
@@ -150,6 +148,10 @@ public class RuntimeObject : RuntimeModelData<RuntimeObject, ModelGPUData, Model
         return true;
     }
 
+    protected internal override bool TryWriteObjectData(Span<byte> destination, uint frame)
+    {
+        return TryGetObjectData(out var data, frame) && WriteStruct(data, destination);
+    }
 
     void UpdateObjectDirty(uint frame)
     {

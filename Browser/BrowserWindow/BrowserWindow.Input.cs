@@ -43,9 +43,9 @@ public partial class BrowserWindow
         currentElement.Events.ExecuteOnClick();
     }
 
-    RuntimeModelData? currentElement;
+    VisualElement? currentElement;
 
-    RuntimeModelData? GetElementUnderCursor(RuntimeModelData? parentElement, List<RuntimeModelData> elements, Vector2 pos)
+    VisualElement? GetElementUnderCursor(VisualElement? parentElement, List<VisualElement> elements, Vector2 pos)
     {
         int _elementsCount = elements.Count;
         for (int i = _elementsCount - 1; i >= 0; i--)

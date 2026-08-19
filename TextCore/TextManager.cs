@@ -52,13 +52,13 @@ public class TextManager : BufferManager
         return runtimeModelData;
     }
 
-    public static RuntimeTextContainer AddText(string text, RuntimeModelData parent)
+    public static RuntimeTextContainer AddText(string text, VisualElement parent)
     {
         uint objectIndex = LastCreatedIndex++;
         RuntimeTextContainer runtimeTextContainer = new(text, objectIndex, parent);
         parent?.AddChild(runtimeTextContainer);
 
-        RuntimeModelData.ObjectsToCompile.Add(new()
+        VisualElement.ObjectsToCompile.Add(new()
         {
             runtimeModel = runtimeTextContainer,
             shader = TextShader

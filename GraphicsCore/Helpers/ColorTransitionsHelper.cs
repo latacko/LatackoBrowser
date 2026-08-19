@@ -13,9 +13,9 @@ public static class ColorTransitionsHelper
         public float Elapsed;
         public required Action<Vector4D<float>> UpdateColor;
     }
-    static Dictionary<RuntimeModelData, TransitionData> elements = new();
+    static Dictionary<VisualElement, TransitionData> elements = new();
 
-    public static void StartTransition(RuntimeModelData element, Vector4D<float> originalColor, Vector4D<float> targetColor, float duration, Action<Vector4D<float>> updateColor = null)
+    public static void StartTransition(VisualElement element, Vector4D<float> originalColor, Vector4D<float> targetColor, float duration, Action<Vector4D<float>> updateColor = null)
     {
         if (elements.TryGetValue(element, out var value))
         {
@@ -38,7 +38,7 @@ public static class ColorTransitionsHelper
 
     public static void Update(float deltaTime)
     {
-        foreach (var item in new Dictionary<RuntimeModelData, TransitionData>(elements))
+        foreach (var item in new Dictionary<VisualElement, TransitionData>(elements))
         {
             item.Value.Elapsed += deltaTime;
             float t = Math.Clamp(item.Value.Elapsed / item.Value.Duration, 0f, 1f);

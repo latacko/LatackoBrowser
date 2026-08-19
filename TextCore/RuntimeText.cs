@@ -37,7 +37,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     RuntimeTextContainer textContainer;
 
 
-    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, RuntimeModelData parent) : base(new([], []), objectIndex, parent)
+    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, VisualElement parent) : base(new([], []), objectIndex, parent)
     {
         Text = text;
         this.leftRange = leftRange;
@@ -211,7 +211,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         return this;
     }
 
-    public override void AddChild(RuntimeModelData runtimeModelData)
+    public override void AddChild(VisualElement runtimeModelData)
     {
         throw new System.Exception("You can't add children to a text");
     }

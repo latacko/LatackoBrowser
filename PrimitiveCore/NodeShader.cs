@@ -1,0 +1,149 @@
+using AssetCore;
+using GraphicsCore;
+using PrimitiveCore.Model;
+using Silk.NET.Vulkan;
+using Silk.NET.Vulkan.Extensions.KHR;
+using Vulkan;
+using VulkanManager;
+
+namespace PrimitiveCore;
+
+public unsafe class NodeShader : GraphicsCore.BaseShader
+{
+    public Dictionary<uint, Dictionary<uint, List<Node>>> elements = [];
+    protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
+
+    public override void Init()
+    {
+        base.Init();
+    }
+
+    #region Shader Data
+    public override DescriptorSetLayout[] GetLayouts()
+    {
+        return [PrimitiveInstancesManager.Instance.objectDescriptorLayout];
+    }
+
+    protected internal override VertexInputBindingDescription GetBindingDescription()
+    {
+        return MeshVertex.GetBindingDescription();
+    }
+
+    protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        return MeshVertex.GetAttributeDescriptions();
+    }
+    #endregion
+
+    #region Rendering Options
+
+    // // override depth — UI has no depth test
+    protected override PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
+    {
+        SType = StructureType.PipelineDepthStencilStateCreateInfo,
+        DepthTestEnable = Vk.False,
+        DepthWriteEnable = Vk.False,
+        StencilTestEnable = Vk.False,
+    };
+
+    // // override blend — UI needs alpha
+    protected override PipelineColorBlendAttachmentState GetColorBlend() => new()
+    {
+        ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
+                        ColorComponentFlags.BBit | ColorComponentFlags.ABit,
+        BlendEnable = Vk.True,
+        SrcColorBlendFactor = BlendFactor.SrcAlpha,
+        DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha,
+        ColorBlendOp = BlendOp.Add,
+        SrcAlphaBlendFactor = BlendFactor.One,
+        DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha,
+        AlphaBlendOp = BlendOp.Add,
+    };
+
+    protected override PipelineRasterizationStateCreateInfo GetRasterizer(bool wireframe) => new()
+    {
+        SType = StructureType.PipelineRasterizationStateCreateInfo,
+        DepthClampEnable = Vk.False,
+        RasterizerDiscardEnable = Vk.False,
+        PolygonMode = wireframe ? PolygonMode.Line : PolygonMode.Fill,
+        LineWidth = 1f,
+        // CullMode = CullModeFlags.BackBit,
+        CullMode = CullModeFlags.None,
+        FrontFace = FrontFace.CounterClockwise,
+        DepthBiasEnable = Vk.False,
+    };
+    #endregion
+
+    public override unsafe void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    {
+        CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
+
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref PrimitiveInstancesManager.Instance.objectDescriptorSet, 0, null);
+
+        ulong vOffset = 0;
+        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
+        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, PrimitiveModelsDb.primitiveBuffer, PrimitiveModelsDb.indicesOffset, IndexType.Uint16);
+
+        ulong _cameraBuffer = textureRenderer.GetCameraBufferDeviceAddress();
+        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong), &_cameraBuffer);
+
+        // Parallel.ForEach(elements, item =>
+        // {
+        //     item.TestToUpdateStyle(currentFrame);
+        // });
+
+        RenderElements(textureRenderer.GetId(), commandBuffer, currentFrame);
+    }
+
+    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
+    {
+
+        foreach (var (modelId, elements) in elements[siteId])
+        {
+            var _siteModelKey = NodesManager.MakeKey(siteId, modelId);
+            foreach (var element in elements)
+            {
+                element.TryWriteObjectData(NodesManager.Instance.GetDestinationSpan(_siteModelKey, currentFrame, element.InstanceIndex, element.ObjectDataSize), currentFrame);
+            }
+            var _meshData = AssetManager.GetModel(modelId);
+
+            ulong _modelBuffer = NodesManager.Instance.shaderDataBuffersForObjects[currentFrame].GetBuffer(currentFrame).DeviceAddress;
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, sizeof(ulong), sizeof(ulong) * 1, &_modelBuffer);
+            CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)_meshData.GetIndicesCount(), (uint)elements.Count, _meshData.indexOffset, (int)_meshData.vertexOffset, 0);
+        }
+    }
+
+    /// <summary>
+    /// Remember to register the site first
+    /// </summary>
+    /// <param name="siteId"></param>
+    /// <param name="node"></param>
+    public override void AddElement(TextureRenderer textureRenderer, VisualElement visualElement)
+    {
+        if (visualElement is null) throw new ArgumentException("visual element must be set");
+        if (visualElement is not Node node) throw new ArgumentException("Node shader only allows Node class and not " + visualElement.GetType());
+
+        if (!elements[textureRenderer.GetId()].TryAdd(node.ModelId, [node]))
+            elements[textureRenderer.GetId()][node.ModelId].Add(node);
+    }
+
+    public override void AddSite(TextureRenderer textureRenderer)
+    {
+        elements.Add(textureRenderer.GetId(), []);
+    }
+
+    public override void Dispose()
+    {
+        base.Dispose();
+        foreach (var (_, siteElements) in elements)
+        {
+            foreach (var (_, models) in siteElements)
+            {
+                foreach (var modelInstance in models)
+                {
+                    modelInstance.Dispose();
+                }
+            }
+        }
+    }
+}

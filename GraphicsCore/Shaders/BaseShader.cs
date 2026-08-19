@@ -267,7 +267,7 @@ public unsafe abstract class BaseShader : IDisposable
     }
     #endregion
 
-    public abstract void AddElement(TextureRenderer textureRenderer, RuntimeModelData runtimeModelData);
+    public abstract void AddElement(TextureRenderer textureRenderer, VisualElement runtimeModelData);
     public abstract void AddSite(TextureRenderer textureRenderer);
 
     public virtual void Dispose()

@@ -7,8 +7,8 @@ namespace Units
 {
     public interface IVertex
     {
-        public VertexInputBindingDescription GetBindingDescription();
+        public static abstract VertexInputBindingDescription GetBindingDescription();
 
-        public VertexInputAttributeDescription[] GetAttributeDescriptions();
+        public static abstract VertexInputAttributeDescription[] GetAttributeDescriptions();
     }
 }

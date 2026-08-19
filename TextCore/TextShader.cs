@@ -173,7 +173,7 @@ public unsafe class TextShader : BaseShader
     /// </summary>
     /// <param name="siteId"></param>
     /// <param name="runtimeModelData"></param>
-    public override void AddElement(uint siteId, RuntimeModelData runtimeModelData)
+    public override void AddElement(uint siteId, VisualElement runtimeModelData)
     {
         elements[siteId].Add(runtimeModelData as RuntimeTextContainer);
     }

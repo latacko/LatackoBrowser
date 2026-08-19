@@ -6,7 +6,7 @@ namespace Vulkan;
 
 public unsafe class CameraBuffers
 {
-    public ShaderDataBuffer[] shaderDataBuffersForCamera = new ShaderDataBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    public BufferData[] shaderDataBuffersForCamera = new BufferData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
 
     internal void CreateBuffers()
