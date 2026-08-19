@@ -5,7 +5,7 @@ using Vulkan;
 
 namespace PrimitiveCore.Buffer;
 
-//TODO - Add request model then add it to queue and write data in render loop so it woudnt fight over buffer with prev renderer.
+//TODO - Add request model then add it to queue and write data in render loop so it woudnt fight over buffer with prev renderer. A
 public class NodesBuffer : IDisposable
 {
     public const int NODES_COUNT_PER_INCREASE = 100;
