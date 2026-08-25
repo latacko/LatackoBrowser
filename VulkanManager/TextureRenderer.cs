@@ -1,6 +1,7 @@
 using System;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager.BufferManager;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace VulkanManager;

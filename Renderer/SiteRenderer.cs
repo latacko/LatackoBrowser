@@ -1,9 +1,11 @@
 using System;
 using GraphicsCore.Styles;
+using PrimitiveCore;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
 using VulkanManager;
+using VulkanManager.BufferManager;
 using VulkanManager.Structs;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
@@ -43,6 +45,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     public CameraBuffers cameraBuffers = new();
 
     internal CommandBuffer[] commandBuffers = new CommandBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+
     #endregion
 
     #region Sub site renderers (e.g. iframes)
@@ -55,6 +58,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
     public SiteRenderer()
     {
         UniqueId = LastUniqueId++;
+        if (RenderEngine.Instance == null)
+            throw new System.NullReferenceException("The render engine hasn't been initialized");
+        RenderEngine.Instance.RegisterSite(this);
     }
 
     #region Setup
@@ -486,6 +492,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         uint _currentFrame = Render();
         return (imagesData[_currentFrame].image, vulkanEngine.renderCompleteSemaphores[_currentFrame]);
     }
+
     #endregion
 
     #region Sub renderer

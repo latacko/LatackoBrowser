@@ -1,26 +1,26 @@
 using System.Numerics;
 using GraphicsCore;
+using PrimitiveCore.Model;
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
-using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace PrimitiveCore;
 
 public class PrimitiveModelsDb : IDisposable
 {
-    internal static Buffer primitiveBuffer;
+    internal static Silk.NET.Vulkan.Buffer primitiveBuffer;
     internal static ulong indicesOffset;
     DeviceMemory primitiveBufferMemory;
 
-    readonly Dictionary<PrimitiveUIModel, ModelData<ushort>> uiDb = new()
+    readonly Dictionary<PrimitiveUIModel, MeshData<ushort>> uiDb = new()
     {
-        [PrimitiveUIModel.Quad] = new ModelData<ushort>(
+        [PrimitiveUIModel.Quad] = new MeshData<ushort>(
             [
-                new ModelVertex(new(0,0,0), new(0,0)),
-                new ModelVertex(new(0,1,0), new(0,1)),
-                new ModelVertex(new(1,1,0), new(1,1)),
-                new ModelVertex(new(1,0,0), new(1,0)),
+                new MeshVertex(new(0,0,0), new(0,0)),
+                new MeshVertex(new(0,1,0), new(0,1)),
+                new MeshVertex(new(1,1,0), new(1,1)),
+                new MeshVertex(new(1,0,0), new(1,0)),
             ],
             [0, 1, 2, 2, 3, 0])
     };
@@ -30,6 +30,9 @@ public class PrimitiveModelsDb : IDisposable
     /// </summary>
     public unsafe void CreateBuffers()
     {
+        foreach (var primitiveModelInfo in uiDb)
+            AssetCore.AssetManager.RegisterModel(primitiveModelInfo.Value);
+
         int _vertexCount = 0;
         int _indexCount = 0;
         foreach (var primitiveModelInfo in uiDb)
@@ -38,7 +41,7 @@ public class PrimitiveModelsDb : IDisposable
             _indexCount += primitiveModelInfo.Value.Indices.Length;
         }
 
-        ModelVertex[] vertices = new ModelVertex[_vertexCount];
+        MeshVertex[] vertices = new MeshVertex[_vertexCount];
         ushort[] indices = new ushort[_indexCount];
 
         int verticesIndex = 0;
@@ -66,9 +69,9 @@ public class PrimitiveModelsDb : IDisposable
         // Console.WriteLine("Created vertices buffer " + primitiveBuffer);
     }
 
-    public unsafe void CreateVertexAndIndicesBuffer<TIndices>(ModelVertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>
+    public unsafe void CreateVertexAndIndicesBuffer<TIndices>(MeshVertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>
     {
-        ulong _vertexSize = (ulong)(sizeof(ModelVertex) * vertices.Length);
+        ulong _vertexSize = (ulong)(sizeof(MeshVertex) * vertices.Length);
         ulong _indicesSize = (ulong)(sizeof(TIndices) * indices.Length);
         ulong _bufferSize = _vertexSize + _indicesSize;
 
@@ -77,8 +80,8 @@ public class PrimitiveModelsDb : IDisposable
         void* data;
         CreateVulkan.vk.MapMemory(LogicalDevice.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);
         byte* ptr = (byte*)data;
-        vertices.CopyTo(new Span<ModelVertex>(ptr, vertices.Length));
-        indicesOffset = (ulong)(sizeof(ModelVertex) * vertices.Length);
+        vertices.CopyTo(new Span<MeshVertex>(ptr, vertices.Length));
+        indicesOffset = (ulong)(sizeof(MeshVertex) * vertices.Length);
         ptr += indicesOffset;
         indices.CopyTo(new Span<TIndices>(ptr, indices.Length));
         CreateVulkan.vk.UnmapMemory(LogicalDevice.device, primitiveBufferMemory);
@@ -86,7 +89,7 @@ public class PrimitiveModelsDb : IDisposable
 
 
 
-    public ModelData<ushort> Get(PrimitiveUIModel model)
+    public MeshData<ushort> Get(PrimitiveUIModel model)
     {
         return uiDb[model];
     }

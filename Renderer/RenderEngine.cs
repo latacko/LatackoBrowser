@@ -1,16 +1,18 @@
 using System;
 using GraphicsCore;
+using GraphicsCore.Shaders;
 using Silk.NET.Input.Sdl;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Silk.NET.Windowing;
 using Vulkan;
+using VulkanManager.BufferManager;
 
 namespace Renderer;
 
 public class RenderEngine : IDisposable
 {
-    public RenderEngine Instance;
+    public static RenderEngine? Instance;
     CreateVulkan createVulkan = new();
     Vulkan.PhysicalDevice physicalDevice;
     LogicalDevice logicalDevice;
@@ -18,6 +20,7 @@ public class RenderEngine : IDisposable
     public readonly string[] DeviceExtensions;
 
     readonly HashSet<BaseShader> shaders = [];
+    readonly HashSet<ElementsManager> uniqueObjectsManagers = [];
 
     public RenderEngine(string[] deviceExtensions, KhrSurface khrSurface, SurfaceKHR surfaceKHR)
     {
@@ -53,15 +56,22 @@ public class RenderEngine : IDisposable
 
     public void RegisterShader(BaseShader shader)
     {
+        uniqueObjectsManagers.Add(shader.objectsManager);
         shaders.Add(shader);
     }
 
     public void RegisterSite(SiteRenderer site)
     {
+        foreach (var objectsManager in uniqueObjectsManagers)
+        {
+            objectsManager.RegisterBuffers(site.GetId());
+        }
+
         foreach (var shader in shaders)
         {
-            shader.AddSite(site.UniqueId);
+            shader.AddSite(site);
         }
+
     }
 
 
@@ -70,6 +80,11 @@ public class RenderEngine : IDisposable
         foreach (var shader in shaders)
         {
             shader.Dispose();
+        }
+
+        foreach (var objectsManager in uniqueObjectsManagers)
+        {
+            objectsManager.Dispose();
         }
 
         logicalDevice.Dispose();

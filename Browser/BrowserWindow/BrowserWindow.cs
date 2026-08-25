@@ -26,17 +26,16 @@ public unsafe partial class BrowserWindow
 
     TextureRenderer textureRenderer;
 
-    public BrowserWindow(TextureRenderer textureRenderer)
+    public BrowserWindow()
     {
-        this.textureRenderer = textureRenderer;
     }
 
-    public void Run(string title)
+    public void Run(TextureRenderer textureRenderer)
     {
         textureRenderer.CreateVulkanEngine();
         CreateCommandBuffers(textureRenderer.GetVulkanEngine());
         SetupVulkan();
-        CreateWindow(title);
+        CreateWindow("Browser");
         OnStart?.Invoke();
         MainLoop();
         CleanUp();

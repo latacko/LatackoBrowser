@@ -1,22 +1,37 @@
 using AssetCore;
 using GraphicsCore;
+using GraphicsCore.Buffers;
+using GraphicsCore.Shaders;
 using PrimitiveCore.Model;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Vulkan;
 using VulkanManager;
+using VulkanManager.BufferManager;
 
 namespace PrimitiveCore;
 
-public unsafe class NodeShader : GraphicsCore.BaseShader
+public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
 {
     public Dictionary<uint, Dictionary<uint, List<Node>>> elements = [];
-    protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
+    // protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
+    
+
+
+    public NodeShader(string shaderPath, InstancesManager objectsManager):base(shaderPath, objectsManager)
+    {
+    }
+
+    public static NodeShader Create(string shaderPath, Func<Type, InstancesManager> objectsManagerFunc)
+    {
+        return new NodeShader(shaderPath, objectsManagerFunc.Invoke(typeof(ModelGPUData)));
+    }
 
     public override void Init()
     {
         base.Init();
     }
+
 
     #region Shader Data
     public override DescriptorSetLayout[] GetLayouts()
@@ -74,7 +89,7 @@ public unsafe class NodeShader : GraphicsCore.BaseShader
     };
     #endregion
 
-    public override unsafe void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    public override void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
@@ -92,23 +107,25 @@ public unsafe class NodeShader : GraphicsCore.BaseShader
         //     item.TestToUpdateStyle(currentFrame);
         // });
 
-        RenderElements(textureRenderer.GetId(), commandBuffer, currentFrame);
+        base.Render(textureRenderer, commandBuffer, currentFrame, wireFrameRendering);
     }
 
     protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
     {
-
         foreach (var (modelId, elements) in elements[siteId])
         {
-            var _siteModelKey = NodesManager.MakeKey(siteId, modelId);
+            var _siteModelKey = InstancesManager.MakeKey(siteId, modelId);
             foreach (var element in elements)
             {
-                element.TryWriteObjectData(NodesManager.Instance.GetDestinationSpan(_siteModelKey, currentFrame, element.InstanceIndex, element.ObjectDataSize), currentFrame);
+                element.TryWriteObjectData(objectsManager!.GetDestinationSpan(_siteModelKey, currentFrame, element.InstanceIndex, element.ObjectDataSize), currentFrame);
             }
-            var _meshData = AssetManager.GetModel(modelId);
+            
+            objectsManager!.RenderTick(_siteModelKey, currentFrame);
 
-            ulong _modelBuffer = NodesManager.Instance.shaderDataBuffersForObjects[currentFrame].GetBuffer(currentFrame).DeviceAddress;
+            ulong _modelBuffer = objectsManager!.GetBufferDeviceAddress(_siteModelKey, modelId);
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, sizeof(ulong), sizeof(ulong) * 1, &_modelBuffer);
+
+            var _meshData = AssetManager.GetModel(modelId);
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)_meshData.GetIndicesCount(), (uint)elements.Count, _meshData.indexOffset, (int)_meshData.vertexOffset, 0);
         }
     }

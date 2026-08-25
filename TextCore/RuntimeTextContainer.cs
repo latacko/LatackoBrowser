@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using GraphicsCore;
 using GraphicsCore;
 using Silk.NET.Maths;
@@ -7,14 +8,15 @@ using Vulkan;
 
 namespace TextCore;
 
-public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextContainerData, IMeshData>
+public class RuntimeTextContainer : VisualElement
 {
     internal FontAtlas fontAtlas;
     public string Text;
     ReadOnlyMemory<char> TextMemory;
     internal List<RuntimeText> runtimeTexts = new();
+    protected internal override int ObjectDataSize => Unsafe.SizeOf<TextContainerData>();
 
-    public RuntimeTextContainer(string text, uint objectIndex, VisualElement? parent = null) : base(null, objectIndex, parent)
+    public RuntimeTextContainer(string text, uint objectIndex, VisualElement? parent = null) : base(0, objectIndex, null, parent)
     {
         SetStyle(TextManager.TextDefaultStyle);
 
@@ -45,7 +47,7 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         throw new Exception("You shoudn't get cursor for this object. You should iterate throught internal texts for cursor.");
     }
 
-    public override bool TryGetObjectData(out TextContainerData data, uint frame)
+    public bool TryGetObjectData(out TextContainerData data, uint frame)
     {
         if (renderDirty[frame] == RenderDirtyFlags.None || renderDirty[frame] == RenderDirtyFlags.Model)
         {
@@ -69,6 +71,11 @@ public class RuntimeTextContainer : RuntimeModelData<RuntimeTextContainer, TextC
         RemoveFlag(RenderDirtyFlags.Data, frame);
 
         return true;
+    }
+
+    protected internal override bool TryWriteObjectData(Span<byte> destination, uint frame)
+    {
+        return TryGetObjectData(out var data, frame) && WriteStruct(data, destination);
     }
 
     public override void Compile()

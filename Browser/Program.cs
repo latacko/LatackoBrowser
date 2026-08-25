@@ -4,6 +4,8 @@ using System.Xml;
 using System.Xml.Linq;
 using BenchmarkDotNet.Running;
 using Browser;
+using GraphicsCore.Buffers;
+using GraphicsCore.Shaders;
 using HTMLParser;
 using PrimitiveCore;
 using Renderer;
@@ -68,18 +70,21 @@ using TextCore;
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
 // Environment.SetEnvironmentVariable("socket","x11");
-SiteRenderer mainBrowser = new(1920, 1080);
-BrowserWindow browserWindow = new(mainBrowser);
+BrowserWindow browserWindow = new();
 
 RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
-renderEngine.RegisterShader(new NodeShader());
+
+ShaderCreator<NodeShader> nodeShaderCreator = new();
+
+renderEngine.RegisterShader(nodeShaderCreator.CreateShader("shaders/Compiled/uiShader.spv"));
 renderEngine.RegisterShader(new TextShader());
 unsafe
 {
     renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);
 }
+SiteRenderer mainBrowser = new();
 
-browserWindow.Run("Browser");
+browserWindow.Run(mainBrowser);
 
 
 // SvgLoader.Loader.Parse(_document);

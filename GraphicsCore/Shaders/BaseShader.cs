@@ -1,3 +1,4 @@
+using GraphicsCore.Buffers;
 using Silk.NET.Assimp;
 using Silk.NET.Core.Native;
 using Silk.NET.Vulkan;
@@ -5,6 +6,7 @@ using Silk.NET.Vulkan.Extensions.KHR;
 using Units;
 using Vulkan;
 using VulkanManager;
+using VulkanManager.BufferManager;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace GraphicsCore;
@@ -15,8 +17,15 @@ public unsafe abstract class BaseShader : IDisposable
     public PipelineLayout PipelineLayout;
     public Pipeline PipelineWireframe;
 
-    protected abstract string moduleShaderPath { get; }
+    public readonly InstancesManager objectsManager;
 
+    protected readonly string moduleShaderPath;
+
+    public BaseShader(string shaderPath, InstancesManager objectsManager)
+    {
+        moduleShaderPath = shaderPath;
+        this.objectsManager = objectsManager;
+    }
 
     #region Init
     public virtual void Init()
@@ -34,7 +43,10 @@ public unsafe abstract class BaseShader : IDisposable
 
     public abstract DescriptorSetLayout[] GetLayouts();
 
-    public abstract void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering);
+    public virtual void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    {
+        RenderElements(textureRenderer.GetId(), commandBuffer, currentFrame);
+    }
 
     protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame);
 

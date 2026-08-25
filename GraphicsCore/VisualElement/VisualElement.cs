@@ -23,7 +23,7 @@ public abstract class VisualElement : IDisposable
     public static HashSet<ObjectComileInfo> ObjectsToCompile = new();
 
     public readonly uint ModelId;
-    public uint InstanceIndex;
+    public uint InstanceIndex {get; private set;}
 
     [Flags]
     internal protected enum RenderDirtyFlags : byte
@@ -32,6 +32,7 @@ public abstract class VisualElement : IDisposable
         Matrix = 1 << 0,
         Data = 1 << 1,
         Model = 1 << 2,
+        InstanceId = 1 << 3,
     }
     internal protected RenderDirtyFlags[] renderDirty = new RenderDirtyFlags[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
@@ -51,12 +52,13 @@ public abstract class VisualElement : IDisposable
     public Style? Style;
     internal protected ComputedStyle computedStyle;
 
-    public VisualElement(uint modelId, uint objectIndex, EventSystem eventSystem, VisualElement? parent = null)
+    public VisualElement(uint modelId, uint instanceIndex, EventSystem? eventSystem, VisualElement? parent = null)
     {
         ModelId = modelId;
-        InstanceIndex = objectIndex;
+        InstanceIndex = instanceIndex;
 
-        Events = new(eventSystem, this);
+        if (eventSystem != null)
+            Events = new(eventSystem, this);
 
         if (parent != null)
             Parent = parent;
@@ -83,6 +85,12 @@ public abstract class VisualElement : IDisposable
     }
 
     protected internal abstract void UpdatePosition();
+
+    public void ChangeInstanceId(uint newInstanceId)
+    {
+        AddFlag(RenderDirtyFlags.InstanceId);
+        InstanceIndex = newInstanceId;
+    }
 
     #region Layout
     protected internal virtual float GetLayoutLeft() => computedStyle.Pos.X;

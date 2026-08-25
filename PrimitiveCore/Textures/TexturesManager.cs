@@ -2,7 +2,6 @@ using System;
 using System.Net.Http.Headers;
 using Silk.NET.Vulkan;
 using Vulkan;
-using Buffer = Silk.NET.Vulkan.Buffer;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace PrimitiveCore.Textures;
@@ -15,7 +14,7 @@ public class TexturesManager : IDisposable
 
     struct TextureStagingBuffer
     {
-        public Buffer buffer;
+        public Silk.NET.Vulkan.Buffer buffer;
         public DeviceMemory deviceMemory;
         public uint id;
     }
