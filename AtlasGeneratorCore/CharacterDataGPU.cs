@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 
-namespace TextCore;
+namespace AtlasGeneratorCore;
 
 [StructLayout(LayoutKind.Sequential)]
 public record struct CharacterDataGPU

@@ -13,7 +13,7 @@ public struct TextVertex(Vector3D<float> pos, Vector2D<float> textCoord, uint ch
     public Vector2D<float> TextCoord = textCoord;
     public uint CharAscii = charAscii;
 
-    public VertexInputBindingDescription GetBindingDescription()
+    public static VertexInputBindingDescription GetBindingDescription()
     {
         VertexInputBindingDescription bindingDescription = new()
         {
@@ -25,7 +25,7 @@ public struct TextVertex(Vector3D<float> pos, Vector2D<float> textCoord, uint ch
         return bindingDescription;
     }
 
-    public VertexInputAttributeDescription[] GetAttributeDescriptions()
+    public static VertexInputAttributeDescription[] GetAttributeDescriptions()
     {
         var attributeDescriptions = new[]
         {

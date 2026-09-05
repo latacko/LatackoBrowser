@@ -9,7 +9,7 @@ using VulkanManager.BufferManager;
 
 namespace TextCore;
 
-public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelData<ushort>>
+public class RuntimeText : VisualElement
 {
     public VulkanManager.BufferManager.Slot Slot;
     public SlotData<TextVertex> VertexSlotData = new();
@@ -26,6 +26,8 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
 
     public int TextLength => rightRange - leftRange;
 
+    protected internal override int ObjectDataSize  => 0;
+
     public float Left;
     public float Top;
 
@@ -37,7 +39,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     RuntimeTextContainer textContainer;
 
 
-    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, VisualElement parent) : base(new([], []), objectIndex, parent)
+    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, VisualElement parent) : base(new([], []), objectIndex, null, parent)
     {
         Text = text;
         this.leftRange = leftRange;
@@ -49,6 +51,7 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
         textContainer = (RuntimeTextContainer)parent;
         GenerateMesh();
     }
+
 
     public bool Equals(int leftRange, int rightRange)
     {
@@ -293,6 +296,11 @@ public class RuntimeText : RuntimeModelData<RuntimeText, ModelData, TextModelDat
     protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)
     {
         throw new System.Exception("This funtion shoudn't be executed on runtime text!");
+    }
+
+    protected internal override bool TryWriteObjectData(Span<byte> destination, uint frame)
+    {
+        throw new NotImplementedException();
     }
 }
 

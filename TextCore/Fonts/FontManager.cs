@@ -1,8 +1,6 @@
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.InteropServices;
-using Remora.MSDFGen;
-using Remora.MSDFGen.Graphics;
+using Msdfgen;
 using SharpFont;
 using Silk.NET.Vulkan;
 using TextCore.Fonts;
@@ -38,17 +36,15 @@ public class FontManager : IDisposable
     {
         var testShape = new Shape();
         var testContour = new Contour();
-        testContour.Edges.Add(new LinearSegment(new Vector2(10, 10), new Vector2(90, 10), EdgeColor.White));
-        testContour.Edges.Add(new LinearSegment(new Vector2(90, 10), new Vector2(50, 90), EdgeColor.White));
-        testContour.Edges.Add(new LinearSegment(new Vector2(50, 90), new Vector2(10, 10), EdgeColor.White));
+        testContour.Edges.Add(new LinearSegment(new Vector2(10, 10), new Vector2(90, 10), EdgeColor.WHITE));
+        testContour.Edges.Add(new LinearSegment(new Vector2(90, 10), new Vector2(50, 90), EdgeColor.WHITE));
+        testContour.Edges.Add(new LinearSegment(new Vector2(50, 90), new Vector2(10, 10), EdgeColor.WHITE));
         testShape.Contours.Add(testContour);
-        testShape.InverseYAxis = false;
+        testShape.SetYAxisOrientation(YAxisOrientation.Downward);
 
-        var testPixmap = new Pixmap<Color3>(100, 100);
+        var testPixmap = new Bitmap<float>(100, 100);
         // Console.WriteLine("Test1");
-        MSDF.GenerateMSDF(testPixmap, testShape, 4.0, new Vector2(1, 1), new Vector2(0, 0));
-        // Console.WriteLine("Test2");
-
+        MsdfGenerator.GenerateMSDF(testPixmap, testShape, 4.0, new Vector2(1, 1), new Vector2(0, 0));
         int testNonBlack = 0;
         for (int k = 0; k < 100 * 100; k++)
         {
@@ -132,8 +128,8 @@ public class FontManager : IDisposable
                         throw new Exception("Not a shape for " + _character);
 
                     _characterShape.Normalize();
+                    MSDF
                     MSDF.EdgeColoringSimple(_characterShape, Math.PI / 3.0);
-
 
                     double _left = 0;
                     double _right = 0;
@@ -240,115 +236,7 @@ public class FontManager : IDisposable
         public byte Tag;
     }
 
-    Shape BuildShape(Face face, char c, float leftPadding, float topPadding, bool insideOut)
-    {
-        Vector2 GetPointCoords(FTVector pos)
-        {
-            // return new Vector2(pos.X.Value, pos.Y.Value);
-            return new Vector2(pos.X.Value - leftPadding, pos.Y.Value + topPadding);
-        }
-        var outline = face.Glyph.Outline;
-        var shape = new Shape();
-
-        int contourStart = 0;
-        List<PointInfo> _points = new();
-        for (int i = 0; i < outline.Contours.Length; i++)
-        {
-            int contourEnd = outline.Contours[i];
-
-            Contour contour = new();
-
-            //? Iterating throught points
-
-            _points.Clear();
-            for (int j = contourStart; j <= contourEnd; j++)
-            {
-                _points.Add(new()
-                {
-                    Pos = GetPointCoords(outline.Points[j]),
-                    Tag = outline.Tags[j],
-                });
-
-            }
-
-            if (insideOut)
-                _points.Reverse();
-
-            int _outlineStart = 0;
-            for (int j = 0; j < _points.Count; j++)
-            {
-                if ((_points[j].Tag & 0b00000001) == 0)
-                {
-                    if (j + 1 < _points.Count && (_points[j + 1].Tag & 0b00000001) == 0)
-                    {
-                        _points.Insert(j + 1, new()
-                        {
-                            Pos = Vector2.Lerp(_points[j].Pos, _points[j + 1].Pos, 0.5f),
-                            Tag = 0b00000001,
-                        });
-                    }
-                    continue;
-                }
-
-                if (j == 0)
-                {
-                    continue;
-                }
-
-                int _outLineEnds = j;
-
-                Vector2 _startPoint = _points[_outlineStart].Pos;
-                Vector2 _endPoint = _points[_outLineEnds].Pos;
-
-
-                switch (_outLineEnds - _outlineStart)
-                {
-                    case 1:
-                        // Console.WriteLine(" linear");
-                        contour.Edges.Add(new LinearSegment(_startPoint, _endPoint, EdgeColor.White));
-                        break;
-                    case 2:
-                        // Console.WriteLine(" quadratic");
-                        Vector2 _controlPoint = _points[_outlineStart + 1].Pos;
-                        contour.Edges.Add(new QuadraticSegment(_startPoint, _controlPoint, _endPoint, EdgeColor.White));
-                        break;
-                    case 3:
-                        _controlPoint = _points[_outlineStart + 1].Pos;
-                        Vector2 _controlPoint2 = _points[_outlineStart + 2].Pos;
-
-                        contour.Edges.Add(new CubicSegment(_startPoint, _controlPoint, _controlPoint2, _endPoint, EdgeColor.White));
-                        break;
-                    default:
-                        throw new Exception("Wrong contour for char: " + c);
-                }
-
-                _outlineStart = _outLineEnds;
-            }
-            Vector2 _endPoint2 = _points[0].Pos;
-            if ((_points[_points.Count - 1].Tag & 0b00000001) == 0)
-            {
-                Vector2 _startPos = _points[_points.Count - 2].Pos;
-                Vector2 _controlPoint = _points[_points.Count - 1].Pos;
-                // Console.WriteLine("Closing shape from " + (_points.Count - 2) + " to 0 is quadratic");
-                contour.Edges.Add(new QuadraticSegment(_startPos, _controlPoint, _endPoint2, EdgeColor.White));
-            }
-            else
-            {
-                // Console.WriteLine("Closing shape from " + (_points.Count - 1) + " to 0 is line");
-                Vector2 _startPos = _points[_points.Count - 1].Pos;
-                contour.Edges.Add(new LinearSegment(_startPos, _endPoint2, EdgeColor.White));
-            }
-
-
-            contourStart = contourEnd + 1;
-
-            shape.Contours.Add(contour);
-        }
-
-        shape.InverseYAxis = true;
-        return shape;
-    }
-
+    
     public void Dispose()
     {
         library.Dispose();

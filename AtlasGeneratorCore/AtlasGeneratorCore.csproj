@@ -5,14 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <UserSecretsId>eb0a959c-2a77-4b4b-b76b-4c6eff68ab47</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MSDF-Sharp.Core" Version="1.0.2" />
+    <PackageReference Include="Silk.NET" Version="2.23.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Silk.NET" Version="2.23.0" />
+    <ProjectReference Include="../MsdfAtlasGen/MsdfAtlasGen.csproj" />
+    <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>
 
 </Project>
