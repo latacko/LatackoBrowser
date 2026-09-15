@@ -7,9 +7,10 @@ public unsafe class LogicalDevice : IDisposable
 {
     public static Device device;
 
-    QueueFamilyIndices indices;
-    internal static Queue graphicsQueue;
-    internal static Queue presentQueue;
+    public static QueueFamilyIndices Indices {get; private set;}
+    public static Queue GraphicsQueue;
+    public static Queue TransferQueue;
+    public static Queue PresentQueue;
 
     readonly string[] deviceExtensions;
 
@@ -20,9 +21,9 @@ public unsafe class LogicalDevice : IDisposable
 
     public uint[] GetIndices()
     {
-        indices = Vulkan.PhysicalDevice.Instance.FindQueueFamilies(Vulkan.PhysicalDevice.physicalDevice);
+        Indices = Vulkan.PhysicalDevice.Instance.FindQueueFamilies(Vulkan.PhysicalDevice.physicalDevice);
 
-        return [indices.GraphicsFamily!.Value, indices.PresentFamily!.Value];
+        return [Indices.GraphicsFamily!.Value, Indices.PresentFamily!.Value];
     }
 
     public void Create()
@@ -111,8 +112,9 @@ public unsafe class LogicalDevice : IDisposable
 
     protected void GetDeviceQueue()
     {
-        CreateVulkan.vk.GetDeviceQueue(device, indices.GraphicsFamily!.Value, 0, out graphicsQueue);
-        CreateVulkan.vk.GetDeviceQueue(device, indices.PresentFamily!.Value, 0, out presentQueue);
+        CreateVulkan.vk.GetDeviceQueue(device, Indices.GraphicsFamily!.Value, 0, out GraphicsQueue);
+        CreateVulkan.vk.GetDeviceQueue(device, Indices.PresentFamily!.Value, 0, out PresentQueue);
+        CreateVulkan.vk.GetDeviceQueue(device, Indices.TransferFamily!.Value, 0, out TransferQueue);
     }
 
     public static void DestroyImageView(ImageView imageView, AllocationCallbacks* pAllocator)

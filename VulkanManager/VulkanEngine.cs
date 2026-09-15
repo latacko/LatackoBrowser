@@ -49,12 +49,11 @@ public unsafe class VulkanEngine : IDisposable
 
     public void CreateCommandPools()
     {
-        var queueFamilyIndices = PhysicalDevice.Instance.FindQueueFamilies(PhysicalDevice.physicalDevice);
         CommandPoolCreateInfo commandPoolCI = new()
         {
             SType = StructureType.CommandPoolCreateInfo,
             Flags = CommandPoolCreateFlags.None,
-            QueueFamilyIndex = queueFamilyIndices.GraphicsFamily!.Value,
+            QueueFamilyIndex = LogicalDevice.Indices.GraphicsFamily!.Value,
         };
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)

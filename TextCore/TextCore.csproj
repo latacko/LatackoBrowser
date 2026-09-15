@@ -10,6 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../AtlasGeneratorCore/AtlasGeneratorCore.csproj" />
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>

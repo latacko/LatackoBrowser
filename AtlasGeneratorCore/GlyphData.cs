@@ -1,7 +1,7 @@
 using System.Numerics;
 using Silk.NET.Maths;
 
-namespace TextCore;
+namespace AtlasGeneratorCore;
 
 internal record struct GlyphData
 {

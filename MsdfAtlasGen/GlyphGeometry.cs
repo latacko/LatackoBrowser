@@ -18,6 +18,8 @@ namespace MsdfAtlasGen
             public bool PxAlignOriginY;
         }
 
+        public uint? CharacterBufferId {get; private set;} = null;
+
         private char character;
         private double _geometryScale;
         private Shape? _shape;
@@ -40,6 +42,11 @@ namespace MsdfAtlasGen
 
         public GlyphGeometry()
         {
+        }
+
+        public void SetCharacterBufferId(uint id)
+        {
+            CharacterBufferId = id;
         }
 
         /// <summary>

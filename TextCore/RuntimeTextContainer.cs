@@ -22,7 +22,7 @@ public class RuntimeTextContainer : VisualElement
 
         Text = text;
         TextMemory = Text.AsMemory();
-        fontAtlas = FontManager.Instance.GetFontAtlas(Style.FontProperties.font);
+        fontAtlas = FontsManager.Instance.GetFontAtlas(Style.FontProperties.font);
         fontAtlas.ScanText(Text);
     }
 

@@ -10,10 +10,10 @@ public class CoreManager : IDisposable
     public static CoreManager Instance;
     BufferManager bufferManager = new();
 
-    internal FontManager fontManager = new();
+    internal FontsManager fontManager = new();
     internal TextManager textManager = new();
-    internal NodesManager objectsManager = new();
-    public ObjectManager objectManager = new();
+    // internal NodesManager objectsManager = new();
+    // public ObjectManager objectManager = new();
     public TexturesManager texturesManager = new();
 
     public CoreManager()
@@ -39,7 +39,6 @@ public class CoreManager : IDisposable
         GraphicsCore.ColorTransitionsHelper.Update((float)deltaTime);
         _ticksToReset++;
 
-        fontManager.Tick();
         if (_ticksToReset == 1000)
         {
             TexturesManager.Tick();
@@ -49,13 +48,14 @@ public class CoreManager : IDisposable
 
     public void OnRender(uint currentFrame)
     {
+        fontManager.Tick(currentFrame);
         textManager.CopyToBuffer(currentFrame);
     }
 
-    public void RenderShader(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
-    {
-        TextManager.TextShader.Render(commandBuffer, currentFrame, wireFrameRendering);
-    }
+    // public void RenderShader(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    // {
+    //     TextManager.TextShader.Render(commandBuffer, currentFrame, wireFrameRendering);
+    // }
 
     public void Dispose()
     {

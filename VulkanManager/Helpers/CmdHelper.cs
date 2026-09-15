@@ -3,7 +3,7 @@ namespace Vulkan;
 
 public static class CmdHelper
 {
-    internal static unsafe CommandBuffer BeginSingleTimeCommands(CommandPool commandPool)
+    public static unsafe CommandBuffer BeginSingleTimeCommands(CommandPool commandPool)
     {
         CommandBufferAllocateInfo _allocInfo = new()
         {
@@ -26,7 +26,7 @@ public static class CmdHelper
         return _commandBuffer;
     }
 
-    internal static unsafe void EndSingleTimeCommandsIdle(CommandPool commandPool, CommandBuffer commandBuffer)
+    public static unsafe void EndSingleTimeCommandsIdle(CommandPool commandPool, CommandBuffer commandBuffer)
     {
         CreateVulkan.vk.EndCommandBuffer(commandBuffer);
 
@@ -37,8 +37,8 @@ public static class CmdHelper
             PCommandBuffers = &commandBuffer,
         };
 
-        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, default);
-        CreateVulkan.vk.QueueWaitIdle(LogicalDevice.graphicsQueue);
+        CreateVulkan.vk.QueueSubmit(LogicalDevice.GraphicsQueue, 1, &_submitInfo, default);
+        CreateVulkan.vk.QueueWaitIdle(LogicalDevice.GraphicsQueue);
 
         CreateVulkan.vk.FreeCommandBuffers(LogicalDevice.device, commandPool, 1, &commandBuffer);
     }
@@ -54,6 +54,6 @@ public static class CmdHelper
             PCommandBuffers = &commandBuffer,
         };
 
-        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, fence);
+        CreateVulkan.vk.QueueSubmit(LogicalDevice.GraphicsQueue, 1, &_submitInfo, fence);
     }
 }

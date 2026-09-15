@@ -38,7 +38,7 @@ namespace MsdfAtlasGen
             // Wrap glyphs into boxes
             var rectangles = new List<Rectangle>(glyphs.Length);
             var rectangleGlyphs = new List<GlyphGeometry>(glyphs.Length);
-            
+
             var attribs = new GlyphGeometry.GlyphAttributes();
             // Pixels-per-font-unit: packer scale * glyph geometry scale.
             attribs.Scale = scale; // will be overridden per glyph below
@@ -92,47 +92,50 @@ namespace MsdfAtlasGen
                         RectanglePacking.PackRectangles<PowerOfTwoSizeSelector>(rectArray, _spacing, out w_out, out h_out);
                         break;
                     case DimensionsConstraint.MultipleOfFourSquare:
-                         {
-                             long totalArea = 0;
-                             var rectCopy = new Rectangle[rectArray.Length];
-                             for(int i=0; i<rectArray.Length; ++i) {
-                                 rectCopy[i] = rectArray[i];
-                                 rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
-                                 totalArea += (long)rectCopy[i].W * rectCopy[i].H;
-                             }
-                             var selector = new SquareSizeSelector((int)totalArea, 4);
-                             RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
-                         }
+                        {
+                            long totalArea = 0;
+                            var rectCopy = new Rectangle[rectArray.Length];
+                            for (int i = 0; i < rectArray.Length; ++i)
+                            {
+                                rectCopy[i] = rectArray[i];
+                                rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
+                                totalArea += (long)rectCopy[i].W * rectCopy[i].H;
+                            }
+                            var selector = new SquareSizeSelector((int)totalArea, 4);
+                            RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
+                        }
                         break;
                     case DimensionsConstraint.EvenSquare:
-                         {
-                             long totalArea = 0;
-                             var rectCopy = new Rectangle[rectArray.Length];
-                             for(int i=0; i<rectArray.Length; ++i) {
-                                 rectCopy[i] = rectArray[i];
-                                 rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
-                                 totalArea += (long)rectCopy[i].W * rectCopy[i].H;
-                             }
-                             var selector = new SquareSizeSelector((int)totalArea, 2);
-                             RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
-                         }
+                        {
+                            long totalArea = 0;
+                            var rectCopy = new Rectangle[rectArray.Length];
+                            for (int i = 0; i < rectArray.Length; ++i)
+                            {
+                                rectCopy[i] = rectArray[i];
+                                rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
+                                totalArea += (long)rectCopy[i].W * rectCopy[i].H;
+                            }
+                            var selector = new SquareSizeSelector((int)totalArea, 2);
+                            RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
+                        }
                         break;
                     case DimensionsConstraint.Square:
                     default:
-                         {
-                             long totalArea = 0;
-                             var rectCopy = new Rectangle[rectArray.Length];
-                             for(int i=0; i<rectArray.Length; ++i) {
-                                 rectCopy[i] = rectArray[i];
-                                 rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
-                                 totalArea += (long)rectCopy[i].W * rectCopy[i].H;
-                             }
-                             var selector = new SquareSizeSelector((int)totalArea, 1);
-                             RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
-                         }
+                        {
+                            long totalArea = 0;
+                            var rectCopy = new Rectangle[rectArray.Length];
+                            for (int i = 0; i < rectArray.Length; ++i)
+                            {
+                                rectCopy[i] = rectArray[i];
+                                rectCopy[i].W += _spacing; rectCopy[i].H += _spacing;
+                                totalArea += (long)rectCopy[i].W * rectCopy[i].H;
+                            }
+                            var selector = new SquareSizeSelector((int)totalArea, 1);
+                            RectanglePacking.PackRectangles(rectArray, rectCopy, selector, _spacing, out w_out, out h_out);
+                        }
                         break;
                 }
-                
+
                 if (!(w_out > 0 && h_out > 0))
                     return -1;
                 width = w_out;
@@ -147,7 +150,7 @@ namespace MsdfAtlasGen
             // Set glyph box placement
             for (int i = 0; i < rectangles.Count; ++i)
                 rectangleGlyphs[i].PlaceBox(rectArray[i].X, height - (rectArray[i].Y + rectArray[i].H));
-            
+
             return 0;
         }
 
@@ -158,7 +161,7 @@ namespace MsdfAtlasGen
         {
             bool lastResult = false;
             int w = _width, h = _height;
-            
+
             bool TryPackLocal(double s)
             {
                 int lw = w, lh = h;
@@ -166,7 +169,7 @@ namespace MsdfAtlasGen
                 lastResult = res;
                 return res;
             }
-            
+
             double minScale = 1, maxScale = 1;
             if (TryPackLocal(1))
             {
@@ -183,16 +186,16 @@ namespace MsdfAtlasGen
             {
                 while (minScale > 1e-32)
                 {
-                     minScale = 0.5 * maxScale;
-                     if (!TryPackLocal(minScale))
+                    minScale = 0.5 * maxScale;
+                    if (!TryPackLocal(minScale))
                         maxScale = minScale;
-                     else
+                    else
                         break;
                 }
             }
-            
+
             if (minScale == maxScale) return 0;
-            
+
             while (minScale / maxScale < 1 - _scaleMaximizationTolerance)
             {
                 double midScale = 0.5 * (minScale + maxScale);
@@ -201,10 +204,10 @@ namespace MsdfAtlasGen
                 else
                     maxScale = midScale;
             }
-            
+
             if (!lastResult)
                 TryPackLocal(minScale);
-                
+
             return minScale;
         }
 
@@ -220,23 +223,23 @@ namespace MsdfAtlasGen
                 int remaining = TryPack(glyphs, _dimensionsConstraint, ref w, ref h, initialScale);
                 if (remaining != 0)
                     return remaining;
-                 // On success, update width/height if implicit
-                 if (_width < 0 || _height < 0)
-                 {
-                     _width = w; _height = h;
-                 }
+                // On success, update width/height if implicit
+                if (_width < 0 || _height < 0)
+                {
+                    _width = w; _height = h;
+                }
             }
             else if (_width < 0 || _height < 0)
                 return -1;
-            
+
             if (_scale <= 0)
             {
                 _scale = PackAndScale(glyphs);
             }
-            
+
             if (_scale <= 0)
                 return -1;
-                
+
             return 0;
         }
 

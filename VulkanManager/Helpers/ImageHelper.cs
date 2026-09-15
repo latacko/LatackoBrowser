@@ -176,7 +176,7 @@ public unsafe class ImageHelper
             SignalSemaphoreCount = 1,
             PSignalSemaphores = &timelineSemaphore,
         };
-        CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &_submitInfo, default);
+        CreateVulkan.vk.QueueSubmit(LogicalDevice.GraphicsQueue, 1, &_submitInfo, default);
 
         // CreateVulkan.vk.DestroyBuffer(LogicalDevice.device, _stagingBuffer, null);
         // CreateVulkan.vk.FreeMemory(LogicalDevice.device, _stagingBufferMemory, null);

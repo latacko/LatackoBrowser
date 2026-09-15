@@ -279,7 +279,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         submitInfo.SignalSemaphoreInfoCount = 1;
         submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
 
-        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.graphicsQueue, 1, &submitInfo, default) != Result.Success)
+        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, default) != Result.Success)
         {
             throw new Exception("Failed to submit command buffer!");
         }

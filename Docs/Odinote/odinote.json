@@ -1,0 +1,119 @@
+{
+  "view": {
+    "kind": "canvas",
+    "projectId": "proj-1789434357375-6324",
+    "trail": [
+      "proj-1789434357375-6324"
+    ]
+  },
+  "lang": "en",
+  "theme": "light",
+  "projects": [
+    {
+      "id": "proj-1789434357375-6324",
+      "name": {
+        "es": "Latacko browser",
+        "en": "Latacko browser"
+      },
+      "emoji": "icon:video_game",
+      "cover": "linear-gradient(135deg, #F7DA84 0%, #E6544F 100%)",
+      "updated": {
+        "es": "ahora",
+        "en": "just now"
+      },
+      "items": 3
+    }
+  ],
+  "canvases": {
+    "proj-1789434357375-6324": {
+      "title": {
+        "es": "Latacko browser",
+        "en": "Latacko browser"
+      },
+      "items": [
+        {
+          "id": "it-1789434372292-7803",
+          "x": 565,
+          "y": 110,
+          "type": "column",
+          "w": 320,
+          "h": 140,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "TODO",
+            "en": "TODO"
+          },
+          "children": [
+            {
+              "id": "it-1789434380938-1081",
+              "x": 380,
+              "y": 109,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Przepisać TextCore na nowy system",
+                "en": "Przepisać TextCore na nowy system"
+              }
+            }
+          ]
+        },
+        {
+          "id": "it-1789435434656-3422",
+          "x": 506,
+          "y": 316,
+          "type": "note",
+          "w": 300,
+          "h": 80,
+          "color": "white",
+          "content": {
+            "es": "",
+            "en": ""
+          }
+        },
+        {
+          "id": "it-1789435509876-2498",
+          "x": 661,
+          "y": -192,
+          "type": "board",
+          "w": 300,
+          "h": 240,
+          "color": "white",
+          "canvasId": "b-1789435509876-3384",
+          "icon": "dashboard",
+          "content": {
+            "es": "Nuevo tablero",
+            "en": "New board"
+          }
+        }
+      ],
+      "connectors": [],
+      "pan": {
+        "x": 152,
+        "y": 272
+      },
+      "scale": 1
+    },
+    "b-1789435509876-3384": {
+      "title": {
+        "es": "Nuevo tablero",
+        "en": "New board"
+      },
+      "parent": "proj-1789434357375-6324",
+      "parentLabel": {
+        "es": "Latacko browser",
+        "en": "Latacko browser"
+      },
+      "items": [],
+      "connectors": [],
+      "pan": {
+        "x": 40,
+        "y": 20
+      },
+      "scale": 1
+    }
+  },
+  "templatesVersion": 2
+}

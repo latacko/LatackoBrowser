@@ -83,7 +83,7 @@ namespace MsdfAtlasGen
             Parallel.For(0, count, parallelOptions, (i) =>
             {
                 var glyph = glyphs[i];
-                string glyphName = glyph.GetCodepoint() != 0 ? char.ConvertFromUtf32((int)glyph.GetCodepoint()) : glyph.GetIndex().ToString();
+                // string glyphName = glyph.GetCodepoint() != 0 ? char.ConvertFromUtf32((int)glyph.GetCodepoint()) : glyph.GetIndex().ToString();
 
                 if (!glyph.IsWhitespace())
                 {
@@ -98,7 +98,7 @@ namespace MsdfAtlasGen
                 }
 
                 int current = System.Threading.Interlocked.Increment(ref completed);
-                progress?.Report(new GeneratorProgress((double)current / count, glyphName, current, count));
+                progress?.Report(new GeneratorProgress((double)current / count, glyph.GetCharacter()+"", current, count));
             });
         }
 

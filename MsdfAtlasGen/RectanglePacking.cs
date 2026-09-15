@@ -16,7 +16,7 @@ namespace MsdfAtlasGen
         /// Packs rectangles into an area of resolved size based on constraints.
         /// </summary>
         public static void PackRectangles<TSelector>(Rectangle[] rectangles, int spacing, out int width, out int height) where TSelector : ISizeSelector
-        {   
+        {
             long totalArea = 0;
             var rectanglesCopy = new Rectangle[rectangles.Length];
             for (int i = 0; i < rectangles.Length; ++i)
@@ -34,17 +34,17 @@ namespace MsdfAtlasGen
         {
             width = 0;
             height = 0;
-            
+
             int curW, curH;
             while (sizeSelector.GetDimensions(out curW, out curH))
             {
                 var packer = new RectanglePacker(curW + spacing, curH + spacing);
-                
+
                 if (packer.Pack(rectanglesCopy) == 0)
                 {
                     width = curW;
                     height = curH;
-                    
+
                     for (int i = 0; i < rectangles.Length; ++i)
                     {
                         rectangles[i].X = rectanglesCopy[i].X;
@@ -65,7 +65,7 @@ namespace MsdfAtlasGen
         /// </summary>
         public static int PackRectangles(Rectangle[] rectangles, int width, int height, int spacing)
         {
-             if (spacing != 0)
+            if (spacing != 0)
             {
                 for (int i = 0; i < rectangles.Length; ++i)
                 {
@@ -73,10 +73,10 @@ namespace MsdfAtlasGen
                     rectangles[i].H += spacing;
                 }
             }
-            
+
             var packer = new RectanglePacker(width + spacing, height + spacing);
             int result = packer.Pack(rectangles);
-            
+
             if (spacing != 0)
             {
                 for (int i = 0; i < rectangles.Length; ++i)

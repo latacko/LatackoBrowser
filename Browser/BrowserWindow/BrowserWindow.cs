@@ -190,7 +190,7 @@ public unsafe partial class BrowserWindow
         };
         submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;
 
-        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.graphicsQueue, 1, &submitInfo, fences[currentFrame]) != Result.Success)
+        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, fences[currentFrame]) != Result.Success)
         {
             throw new Exception("Failed to submit command buffer!");
         }
@@ -211,7 +211,7 @@ public unsafe partial class BrowserWindow
                 PImageIndices = &imageIndex
             };
 
-            _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.presentQueue, &presentInfo);
+            _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.PresentQueue, &presentInfo);
 
             if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
             {

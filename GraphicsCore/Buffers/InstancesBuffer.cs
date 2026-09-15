@@ -12,6 +12,9 @@ public class InstancesBuffer : IDisposable
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;
     uint lastInstanceId = 0;
+    bool increseBufferInTheNextFrame;
+    bool bufferHasIncresed = false;
+    readonly uint[] buffersSize = new uint[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly BufferData[] buffers = new BufferData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     VisualElement[] instances = [];
     readonly List<uint> freeSlots = [];
@@ -19,6 +22,7 @@ public class InstancesBuffer : IDisposable
 
     readonly int gpuDataSize;
 
+    //NOTE - Mam wrażenie że coś jest tu źle z typem. Powinno być coś innego zamiast InstancesManager a przynajmniej tak mi się wydaje.
     public InstancesBuffer()
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
@@ -89,16 +93,46 @@ public class InstancesBuffer : IDisposable
 
     public void RenderTick(uint frameInFlight)
     {
-        if (addInstanceQueue.Count == 0) return;
+        if (addInstanceQueue.Count == 0)
+        {
+            if (!bufferHasIncresed) return;
+
+            uint _maxSize = 0;
+            bool _isTheSame = false;
+            for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+            {
+                if (buffersSize[i] > _maxSize)
+                {
+                    _maxSize = buffersSize[i];
+                }
+                else
+                {
+                    _isTheSame = buffersSize[i] == _maxSize;
+                }
+            }
+            if (_isTheSame)
+            {
+                bufferHasIncresed = false;
+            }
+
+            if (buffersSize[frameInFlight] != _maxSize)
+            {
+                IncreseBuffer((int)frameInFlight, _maxSize);
+            }
+            return;
+        }
+
 
         #region Test if it is required to create new buffer with larger size
         uint _newSize = GetNewSize(lastInstanceId + (uint)addInstanceQueue.Count);
         if (_newSize != incresedTimes)
         {
+            buffersSize[frameInFlight] = _newSize;
             IncreseBuffer((int)frameInFlight, _newSize);
             var _oldInstances = instances;
             instances = new VisualElement[_newSize];
             Array.Copy(_oldInstances, instances, _oldInstances.Length);
+            bufferHasIncresed = true;
         }
         #endregion
 
