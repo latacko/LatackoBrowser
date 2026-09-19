@@ -20,7 +20,7 @@ public unsafe partial class BrowserWindow
     private const int WIDTH = 800;
     private const int HEIGHT = 800;
 
-    uint currentFrame = 0;
+    uint frameInFlight = 0;
 
     public Action OnStart;
 
@@ -119,12 +119,12 @@ public unsafe partial class BrowserWindow
     private void OnRender(double deltaTime)
     {
         // diagnosticStopwatch.Restart();
-        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in fences[currentFrame], Vk.True, ulong.MaxValue);
-        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in fences[currentFrame]);
+        CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in fences[frameInFlight], Vk.True, ulong.MaxValue);
+        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in fences[frameInFlight]);
 
 
         uint imageIndex;
-        var _result = swapchain.khrSwapChain!.AcquireNextImage(LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, imageAcquiredSemaphores[currentFrame], default, &imageIndex);
+        var _result = swapchain.khrSwapChain!.AcquireNextImage(LogicalDevice.device, swapchain.swapChain, ulong.MaxValue, imageAcquiredSemaphores[frameInFlight], default, &imageIndex);
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
@@ -135,21 +135,21 @@ public unsafe partial class BrowserWindow
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
 
-        // Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[currentFrame]);
+        // Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[frameInFlight]);
 
-        CreateVulkan.vk.ResetCommandBuffer(commandBuffers[currentFrame], 0);
+        CreateVulkan.vk.ResetCommandBuffer(commandBuffers[frameInFlight], 0);
 
 
 
-        // UpdateUniformBuffer(currentFrame);
-        // coreManager.OnRender(currentFrame);
+        // UpdateUniformBuffer(frameInFlight);
+        // coreManager.OnRender(frameInFlight);
         // StylesManager.ComputeStyles();
         var _imageData = textureRenderer.GetImage();
-        RecordCommandBuffer(commandBuffers[currentFrame], imageIndex, _imageData.image);
-        // StylesManager.SetFrameAsNotDirty(currentFrame);
+        RecordCommandBuffer(commandBuffers[frameInFlight], imageIndex, _imageData.image);
+        // StylesManager.SetFrameAsNotDirty(frameInFlight);
 
 
-        // UpdateUniformBufferPerspective(currentFrame);
+        // UpdateUniformBufferPerspective(frameInFlight);
 
         SubmitInfo2 submitInfo = new()
         {
@@ -162,7 +162,7 @@ public unsafe partial class BrowserWindow
             new()
             {
                 SType = StructureType.SemaphoreSubmitInfo,
-                Semaphore = imageAcquiredSemaphores[currentFrame],
+                Semaphore = imageAcquiredSemaphores[frameInFlight],
                 StageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
             },
             new()
@@ -178,7 +178,7 @@ public unsafe partial class BrowserWindow
 
         CommandBufferSubmitInfo _cbSubmitInfo = new()
         {
-            CommandBuffer = commandBuffers[currentFrame],
+            CommandBuffer = commandBuffers[frameInFlight],
         };
         submitInfo.PCommandBufferInfos = &_cbSubmitInfo;
 
@@ -186,18 +186,18 @@ public unsafe partial class BrowserWindow
 
         SemaphoreSubmitInfo _signalRenderComplete = new()
         {
-            Semaphore = renderCompleteSemaphores[currentFrame]
+            Semaphore = renderCompleteSemaphores[frameInFlight]
         };
         submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;
 
-        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, fences[currentFrame]) != Result.Success)
+        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, fences[frameInFlight]) != Result.Success)
         {
             throw new Exception("Failed to submit command buffer!");
         }
 
 
         fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
-        fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[currentFrame])
+        fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[frameInFlight])
         {
             PresentInfoKHR presentInfo = new()
             {
@@ -223,7 +223,7 @@ public unsafe partial class BrowserWindow
                 throw new Exception("failed to present swap chain image!");
             }
         }
-        currentFrame = (currentFrame + 1) % VulkanEngine.MAX_FRAMES_IN_FLIGHT;
+        frameInFlight = (frameInFlight + 1) % VulkanEngine.MAX_FRAMES_IN_FLIGHT;
     }
 
     Vector2D<int> GetFrameBufferSize()

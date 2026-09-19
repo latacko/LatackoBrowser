@@ -10,7 +10,7 @@ namespace AtlasGeneratorCore;
 
 public class FontAtlas : IDisposable
 {
-    internal uint id { get; private set; } = 0;
+    public uint Id { get; private set; } = 0;
     internal string name { get; private set; } = "";
     struct UploadRegion
     {
@@ -27,6 +27,7 @@ public class FontAtlas : IDisposable
         public byte[] pixels;
         public int index;
     }
+    
     #region CONSTS
     public const int GLYPHD_IN_LINE = 16;
     public const uint STAGING_BUFFER_GLYPH_COUNT = 10;
@@ -42,7 +43,6 @@ public class FontAtlas : IDisposable
     #endregion
 
     #region Glyph attributes
-
     double glyphScale;
     Msdfgen.Range glyphUnitRange;
     Msdfgen.Range glyphPxRange;
@@ -78,12 +78,12 @@ public class FontAtlas : IDisposable
 
     public readonly Queue<WaitingCharacter> WaitingCharacters = new();
 
-    internal CharactersBuffer charactersBuffer;
+    public CharactersBuffer charactersBuffer;
     IProgress<double>? progress = null;
 
     public FontAtlas(uint id, string name, Action<ImageView, uint> registerTextureCB, IProgress<double>? progress = null)
     {
-        this.id = id;
+        this.Id = id;
         this.name = name;
         this.progress = progress;
 
@@ -313,6 +313,13 @@ public class FontAtlas : IDisposable
     public void SetScale(double scale) { glyphScale = scale; }
 
 
+    #endregion
+    
+    #region Getters
+    public GlyphGeometry GetGlyph(char character)
+    {
+        return Glyphs[character];
+    }
     #endregion
     public unsafe void Dispose()
     {

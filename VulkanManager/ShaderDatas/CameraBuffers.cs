@@ -28,11 +28,11 @@ public unsafe class CameraBuffers
         }
     }
 
-    public void Update(uint currentFrame, Matrix4X4<float> proj)
+    public void Update(uint frameInFlight, Matrix4X4<float> proj)
     {
         var ubo = new UICameraUBO { Proj = proj };
 
-        new Span<UICameraUBO>(shaderDataBuffersForCamera[currentFrame].Mapped, 1)[0] = ubo;
+        new Span<UICameraUBO>(shaderDataBuffersForCamera[frameInFlight].Mapped, 1)[0] = ubo;
     }
 
     public void Dispose()

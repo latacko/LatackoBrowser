@@ -106,7 +106,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
 
     int lastFreeCount = 0;
     int lastFullCount = 0;
-    public void CopyToBuffer(uint currentFrame)
+    public void CopyToBuffer(uint frameInFlight)
     {
         if (lastFreeCount != freeBuffers.Count)
         {
@@ -115,7 +115,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
         }
         foreach (var item in freeBuffers)
         {
-            item.CopyToBuffer(currentFrame);
+            item.CopyToBuffer(frameInFlight);
         }
 
         if (lastFullCount != fullBuffers.Count)
@@ -125,7 +125,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
         }
         foreach (var item in fullBuffers)
         {
-            item.CopyToBuffer(currentFrame);
+            item.CopyToBuffer(frameInFlight);
         }
     }
 

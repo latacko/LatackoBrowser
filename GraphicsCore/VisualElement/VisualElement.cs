@@ -44,8 +44,9 @@ public abstract class VisualElement : IDisposable
     internal protected Vector3D<float> relativeTransformation;
     internal protected bool[] mySizeHasChangedThisFrame = new bool[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
-    public Vector2D<float> ParentSize;
     public VisualElement? Parent;
+
+    public ILayoutManager LayoutManager {get; protected set;}
 
     public readonly EventHelper Events;
 
@@ -68,7 +69,7 @@ public abstract class VisualElement : IDisposable
     {
         if (parent != null)
             Parent = parent;
-        OnParentSizeChanged(true);
+        LayoutManager.OnParentSizeChanged(true);
     }
 
     protected internal void AddFlag(RenderDirtyFlags flags)
@@ -84,40 +85,15 @@ public abstract class VisualElement : IDisposable
         renderDirty[frame] &= ~flags;
     }
 
-    protected internal abstract void UpdatePosition();
-
     public void ChangeInstanceId(uint newInstanceId)
     {
         AddFlag(RenderDirtyFlags.InstanceId);
         InstanceIndex = newInstanceId;
     }
 
-    #region Layout
-    protected internal virtual float GetLayoutLeft() => computedStyle.Pos.X;
-    protected internal virtual float GetLayoutTop() => computedStyle.Pos.Y;
-    protected internal abstract Vector2D<float> GetLayoutSize();
-
-    protected internal abstract void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width);
-    protected internal abstract void UpdateChildrenLayout();
-    public abstract Bounds GetBounds();
-    #endregion
-
     public abstract void AddChild(VisualElement runtimeModelData);
 
     public abstract CursorType GetCursorType();
-
-    protected internal virtual void OnParentSizeChanged(bool informChildren = false)
-    {
-        if (Parent != null)
-        {
-            ParentSize = Parent.GetLayoutSize();
-        }
-        else
-        {
-            ParentSize = new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
-        }
-        Console.WriteLine("Updating my parent size: " + ParentSize);
-    }
 
     public void TestToUpdateStyle(uint frame)
     {
@@ -126,7 +102,7 @@ public abstract class VisualElement : IDisposable
         var _prevSize = computedStyle.Size;
         if (Style.ShouldObjectUpdate[frame])
         {
-            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+            computedStyle = Style.ComputeStyles(false, true, LayoutManager.GetParentSize(), computedStyle.Size);
         }
 
         mySizeHasChangedThisFrame[frame] = _prevSize != computedStyle.Size;
@@ -134,10 +110,10 @@ public abstract class VisualElement : IDisposable
 
     public virtual void Compile()
     {
-        OnParentSizeChanged();
+        LayoutManager.OnParentSizeChanged();
 
         if (Style != null)
-            computedStyle = Style.ComputeStyles(false, true, ParentSize, computedStyle.Size);
+            computedStyle = Style.ComputeStyles(false, true, LayoutManager.GetParentSize(), computedStyle.Size);
     }
 
     public VisualElement SetEvents(Action<EventHelper> setEvents)
@@ -150,7 +126,7 @@ public abstract class VisualElement : IDisposable
     {
         Style = style;
         // StylesManager.AddInlineStyle(style);
-        computedStyle = style.ComputeStyles(true, false, ParentSize, computedStyle.Size);
+        computedStyle = style.ComputeStyles(true, false, LayoutManager.GetParentSize(), computedStyle.Size);
         return this;
     }
 

@@ -14,8 +14,8 @@ public class BrowserUI
     public Node TopBar;
     public Node Karta;
     public Node hellothere;
-    public RuntimeTextContainer hellothereText;
-    public RuntimeTextContainer TextTest;
+    public TextContainer hellothereText;
+    public TextContainer TextTest;
 
 
     public void Create()

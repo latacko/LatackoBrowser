@@ -12,6 +12,8 @@ public class ShaderCreator<TBaseShader> where TBaseShader: BaseShader, IShaderFa
     }
     protected InstancesManager CreateObjectsManager(Type gpuDataType)
     {
-        return new InstancesManager(gpuDataType);
+        if (!BaseShader.InstancesManagerByType.ContainsKey(gpuDataType))
+            BaseShader.InstancesManagerByType.Add(gpuDataType, new InstancesManager(gpuDataType));
+        return BaseShader.InstancesManagerByType[gpuDataType];
     }
 }

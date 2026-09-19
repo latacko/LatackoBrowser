@@ -1,6 +1,7 @@
 ﻿using GraphicsCore;
 using GraphicsCore.Styles;
 using Silk.NET.Vulkan;
+using TextCore.Text;
 using Units;
 using Vulkan;
 using VulkanManager.BufferManager;
@@ -16,8 +17,8 @@ public class TextManager : BufferManager
     internal DynamicBuffer<TextVertex> vertexBuffer;
     internal DynamicBuffer<ushort> indicesBuffer;
 
-    internal BufferInfo<TextContainerData>[] textContainerDataBuffer = new BufferInfo<TextContainerData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<ModelData>[] textModelDataBuffer = new BufferInfo<ModelData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextContainerGPUData>[] textContainerDataBuffer = new BufferInfo<TextContainerGPUData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal BufferInfo<TextLineGPUData>[] textModelDataBuffer = new BufferInfo<TextLineGPUData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     Dictionary<BucketSize, Queue<Slot>> freePools = new();
     uint vertexHead = 0;
     uint indexHead = 0;
@@ -25,7 +26,7 @@ public class TextManager : BufferManager
     public DescriptorAllocatorGrowable TextDescriptorAllocatorGrowable = new();
 
 
-    List<RuntimeText> activeTexts = new();
+    List<TextLine> activeTexts = new();
     public static uint LastCreatedIndex = 0;
 
     internal DescriptorSetLayout textDescriptorLayout;
@@ -40,10 +41,10 @@ public class TextManager : BufferManager
         Instance = this;
     }
 
-    internal static RuntimeText AddModelText(ReadOnlyMemory<char> text, int leftRange, int rightRange, RuntimeTextContainer parent)
+    internal static TextLine AddModelText(ReadOnlyMemory<char> text, int leftRange, int rightRange, TextContainer parent)
     {
         uint objectIndex = LastCreatedIndex++;
-        RuntimeText runtimeModelData = new(text, leftRange, rightRange, objectIndex, parent);
+        TextLine runtimeModelData = new(text, leftRange, rightRange, objectIndex, parent);
         if (parent != null)
         {
             parent.AddChild(runtimeModelData);
@@ -52,10 +53,10 @@ public class TextManager : BufferManager
         return runtimeModelData;
     }
 
-    public static RuntimeTextContainer AddText(string text, VisualElement parent)
+    public static TextContainer AddText(string text, VisualElement parent)
     {
         uint objectIndex = LastCreatedIndex++;
-        RuntimeTextContainer runtimeTextContainer = new(text, objectIndex, parent);
+        TextContainer runtimeTextContainer = new(text, objectIndex, parent);
         parent?.AddChild(runtimeTextContainer);
 
         VisualElement.ObjectsToCompile.Add(new()
@@ -217,7 +218,7 @@ public class TextManager : BufferManager
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);
     }
 
-    public void Update(RuntimeText text)
+    public void Update(TextLine text)
     {
         // Console.WriteLine("Vertex: ");
         vertexBuffer.Update(text.VertexSlotData);
@@ -225,35 +226,35 @@ public class TextManager : BufferManager
         indicesBuffer.Update(text.IndicesSlotData);
     }
 
-    public unsafe void Update(uint currentFrame, uint objectIndex, ModelData objectData)
+    public unsafe void Update(uint frameInFlight, uint objectIndex, TextLineGPUData objectData)
     {
-        ((ModelData*)textModelDataBuffer[currentFrame].Mapped)[objectIndex] = objectData;
+        ((TextLineGPUData*)textModelDataBuffer[frameInFlight].Mapped)[objectIndex] = objectData;
     }
 
-    public unsafe void Update(uint currentFrame, uint objectIndex, TextContainerData textContainerData)
+    public unsafe void Update(uint frameInFlight, uint objectIndex, TextContainerGPUData textContainerData)
     {
-        ((TextContainerData*)textContainerDataBuffer[currentFrame].Mapped)[objectIndex] = textContainerData;
+        ((TextContainerGPUData*)textContainerDataBuffer[frameInFlight].Mapped)[objectIndex] = textContainerData;
     }
 
-    public unsafe void CopyToBuffer(uint currentFrame)
+    public unsafe void CopyToBuffer(uint frameInFlight)
     {
         // Console.WriteLine("Vertex:");
-        vertexBuffer.CopyToBuffer(currentFrame);
+        vertexBuffer.CopyToBuffer(frameInFlight);
         // Console.WriteLine("Indices:");
-        indicesBuffer.CopyToBuffer(currentFrame);
+        indicesBuffer.CopyToBuffer(frameInFlight);
         // foreach (var text in activeTexts)
         // {
-        //     if (!text.dirty[currentFrame].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
+        //     if (!text.dirty[frameInFlight].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
 
         //     text.ModelData.Vertices.CopyTo(
-        //         new Span<TextVertex>(((TextVertex*)vertexBuffer[currentFrame].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
+        //         new Span<TextVertex>(((TextVertex*)vertexBuffer[frameInFlight].Mapped) + text.Slot.VertexOffset, (int)VertexsPerBucket(text.Slot.Bucket))
         //     );
 
         //     text.ModelData.Indices.CopyTo(
-        //         new Span<ushort>((ushort*)indicesBuffer[currentFrame].Mapped + text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
+        //         new Span<ushort>((ushort*)indicesBuffer[frameInFlight].Mapped + text.Slot.IndexOffset, (int)IndicesPerBucket(text.Slot.Bucket))
         //     );
 
-        //     text.RemoveFlag(RuntimeModelData.DirtyFlags.Model, currentFrame);
+        //     text.RemoveFlag(RuntimeModelData.DirtyFlags.Model, frameInFlight);
         // }
     }
 

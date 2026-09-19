@@ -39,7 +39,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     DirtyFlag dirty;
 
 
-    internal uint CurrentFrame { get; private set; } = 0;
+    internal uint FrameInFlight { get; private set; } = 0;
     VulkanEngine? vulkanEngine;
 
     public CameraBuffers cameraBuffers = new();
@@ -132,28 +132,26 @@ public class SiteRenderer : TextureRenderer, IDisposable
         vulkanEngine.Dispose();
     }
 
-    public override VulkanEngine GetVulkanEngine()=>vulkanEngine;
+    public override VulkanEngine GetVulkanEngine() => vulkanEngine;
 
-    public override uint GetId()=>UniqueId;
-    public override ulong GetCameraBufferDeviceAddress()=>cameraBuffers.shaderDataBuffersForCamera[CurrentFrame].DeviceAddress;
+    public override uint GetId() => UniqueId;
+    public override ulong GetCameraBufferDeviceAddress() => cameraBuffers.shaderDataBuffersForCamera[FrameInFlight].DeviceAddress;
 
     #endregion
 
     #region Rendering
     //TODO - Render to texture
-    public unsafe uint GetCommandBuffer()
+    public unsafe void GetCommandBuffer(uint? frameInFlight)
     {
-        UpdateCameraUBO(CurrentFrame);
+        if (frameInFlight.HasValue)
+            FrameInFlight = frameInFlight.Value;
+        UpdateCameraUBO(FrameInFlight);
 
-        // coreManager.OnRender(CurrentFrame);
+        // coreManager.OnRender(FrameInFlight);
         stylesManager.ComputeStyles();
 
-        RecordCommandBuffer(commandBuffers[CurrentFrame], CurrentFrame);
-        stylesManager.SetFrameAsNotDirty(CurrentFrame);
-
-        CurrentFrame = (CurrentFrame + 1) % Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT;
-
-        return CurrentFrame;
+        RecordCommandBuffer(commandBuffers[FrameInFlight], FrameInFlight);
+        stylesManager.SetFrameAsNotDirty(FrameInFlight);
 
         // SubmitInfo submitInfo = new()
         // {
@@ -162,9 +160,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         // PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
 
-        // fixed (Semaphore* waitSemaphoresPtr = &vulkanEngine.imageAcquiredSemaphores[CurrentFrame])
-        // fixed (CommandBuffer* commandBufferPtr = &vulkanEngine.commandBuffers[CurrentFrame])
-        // fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanEngine.renderCompleteSemaphores[CurrentFrame])
+        // fixed (Semaphore* waitSemaphoresPtr = &vulkanEngine.imageAcquiredSemaphores[FrameInFlight])
+        // fixed (CommandBuffer* commandBufferPtr = &vulkanEngine.commandBuffers[FrameInFlight])
+        // fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanEngine.renderCompleteSemaphores[FrameInFlight])
         // {
         //     submitInfo.WaitSemaphoreCount = 1;
         //     submitInfo.PWaitSemaphores = waitSemaphoresPtr;
@@ -177,7 +175,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         //     submitInfo.SignalSemaphoreCount = 1;
         //     submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
 
-        //     if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanEngine.fences[CurrentFrame]) != Result.Success)
+        //     if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanEngine.fences[FrameInFlight]) != Result.Success)
         //     {
         //         throw new Exception("Failed to submit command buffer!");
         //     }
@@ -211,7 +209,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         // }
         // diagnosticStopwatch.Stop();
-        // if (CurrentFrame == 0)
+        // if (FrameInFlight == 0)
         //     renderMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
         // else
         //     render2Microseconds = diagnosticStopwatch.Elapsed.Microseconds;
@@ -240,26 +238,28 @@ public class SiteRenderer : TextureRenderer, IDisposable
     }
 
     //TODO - Rendering do zrobienia coding vibe o 2:45
-    public unsafe uint Render()
+    public unsafe void Render(uint frameInFlight)
     {
+        FrameInFlight = frameInFlight;
         SubmitInfo2 submitInfo = new()
         {
             SType = StructureType.SubmitInfo2,
             WaitSemaphoreInfoCount = 0,
         };
 
-        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[CurrentFrame], CommandPoolResetFlags.None);
+        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[FrameInFlight], CommandPoolResetFlags.None);
 
-        uint _currentFrame = GetCommandBuffer();
-        subSiteCommandBuffers![0].CommandBuffer = commandBuffers[_currentFrame];
+        GetCommandBuffer(null);
+        subSiteCommandBuffers![0].CommandBuffer = commandBuffers[FrameInFlight];
 
         if (subSiteRenderers != null)
         {
             int i = 1;
             foreach (var siteRenderer in subSiteRenderers)
             {
-                // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.CurrentFrame];
-                subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[siteRenderer.GetCommandBuffer()];
+                // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.FrameInFlight];
+                siteRenderer.GetCommandBuffer(FrameInFlight);
+                subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[FrameInFlight];
 
                 i++;
             }
@@ -273,7 +273,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         SemaphoreSubmitInfo _signalSemaphoreInfo = new()
         {
             SType = StructureType.SemaphoreSubmitInfo,
-            Semaphore = vulkanEngine.renderCompleteSemaphores[CurrentFrame],
+            Semaphore = vulkanEngine.renderCompleteSemaphores[FrameInFlight],
         };
 
         submitInfo.SignalSemaphoreInfoCount = 1;
@@ -283,8 +283,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
         {
             throw new Exception("Failed to submit command buffer!");
         }
-
-        return _currentFrame;
     }
 
     unsafe void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex)
@@ -419,10 +417,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         // foreach (var shader in loadedShaders)
         // {
-        //     shader.Render(commandBuffer, CurrentFrame, wireFrameRendering);
+        //     shader.Render(commandBuffer, FrameInFlight, wireFrameRendering);
         // }
 
-        // coreManager.RenderShader(commandBuffer, CurrentFrame, wireFrameRendering);
+        // coreManager.RenderShader(commandBuffer, FrameInFlight, wireFrameRendering);
 
         // if (swapchain.recreatedSwapChain)
         //     swapchain.recreatedSwapChain = false;
@@ -487,10 +485,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     }
 
-    public override (Image, Semaphore) GetImage()
+    public override (Image, Semaphore) GetImage(uint frameInFlight)
     {
-        uint _currentFrame = Render();
-        return (imagesData[_currentFrame].image, vulkanEngine.renderCompleteSemaphores[_currentFrame]);
+        Render(frameInFlight);
+        return (imagesData[frameInFlight].image, vulkanEngine.renderCompleteSemaphores[frameInFlight]);
     }
 
     #endregion

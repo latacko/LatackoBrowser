@@ -23,8 +23,7 @@ public struct PushConstants
     public ModelData *modelsData;
     public CharacterData *characterDataPtr;
     public uint TextIndex;
-    public uint ShowMSDF;
-    public uint ShowMipLevel;
+    public uint dataMask;
 };
 
 [push_constant]
@@ -95,7 +94,7 @@ FragmentOutput FragmentMain(VertexOutput input)
     //     return output;
     // }
 
-    bool isGapQuad = (input.char &FLAG_FLIP_IF_END_CHAR) != 0;
+    bool isGapQuad = (input.char & FLAG_FLIP_IF_END_CHAR) != 0;
 
     if (isGapQuad)
     {
@@ -108,7 +107,8 @@ FragmentOutput FragmentMain(VertexOutput input)
 
     float2 scaledUV = input.UV;
 
-    if (pc.ShowMipLevel == 1)
+    bool showLOD = (pc.dataMask & 1 << 1) != 0;
+    if (showLOD)
     {
         float mipLevel = textures[input.fontIndex].CalculateLevelOfDetail(sampler, scaledUV);
 
@@ -169,7 +169,8 @@ FragmentOutput FragmentMain(VertexOutput input)
 
     float opacity = clamp(screenPxDistance + 0.5f, 0.0f, 1.0f);
 
-    if (pc.ShowMSDF == 1)
+    bool showMSDF = (pc.dataMask & 1 << 0) != 0;
+    if (showMSDF == 1)
         output.color = float4(msd, 1);
     else
         output.color = float4(input.color.xyz, opacity);

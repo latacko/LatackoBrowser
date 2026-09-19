@@ -16,10 +16,11 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
     public Dictionary<uint, Dictionary<uint, List<Node>>> elements = [];
     // protected override string moduleShaderPath => "shaders/Compiled/uiShader.spv";
     
+    InstancesManager instanceManager;
 
-
-    public NodeShader(string shaderPath, InstancesManager objectsManager):base(shaderPath, objectsManager)
+    public NodeShader(string shaderPath, InstancesManager instanceManager):base(shaderPath)
     {
+        this.instanceManager = instanceManager;
     }
 
     public static NodeShader Create(string shaderPath, Func<Type, InstancesManager> objectsManagerFunc)
@@ -89,7 +90,7 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
     };
     #endregion
 
-    public override void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    public override void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
@@ -104,25 +105,26 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
 
         // Parallel.ForEach(elements, item =>
         // {
-        //     item.TestToUpdateStyle(currentFrame);
+        //     item.TestToUpdateStyle(frameInFlight);
         // });
 
-        base.Render(textureRenderer, commandBuffer, currentFrame, wireFrameRendering);
+        base.Render(textureRenderer, commandBuffer, frameInFlight, wireFrameRendering);
     }
 
-    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
+    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint frameInFlight)
     {
         foreach (var (modelId, elements) in elements[siteId])
         {
             var _siteModelKey = InstancesManager.MakeKey(siteId, modelId);
+            instanceManager!.RenderTick(_siteModelKey, frameInFlight);
+            
             foreach (var element in elements)
             {
-                element.TryWriteObjectData(objectsManager!.GetDestinationSpan(_siteModelKey, currentFrame, element.InstanceIndex, element.ObjectDataSize), currentFrame);
+                element.TryWriteObjectData(instanceManager!.GetDestinationSpan(_siteModelKey, frameInFlight, element.InstanceIndex, element.ObjectDataSize), frameInFlight);
             }
             
-            objectsManager!.RenderTick(_siteModelKey, currentFrame);
 
-            ulong _modelBuffer = objectsManager!.GetBufferDeviceAddress(_siteModelKey, modelId);
+            ulong _modelBuffer = instanceManager!.GetBufferDeviceAddress(_siteModelKey, frameInFlight);
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, sizeof(ulong), sizeof(ulong) * 1, &_modelBuffer);
 
             var _meshData = AssetManager.GetModel(modelId);

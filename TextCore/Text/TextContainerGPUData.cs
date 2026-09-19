@@ -2,10 +2,10 @@ using System;
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 
-namespace TextCore;
+namespace TextCore.Text;
 
 [StructLayout(LayoutKind.Sequential)]
-public record struct TextContainerData
+public record struct TextContainerGPUData
 {
     public Vector4D<float> Color; //16
     

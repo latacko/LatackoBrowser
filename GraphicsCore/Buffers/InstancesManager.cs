@@ -28,13 +28,13 @@ public unsafe class InstancesManager: IDisposable
 
         foreach (var modelId in _idsOfModels)
         {
-            nodesBuffers[MakeKey(siteId, modelId)] = new();
+            nodesBuffers[MakeKey(siteId, modelId)] = new(gpuDataType);
         }
     }
 
-    public Span<byte> GetDestinationSpan(ulong siteModelKey, uint currentFrame, uint objectIndex, int structSize)
+    public Span<byte> GetDestinationSpan(ulong siteModelKey, uint frameInFlight, uint objectIndex, int structSize)
     {
-        byte* basePtr = (byte*)nodesBuffers[siteModelKey].GetBuffer(currentFrame).Mapped;
+        byte* basePtr = (byte*)nodesBuffers[siteModelKey].GetBuffer(frameInFlight).Mapped;
         return new Span<byte>(basePtr + objectIndex * structSize, structSize);
     }
 
@@ -43,7 +43,7 @@ public unsafe class InstancesManager: IDisposable
         nodesBuffers[siteModelKey].RenderTick(frameInFlight);
     }
 
-    public ulong GetBufferDeviceAddress(ulong siteModelKey, uint currentFrame) => nodesBuffers[siteModelKey].GetBuffer(currentFrame).DeviceAddress;
+    public ulong GetBufferDeviceAddress(ulong siteModelKey, uint frameInFlight) => nodesBuffers[siteModelKey].GetBuffer(frameInFlight).DeviceAddress;
 
     public void Dispose()
     {

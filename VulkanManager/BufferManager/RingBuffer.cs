@@ -113,20 +113,20 @@ public class RingBuffer<BufferData> : IDisposable where BufferData : unmanaged
         return true;
     }
 
-    public unsafe void CopyToBuffer(uint currentFrame)
+    public unsafe void CopyToBuffer(uint frameInFlight)
     {
         foreach (var slot in slots)
         {
-            if (!slot.IsDirty(currentFrame)) continue;
+            if (!slot.IsDirty(frameInFlight)) continue;
             // Console.WriteLine("Copy to buffer with multiplier of: " + bucketSizeMultiplier + " bucket size: " + ((int)slot.GetSlot().Bucket*bucketSizeMultiplier) + " vertexes: " + slot.GetDataCount() + " offset: " + slot.GetSlot().Offset + " handle: " + buffersInfo[0].Buffer.Handle);
             
             ReadOnlySpan<BufferData> sourceSpan = slot.GetDatas().AsSpan(0, (int)slot.GetDataCount());
 
             sourceSpan.CopyTo(
-                new Span<BufferData>(((BufferData*)buffersInfo[currentFrame].Mapped) + slot.GetSlot().Offset, (int)slot.GetSlot().Bucket * (int)bucketSizeMultiplier)
+                new Span<BufferData>(((BufferData*)buffersInfo[frameInFlight].Mapped) + slot.GetSlot().Offset, (int)slot.GetSlot().Bucket * (int)bucketSizeMultiplier)
             );
 
-            slot.RemoveDirty(currentFrame);
+            slot.RemoveDirty(frameInFlight);
         }
     }
 

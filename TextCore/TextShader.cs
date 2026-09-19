@@ -1,18 +1,36 @@
 using System.Drawing;
 using GraphicsCore;
+using GraphicsCore.Buffers;
+using GraphicsCore.Shaders;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
+using TextCore.Text;
 using Vulkan;
+using VulkanManager;
 
 namespace TextCore;
 
-public unsafe class TextShader : BaseShader
+public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
 {
-    public Dictionary<uint, List<RuntimeTextContainer>> elements = new();
-    protected override string moduleShaderPath => "shaders/Compiled/textShader.spv";
+    public Dictionary<uint, List<TextContainer>> elements = new();
 
     public static bool ShowMSDF;
     public static bool ShowLOD;
+
+    InstancesManager textContainerManager;
+    InstancesManager textLineManager;
+
+    public TextShader(string shaderPath, InstancesManager textContainerManager, InstancesManager textLineManager) : base(shaderPath)
+    {
+        this.textContainerManager = textContainerManager;
+        this.textLineManager = textLineManager;
+    }
+
+    public static TextShader Create(string shaderPath, Func<Type, InstancesManager> objectsManagerFunc)
+    {
+        return new TextShader(shaderPath, objectsManagerFunc.Invoke(typeof(TextContainerGPUData)), objectsManagerFunc.Invoke(typeof(TextLineGPUData)));
+    }
+
     public override void Init()
     {
         base.Init();
@@ -63,7 +81,7 @@ public unsafe class TextShader : BaseShader
         new()
         {
             StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-            Size       = sizeof(ulong)*4 + sizeof(uint) * 3  // camera ubo & text data & objects ubo
+            Size       = sizeof(ulong)*4 + sizeof(uint) * 2 // camera ubo & text data & objects ubo
         },
     ];
 
@@ -76,94 +94,83 @@ public unsafe class TextShader : BaseShader
 
     protected internal override VertexInputBindingDescription GetBindingDescription()
     {
-        return new TextVertex().GetBindingDescription();
+        return TextVertex.GetBindingDescription();
     }
 
     protected internal override VertexInputAttributeDescription[] GetAttributeDescriptions()
     {
-        return new TextVertex().GetAttributeDescriptions();
+        return TextVertex.GetAttributeDescriptions();
     }
 
 
-    public override void Render(uint siteId, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    public override void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
         CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
 
-        ulong vOffset = 0;
-        // CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref TextManager.Instance.vertexBuffer[currentFrame].Buffer, ref vOffset);
-        // CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, TextManager.Instance.indicesBuffer[currentFrame].Buffer, 0, IndexType.Uint16);
-
         ulong* addresses = stackalloc ulong[3]
         {
-            VulkanEngine.Instance.cameraBuffers.shaderDataBuffersForCamera[currentFrame].DeviceAddress,
-            TextManager.Instance.textContainerDataBuffer[currentFrame].DeviceAddress,
-            TextManager.Instance.textModelDataBuffer[currentFrame].DeviceAddress,
+            textureRenderer.GetCameraBufferDeviceAddress(),
+            textContainerManager.GetBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
+            textLineManager.GetBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
 
         // Parallel.ForEach(elements, item =>
         // {
-        //     item.TestToUpdateStyle(currentFrame);
+        //     item.TestToUpdateStyle(frameInFlight);
         // });
 
-        RenderElements(siteId, commandBuffer, currentFrame);
+        base.Render(textureRenderer, commandBuffer, frameInFlight, wireFrameRendering);
     }
 
-    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame)
+    protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint frameInFlight)
     {
         Silk.NET.Vulkan.Buffer _lastVertexBuffer = default;
         Silk.NET.Vulkan.Buffer _lastIndexBuffer = default;
-        ulong _lastFontAtlasAddress = 0;
         ulong vOffset = 0;
 
-        uint _shouldShowMSDF = ShowMSDF ? 1u : 0;
-        uint _shouldShowLOD = ShowLOD ? 1u : 0;
+        uint _dataMask = 0;
 
-        foreach (var element in elements[siteId])
+        _dataMask |= ShowMSDF ? 1 << 0 : 0u;
+        _dataMask |= ShowLOD ? 1 << 1 : 0u;
+
+        foreach (var textContainer in elements[siteId])
         {
-            if (element.TryGetObjectData(out var textData, currentFrame))
+            var _siteModelKey = InstancesManager.MakeKey(siteId, textContainer.ModelId);
+
+            textContainerManager.RenderTick(_siteModelKey, frameInFlight);
+
+            textContainer.TryWriteObjectData(textContainerManager.GetDestinationSpan(_siteModelKey, frameInFlight, textContainer.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
+
+            ulong _characterBufferDeviceAddress = textContainer.fontAtlas.charactersBuffer.GetBuffer(frameInFlight).DeviceAddress;
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), &_characterBufferDeviceAddress);
+
+            uint _instanceIndex = textContainer.InstanceIndex;
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), &_instanceIndex);
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _dataMask);
+
+            foreach (var textLine in textContainer.runtimeTexts)
             {
-                TextManager.Instance.Update(currentFrame, element.InstanceIndex, textData);
-            }
+                var _siteModelKeyTextLine = InstancesManager.MakeKey(siteId, textLine.ModelId);
+                textLine.TryWriteObjectData(textLineManager.GetDestinationSpan(_siteModelKeyTextLine, frameInFlight, textLine.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
+                
+                var _vertexBuffer = textLine.VertexSlotData.GetRingBuffer().buffersInfo[frameInFlight].Buffer;
+                var _indexBuffer = textLine.IndicesSlotData.GetRingBuffer().buffersInfo[frameInFlight].Buffer;
 
-            fixed (uint* objectIndexPtr = &element.InstanceIndex)
-                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), objectIndexPtr);
-
-            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _shouldShowMSDF);
-            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint) * 2, sizeof(uint), ref ShowLOD);
-
-            fixed (ulong* deviceAddressPtr = &element.fontAtlas.charactersBuffer.DeviceAddress)
-                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), deviceAddressPtr);
-
-            lock (element.runtimeTexts)
-            {
-                foreach (var runtimeText in element.runtimeTexts)
+                if (_lastVertexBuffer.Handle != _vertexBuffer.Handle)
                 {
-
-                    if (runtimeText.TryGetObjectData(out var modelData, currentFrame))
-                    {
-                        TextManager.Instance.Update(currentFrame, runtimeText.InstanceIndex, modelData);
-                        // Console.WriteLine($"charactersBiffer.DeviceAddress = {element.fontAtlas.charactersBuffer.DeviceAddress}");
-                    }
-
-                    var _vertexBuffer = runtimeText.VertexSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer;
-                    var _indexBuffer = runtimeText.IndicesSlotData.GetRingBuffer().buffersInfo[currentFrame].Buffer;
-
-                    if (_lastVertexBuffer.Handle != _vertexBuffer.Handle)
-                    {
-                        _lastVertexBuffer = _vertexBuffer;
-                        CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref _vertexBuffer, ref vOffset);
-                    }
-
-                    if (_lastIndexBuffer.Handle != _indexBuffer.Handle)
-                    {
-                        _lastIndexBuffer = _indexBuffer;
-                        CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, IndexType.Uint16);
-                    }
-                    CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)runtimeText.IndicesSlotData.GetDataCount(), 1, runtimeText.IndicesSlotData.GetSlot().Offset, (int)runtimeText.VertexSlotData.GetSlot().Offset, runtimeText.InstanceIndex);
+                    _lastVertexBuffer = _vertexBuffer;
+                    CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref _vertexBuffer, ref vOffset);
                 }
+
+                if (_lastIndexBuffer.Handle != _indexBuffer.Handle)
+                {
+                    _lastIndexBuffer = _indexBuffer;
+                    CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, _indexBuffer, 0, IndexType.Uint16);
+                }
+                CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)textLine.IndicesSlotData.GetDataCount(), 1, textLine.IndicesSlotData.GetSlot().Offset, (int)textLine.VertexSlotData.GetSlot().Offset, textLine.InstanceIndex);
             }
         }
     }
@@ -173,14 +180,17 @@ public unsafe class TextShader : BaseShader
     /// </summary>
     /// <param name="siteId"></param>
     /// <param name="runtimeModelData"></param>
-    public override void AddElement(uint siteId, VisualElement runtimeModelData)
+    public override void AddElement(TextureRenderer textureRenderer, VisualElement visualElement)
     {
-        elements[siteId].Add(runtimeModelData as RuntimeTextContainer);
+        if (visualElement is null) throw new ArgumentException("visual element must be set");
+        if (visualElement is not TextContainer textContainer) throw new ArgumentException("Node shader only allows Node class and not " + visualElement.GetType());
+
+        elements[textureRenderer.GetId()].Add(textContainer);
     }
 
-    public override void AddSite(uint siteId)
+    public override void AddSite(TextureRenderer textureRenderer)
     {
-        elements.Add(siteId, []);
+        elements.Add(textureRenderer.GetId(), []);
     }
 
     public override void Dispose()

@@ -57,9 +57,9 @@ public class FontAtlasesManager: IDisposable
     public ulong GetNextDoneSignalValue() => nextAtlasDoneSignalValue;
     public ulong GetCurrentDoneSignalValue() => currentAtlasDoneSignalValue;
 
-    public static void ResetCommandPool(uint CurrentFrame)
+    public static void ResetCommandPool(uint FrameInFlight)
     {
-        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, Instance!.CommandPools[CurrentFrame], CommandPoolResetFlags.None);
+        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, Instance!.CommandPools[FrameInFlight], CommandPoolResetFlags.None);
     }
 
     public static void RegisterCommandBuffer(CommandBuffer commandBuffer)

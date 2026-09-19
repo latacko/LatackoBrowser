@@ -1,4 +1,6 @@
 using System;
+using System.Runtime.CompilerServices;
+using AtlasGeneratorCore;
 using GraphicsCore;
 using GraphicsCore;
 using Silk.NET.Maths;
@@ -7,9 +9,9 @@ using Units;
 using Vulkan;
 using VulkanManager.BufferManager;
 
-namespace TextCore;
+namespace TextCore.Text;
 
-public class RuntimeText : VisualElement
+public class TextLine : VisualElement
 {
     public VulkanManager.BufferManager.Slot Slot;
     public SlotData<TextVertex> VertexSlotData = new();
@@ -26,29 +28,31 @@ public class RuntimeText : VisualElement
 
     public int TextLength => rightRange - leftRange;
 
-    protected internal override int ObjectDataSize  => 0;
+    protected internal override int ObjectDataSize => Unsafe.SizeOf<TextLineGPUData>();
 
     public float Left;
     public float Top;
 
 
-    float widthWithoutScale;
+    internal float widthWithoutScale;
 
     Bounds bounds = new();
 
-    RuntimeTextContainer textContainer;
+    internal TextContainer textContainer;
 
 
-    public RuntimeText(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint objectIndex, VisualElement parent) : base(new([], []), objectIndex, null, parent)
+    public TextLine(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint modelId, uint objectIndex, VisualElement parent) : base(modelId, objectIndex, null, parent)
     {
         Text = text;
+        this.LayoutManager = new TextLineLayoutManager();
+
         this.leftRange = leftRange;
         this.rightRange = rightRange;
 
-        if (parent is not RuntimeTextContainer)
+        if (parent is not TextContainer)
             throw new Exception("Runtime text can be only a child of runtime text container!");
 
-        textContainer = (RuntimeTextContainer)parent;
+        textContainer = (TextContainer)parent;
         GenerateMesh();
     }
 
@@ -77,7 +81,7 @@ public class RuntimeText : VisualElement
 
         for (int i = 0; i < textLength; i++)
         {
-            GlyphData g = glyphs[text[i]];
+            MsdfAtlasGen.GlyphGeometry g = glyphs[text[i]];
 
             // 1. Odwzorowanie dodawania szerokości właściwej znaku (jeśli istnieje)
             float glyphWidth = g.Width;
@@ -119,7 +123,7 @@ public class RuntimeText : VisualElement
 
         ReadOnlySpan<char> _text = Text.Span;
 
-        GlyphData _fcharGlyphData = textContainer.fontAtlas.Glyphs[_text[leftRange]];
+        var _fcharGlyphData = textContainer.fontAtlas.GetGlyph(_text[leftRange]);
         _vertices[0] = new TextVertex(new(0, 1, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMax.Y), _text[leftRange]);
         _vertices[1] = new TextVertex(new(0, 0, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMin.Y), _text[leftRange]);
 
@@ -128,7 +132,7 @@ public class RuntimeText : VisualElement
 
         for (int i = leftRange; i < rightRange; i++)
         {
-            GlyphData _glyphData = textContainer.fontAtlas.Glyphs[_text[i]];
+            var _glyphData = textContainer.fontAtlas.GetGlyph(_text[i]);
 
             float _width = _glyphData.Width;
             if (_width != 0)
@@ -141,9 +145,9 @@ public class RuntimeText : VisualElement
             if (i + 1 == rightRange)
                 break;
 
-            GlyphData _nextCharGlyphData = textContainer.fontAtlas.Glyphs[_text[i + 1]];
+            var _nextCharGlyphData = textContainer.fontAtlas.GetGlyph(_text[i + 1]);
 
-            _width = _glyphData.Advance - _glyphData.Width - _glyphData.BearingX + textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX;
+            _width = _glyphData.GetAdvance() - _glyphData.Width - _glyphData.BearingX + textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX;
 
             if (_width != 0)
             {
@@ -202,12 +206,7 @@ public class RuntimeText : VisualElement
         i++;
     }
 
-    protected internal override Vector2D<float> GetLayoutSize()
-    {
-        return new Vector2D<float>(widthWithoutScale * textContainer.computedStyle.FontSize / 2, textContainer.fontAtlas.height * textContainer.computedStyle.FontSize);
-    }
-
-    public RuntimeText SetPosition(float left, float top)
+    public TextLine SetPosition(float left, float top)
     {
         Left = left;
         Top = top;
@@ -219,12 +218,15 @@ public class RuntimeText : VisualElement
         throw new System.Exception("You can't add children to a text");
     }
 
-    public override Bounds GetBounds() => bounds;
-
     public override CursorType GetCursorType() => Style.FontProperties.Cursor;
 
+    protected internal override bool TryWriteObjectData(Span<byte> destination, uint frame)
+    {
+        return TryGetObjectData(out var data, frame) && WriteStruct(data, destination);
+    }
+
     //FIXME - the text is diffrent between buffers when resizing
-    public override bool TryGetObjectData(out ModelData data, uint frame)
+    public bool TryGetObjectData(out TextLineGPUData data, uint frame)
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
@@ -262,7 +264,7 @@ public class RuntimeText : VisualElement
             RemoveFlag(RenderDirtyFlags.Matrix, frame);
         }
 
-        data = new ModelData
+        data = new TextLineGPUData
         {
             Model = cachedModel,
         };
@@ -276,46 +278,4 @@ public class RuntimeText : VisualElement
 
         return true;
     }
-
-    protected internal override float GetLayoutLeft() => 0;
-    protected internal override float GetLayoutTop() => 0;
-
-
-    protected internal override void UpdatePosition()
-    {
-        AddFlag(RenderDirtyFlags.Matrix);
-        return;
-    }
-
-
-    protected internal override void UpdateChildrenLayout()
-    {
-        throw new Exception("You shoudn't update children layout for this object.");
-    }
-
-    protected internal override void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> sizeOfLine, ref float width)
-    {
-        throw new System.Exception("This funtion shoudn't be executed on runtime text!");
-    }
-
-    protected internal override bool TryWriteObjectData(Span<byte> destination, uint frame)
-    {
-        throw new NotImplementedException();
-    }
-}
-
-
-public record struct Slot(
-    uint VertexOffset,
-    uint IndexOffset,
-    BucketSize Bucket
-);
-
-public enum BucketSize : uint
-{
-    Tiny = 16,
-    Small = 32,
-    Medium = 64,
-    Large = 128,
-    Huge = 256,
 }

@@ -12,9 +12,9 @@ public interface ISlotInformation<BufferData> where BufferData : unmanaged
 
     public BufferData[] GetDatas();
 
-    public bool IsDirty(uint currentFrame);
+    public bool IsDirty(uint frameInFlight);
     public void SetDirty();
-    public void RemoveDirty(uint currentFrame);
+    public void RemoveDirty(uint frameInFlight);
 
     public RingBuffer<BufferData> GetRingBuffer();
     public void SetRingBuffer(RingBuffer<BufferData> ringBuffer);

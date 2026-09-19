@@ -46,15 +46,15 @@ public class CoreManager : IDisposable
         }
     }
 
-    public void OnRender(uint currentFrame)
+    public void OnRender(uint frameInFlight)
     {
-        fontManager.Tick(currentFrame);
-        textManager.CopyToBuffer(currentFrame);
+        fontManager.Tick(frameInFlight);
+        textManager.CopyToBuffer(frameInFlight);
     }
 
-    // public void RenderShader(CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    // public void RenderShader(CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)
     // {
-    //     TextManager.TextShader.Render(commandBuffer, currentFrame, wireFrameRendering);
+    //     TextManager.TextShader.Render(commandBuffer, frameInFlight, wireFrameRendering);
     // }
 
     public void Dispose()

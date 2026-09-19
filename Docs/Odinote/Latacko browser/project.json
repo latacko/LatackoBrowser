@@ -4,11 +4,12 @@
       "kind": "canvas",
       "projectId": "proj-1789434357375-6324",
       "trail": [
-        "proj-1789434357375-6324"
+        "proj-1789434357375-6324",
+        "b-1789777727907-5096"
       ]
     },
     "lang": "en",
-    "theme": "light",
+    "theme": "dark",
     "templatesVersion": 2
   },
   "project": {
@@ -23,7 +24,7 @@
       "es": "ahora",
       "en": "just now"
     },
-    "items": 3
+    "items": 5
   },
   "canvases": {
     "proj-1789434357375-6324": {
@@ -34,11 +35,11 @@
       "items": [
         {
           "id": "it-1789434372292-7803",
-          "x": 565,
-          "y": 110,
+          "x": 555,
+          "y": -6,
           "type": "column",
           "w": 320,
-          "h": 140,
+          "h": 227,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -55,65 +56,181 @@
               "h": 80,
               "color": "white",
               "content": {
-                "es": "Przepisać TextCore na nowy system",
-                "en": "Przepisać TextCore na nowy system"
+                "es": "<a class=\"odi-link\" data-odi-node=\"it-1789777727907-181\" data-odi-canvas=\"proj-1789434357375-6324\">Przepisać TextCore na nowy system</a><a class=\"odi-link\" data-odi-node=\"it-1789777727907-181\" data-odi-canvas=\"proj-1789434357375-6324\"></a>",
+                "en": "<a class=\"odi-link\" data-odi-node=\"it-1789777727907-181\" data-odi-canvas=\"proj-1789434357375-6324\">Przepisać TextCore na nowy system</a><a class=\"odi-link\" data-odi-node=\"it-1789777727907-181\" data-odi-canvas=\"proj-1789434357375-6324\"></a>"
+              },
+              "manualH": false,
+              "reactions": {}
+            },
+            {
+              "id": "it-1789778257552-4308",
+              "x": 565,
+              "y": 95,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "<a class=\"odi-link\" data-odi-node=\"it-1789777826362-5985\" data-odi-canvas=\"b-1789777727907-5096\">Zamienić InstanceManager na interfejs</a>",
+                "en": "<a class=\"odi-link\" data-odi-node=\"it-1789777826362-5985\" data-odi-canvas=\"b-1789777727907-5096\">Zamienić InstanceManager na interfejs</a>"
               }
             }
           ]
         },
         {
-          "id": "it-1789435434656-3422",
-          "x": 506,
-          "y": 316,
-          "type": "note",
-          "w": 300,
-          "h": 80,
-          "color": "white",
-          "content": {
-            "es": "",
-            "en": ""
-          }
-        },
-        {
-          "id": "it-1789435509876-2498",
-          "x": 661,
-          "y": -192,
+          "id": "it-1789777727907-181",
+          "x": 678,
+          "y": 333,
           "type": "board",
           "w": 300,
           "h": 240,
           "color": "white",
-          "canvasId": "b-1789435509876-3384",
+          "canvasId": "b-1789777727907-5096",
           "icon": "dashboard",
           "content": {
-            "es": "Nuevo tablero",
-            "en": "New board"
+            "es": "Przepiswywanie textCore",
+            "en": "Przepiswywanie textCore"
           }
         }
       ],
       "connectors": [],
       "pan": {
-        "x": 152,
-        "y": 272
+        "x": -334,
+        "y": 28
       },
       "scale": 1
     },
-    "b-1789435509876-3384": {
+    "b-1789777727907-5096": {
       "title": {
-        "es": "Nuevo tablero",
-        "en": "New board"
+        "es": "Przepiswywanie textCore",
+        "en": "Przepiswywanie textCore"
       },
       "parent": "proj-1789434357375-6324",
       "parentLabel": {
         "es": "Latacko browser",
         "en": "Latacko browser"
       },
-      "items": [],
+      "items": [
+        {
+          "id": "it-1789777826362-5985",
+          "x": 263,
+          "y": -6,
+          "type": "column",
+          "w": 326,
+          "h": 314,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "TODO",
+            "en": "TODO"
+          },
+          "children": [
+            {
+              "id": "it-1789777956039-4638",
+              "x": 289,
+              "y": 54,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Zamienienienie InstanceManager na coś innego. Ponieważ text nie potrzebuje instancji.",
+                "en": "Zamienienienie InstanceManager na coś innego. Ponieważ text nie potrzebuje instancji."
+              }
+            },
+            {
+              "id": "it-1789778128743-738",
+              "x": 230.99999999999957,
+              "y": 167.00000000000014,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Dodanie do atlasu informacji o wysokości aby można było skalować tekst.",
+                "en": "Dodanie do atlasu informacji o wysokości aby można było skalować tekst."
+              }
+            },
+            {
+              "id": "it-1789778161424-8362",
+              "x": 263,
+              "y": 167.0000000000002,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Dodanie do geometry data informacji o szerokości aby móc obliczać szerokość i włączyć generacje geometri.",
+                "en": "Dodanie do geometry data informacji o szerokości aby móc obliczać szerokość i włączyć generacje geometri."
+              }
+            }
+          ]
+        },
+        {
+          "id": "it-1789777831785-8751",
+          "x": 977,
+          "y": -6,
+          "type": "column",
+          "w": 320,
+          "h": 140,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "Zrobione",
+            "en": "Zrobione"
+          },
+          "children": [
+            {
+              "id": "it-1789777941990-9093",
+              "x": 1017,
+              "y": 68.33334350585938,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Przepisanie TextShader",
+                "en": "Przepisanie TextShader"
+              }
+            }
+          ]
+        },
+        {
+          "id": "it-1789777844597-93584-79151",
+          "x": 623,
+          "y": -6,
+          "type": "column",
+          "w": 320,
+          "h": 140,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "W trakcie",
+            "en": "W trakcie"
+          },
+          "children": [
+            {
+              "id": "it-1789777910385-7357",
+              "x": 643,
+              "y": 54,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Ogarnięcie vertext buffer and indices buffer aby była auto rejestracja",
+                "en": "Ogarnięcie vertext buffer and indices buffer aby była auto rejestracja"
+              }
+            }
+          ]
+        }
+      ],
       "connectors": [],
       "pan": {
-        "x": 40,
-        "y": 20
+        "x": -89.99999999999909,
+        "y": 165.00000000000006
       },
-      "scale": 1
+      "scale": 0.9999999999999988
     }
   }
 }

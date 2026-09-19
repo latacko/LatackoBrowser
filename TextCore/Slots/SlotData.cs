@@ -50,11 +50,11 @@ public class SlotData<BufferData> : ISlotInformation<BufferData> where BufferDat
 
 
 
-    public bool IsDirty(uint currentFrame) => isDirty[currentFrame];
+    public bool IsDirty(uint frameInFlight) => isDirty[frameInFlight];
 
-    public void RemoveDirty(uint currentFrame)
+    public void RemoveDirty(uint frameInFlight)
     {
-        isDirty[currentFrame] = false;
+        isDirty[frameInFlight] = false;
     }
 
     public void SetDirty()

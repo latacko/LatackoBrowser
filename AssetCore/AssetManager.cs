@@ -5,12 +5,26 @@ namespace AssetCore;
 public static class AssetManager
 {
     static uint lastModelId = 0;
+    static readonly Dictionary<Type, Action<IMeshData>> addMeshDataToBuffer = [];
     static readonly Dictionary<uint, IMeshData> models = [];
 
     public static uint RegisterModel(IMeshData meshData)
     {
+        if (!addMeshDataToBuffer.TryGetValue(meshData.GetType(), out var add))
+            throw new System.NotSupportedException("This type of data doesn't have registered buffer action.");
+
+        add.Invoke(meshData);
+
         models.Add(lastModelId, meshData);
         return lastModelId++;
+    }
+
+    public static void RegisterMeshDataBufferManager(Type typeOfMeshData, Action<IMeshData> registerMeshData)
+    {
+        if (typeOfMeshData.BaseType == null || !typeOfMeshData.BaseType.Equals(typeof(IMeshData))) 
+            throw new Exception("The Mesh data needs to directly inherit from IMeshData");
+        
+        addMeshDataToBuffer.Add(typeOfMeshData, registerMeshData);
     }
 
     public static void RemoveModel(uint modelId)

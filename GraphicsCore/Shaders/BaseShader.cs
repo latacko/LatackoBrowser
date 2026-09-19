@@ -17,14 +17,13 @@ public unsafe abstract class BaseShader : IDisposable
     public PipelineLayout PipelineLayout;
     public Pipeline PipelineWireframe;
 
-    public readonly InstancesManager objectsManager;
+    public static readonly Dictionary<Type, InstancesManager> InstancesManagerByType = [];
 
     protected readonly string moduleShaderPath;
 
-    public BaseShader(string shaderPath, InstancesManager objectsManager)
+    public BaseShader(string shaderPath)
     {
         moduleShaderPath = shaderPath;
-        this.objectsManager = objectsManager;
     }
 
     #region Init
@@ -43,12 +42,12 @@ public unsafe abstract class BaseShader : IDisposable
 
     public abstract DescriptorSetLayout[] GetLayouts();
 
-    public virtual void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint currentFrame, bool wireFrameRendering)
+    public virtual void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)
     {
-        RenderElements(textureRenderer.GetId(), commandBuffer, currentFrame);
+        RenderElements(textureRenderer.GetId(), commandBuffer, frameInFlight);
     }
 
-    protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint currentFrame);
+    protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint frameInFlight);
 
     #region Graphic pipeline
     protected virtual PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-
+    <ShaderWorkingDirectory>$(ProjectDir)shaders</ShaderWorkingDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -47,7 +47,10 @@
   </ItemGroup>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
-    <Exec Command="bash compile.sh" WorkingDirectory="$(ProjectDir)shaders" />
-  </Target>
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
 
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
+  </Target>
 </Project>

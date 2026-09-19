@@ -22,19 +22,16 @@ public class InstancesBuffer : IDisposable
 
     readonly int gpuDataSize;
 
-    //NOTE - Mam wrażenie że coś jest tu źle z typem. Powinno być coś innego zamiast InstancesManager a przynajmniej tak mi się wydaje.
-    public InstancesBuffer()
+    public InstancesBuffer(Type gpuDataType)
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             buffers[i] = CreateBuffer();
         }
 
-        Type type = typeof(InstancesManager);
-
         MethodInfo openMethod = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf))!;
 
-        MethodInfo closedMethod = openMethod.MakeGenericMethod(type);
+        MethodInfo closedMethod = openMethod.MakeGenericMethod(gpuDataType);
 
         gpuDataSize = (int)closedMethod.Invoke(null, null)!;
     }
