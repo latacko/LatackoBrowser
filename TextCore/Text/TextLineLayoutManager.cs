@@ -35,7 +35,7 @@ public struct TextLineLayoutManager : ILayoutManager
 
     public Vector2D<float> GetLayoutSize()
     {
-        return new Vector2D<float>(textLine.widthWithoutScale * textLine.textContainer.computedStyle.FontSize / 2, textLine.textContainer.fontAtlas.height * textLine.textContainer.computedStyle.FontSize);
+        return new Vector2D<float>((float)textLine.widthWithoutScale * textLine.textContainer.computedStyle.FontSize / 2, (float)textLine.textContainer.fontManager.GetFontGeometry().GetMetrics().UniversalHeight * textLine.textContainer.computedStyle.FontSize);
     }
 
     public void UpdateChildrenLayout()

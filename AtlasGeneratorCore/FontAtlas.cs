@@ -69,11 +69,6 @@ public class FontAtlas : IDisposable
 
     readonly List<UploadRegion> inFlight = new();
 
-
-    internal float height = 0;
-    internal float lineGap = 0;
-    internal float baseline = 0;
-
     readonly List<BufferImageCopy> uploadList = new();
 
     public readonly Queue<WaitingCharacter> WaitingCharacters = new();

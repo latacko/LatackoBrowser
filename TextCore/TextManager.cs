@@ -1,4 +1,5 @@
 ﻿using GraphicsCore;
+using GraphicsCore.Buffers;
 using GraphicsCore.Styles;
 using Silk.NET.Vulkan;
 using TextCore.Text;
@@ -13,18 +14,10 @@ namespace TextCore;
 public class TextManager : BufferManager
 {
     internal static TextManager Instance;
-    public static TextShader TextShader = new();
     internal DynamicBuffer<TextVertex> vertexBuffer;
     internal DynamicBuffer<ushort> indicesBuffer;
 
-    internal BufferInfo<TextContainerGPUData>[] textContainerDataBuffer = new BufferInfo<TextContainerGPUData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    internal BufferInfo<TextLineGPUData>[] textModelDataBuffer = new BufferInfo<TextLineGPUData>[Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    Dictionary<BucketSize, Queue<Slot>> freePools = new();
-    uint vertexHead = 0;
-    uint indexHead = 0;
-
     public DescriptorAllocatorGrowable TextDescriptorAllocatorGrowable = new();
-
 
     List<TextLine> activeTexts = new();
     public static uint LastCreatedIndex = 0;
@@ -44,7 +37,7 @@ public class TextManager : BufferManager
     internal static TextLine AddModelText(ReadOnlyMemory<char> text, int leftRange, int rightRange, TextContainer parent)
     {
         uint objectIndex = LastCreatedIndex++;
-        TextLine runtimeModelData = new(text, leftRange, rightRange, objectIndex, parent);
+        TextLine runtimeModelData = new(text, leftRange, rightRange, parent);
         if (parent != null)
         {
             parent.AddChild(runtimeModelData);
@@ -75,18 +68,9 @@ public class TextManager : BufferManager
         vertexBuffer = new(10000, 2, BufferUsageFlags.VertexBufferBit);
         indicesBuffer = new(5000, 2, BufferUsageFlags.IndexBufferBit);
 
-        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-        {
-
-            textModelDataBuffer[i] = new(256, 0);
-            textContainerDataBuffer[i] = new(256, 0);
-        }
-
         CreateFontSampler();
         CreateDescriptorsPool();
         RegisterDescriptor();
-
-        TextShader.Init();
 
         TextDefaultStyle = new Style("Default text style")
             .SetFontProperties((FontProperties) => FontProperties
@@ -105,7 +89,7 @@ public class TextManager : BufferManager
             MipmapMode = SamplerMipmapMode.Linear,
             AnisotropyEnable = false,
             MinLod = 0,
-            MaxLod = FontAtlas.MIP_LAYERS-1, // = 1000.0f, allows all mip levels
+            MaxLod = 0, // = 1000.0f, allows all mip levels
             AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
             AddressModeV = SamplerAddressMode.ClampToEdge,
             AddressModeW = SamplerAddressMode.ClampToEdge,
@@ -226,16 +210,6 @@ public class TextManager : BufferManager
         indicesBuffer.Update(text.IndicesSlotData);
     }
 
-    public unsafe void Update(uint frameInFlight, uint objectIndex, TextLineGPUData objectData)
-    {
-        ((TextLineGPUData*)textModelDataBuffer[frameInFlight].Mapped)[objectIndex] = objectData;
-    }
-
-    public unsafe void Update(uint frameInFlight, uint objectIndex, TextContainerGPUData textContainerData)
-    {
-        ((TextContainerGPUData*)textContainerDataBuffer[frameInFlight].Mapped)[objectIndex] = textContainerData;
-    }
-
     public unsafe void CopyToBuffer(uint frameInFlight)
     {
         // Console.WriteLine("Vertex:");
@@ -266,12 +240,5 @@ public class TextManager : BufferManager
 
         vertexBuffer.Dispose();
         indicesBuffer.Dispose();
-
-        for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-        {
-
-            textModelDataBuffer[i].Dispose();
-            textContainerDataBuffer[i].Dispose();
-        }
     }
 }

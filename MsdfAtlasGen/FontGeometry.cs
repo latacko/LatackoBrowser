@@ -46,6 +46,7 @@ namespace MsdfAtlasGen
         private readonly Dictionary<char, int> _glyphsByCharacter = new();
         private readonly Dictionary<(int, int), double> _kerning = new();
         private string _name = string.Empty;
+        
 
         /// <summary>
         /// Initializes a new font geometry instance with no glyphs.
@@ -58,7 +59,7 @@ namespace MsdfAtlasGen
         /// <summary>
         /// Loads a set of glyphs by their Unicode codepoints from the specified font.
         /// </summary>
-        public int LoadCharset(Face font, double fontScale, string charset, bool enableKerning = true)
+        public (int, string?) LoadCharset(Face font, double fontScale, string charset, bool enableKerning = true)
         {
             string toLoadCharacters = "";
             for (int i = 0; i < charset.Length; i++)
@@ -69,7 +70,7 @@ namespace MsdfAtlasGen
                 toLoadCharacters += charset[i];
             }
             if (!LoadMetrics(font, fontScale))
-                return -1;
+                return (-1, null);
 
             int loaded = 0;
             foreach (char cp in toLoadCharacters)
@@ -83,7 +84,7 @@ namespace MsdfAtlasGen
             }
             if (enableKerning)
                 LoadKerning(font);
-            return loaded;
+            return (loaded, toLoadCharacters);
         }
 
         /// <summary>

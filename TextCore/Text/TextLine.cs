@@ -13,7 +13,7 @@ namespace TextCore.Text;
 
 public class TextLine : VisualElement
 {
-    public VulkanManager.BufferManager.Slot Slot;
+    public Slot Slot;
     public SlotData<TextVertex> VertexSlotData = new();
     public SlotData<ushort> IndicesSlotData = new();
     ReadOnlyMemory<char> Text;
@@ -34,14 +34,14 @@ public class TextLine : VisualElement
     public float Top;
 
 
-    internal float widthWithoutScale;
+    internal double widthWithoutScale;
 
     Bounds bounds = new();
 
     internal TextContainer textContainer;
 
 
-    public TextLine(ReadOnlyMemory<char> text, int leftRange, int rightRange, uint modelId, uint objectIndex, VisualElement parent) : base(modelId, objectIndex, null, parent)
+    public TextLine(ReadOnlyMemory<char> text, int leftRange, int rightRange, VisualElement parent) : base(null, parent)
     {
         Text = text;
         this.LayoutManager = new TextLineLayoutManager();
@@ -56,7 +56,6 @@ public class TextLine : VisualElement
         GenerateMesh();
     }
 
-
     public bool Equals(int leftRange, int rightRange)
     {
         return this.leftRange == leftRange && this.rightRange == rightRange;
@@ -70,21 +69,20 @@ public class TextLine : VisualElement
     }
 
     //FIXME - troszkę zaniża długość tekstu
-    public static float GetTextWidth(FontAtlas fontAtlas, ReadOnlySpan<char> text, float textSize)
+    public static double GetTextWidth(FontManager fontManager, ReadOnlySpan<char> text, float textSize)
     {
         if (text.IsEmpty) return 0f;
 
-        float cursorX = 0f;
-        float invHeight = 1f / fontAtlas.height;
+        double cursorX = 0f;
+        double invHeight = 1f / fontManager.GetFontGeometry().GetMetrics().UniversalHeight;
         int textLength = text.Length;
-        var glyphs = fontAtlas.Glyphs;
 
         for (int i = 0; i < textLength; i++)
         {
-            MsdfAtlasGen.GlyphGeometry g = glyphs[text[i]];
+            MsdfAtlasGen.GlyphGeometry g = fontManager.GetFontAtlas().GetGlyph(text[i]);
 
             // 1. Odwzorowanie dodawania szerokości właściwej znaku (jeśli istnieje)
-            float glyphWidth = g.Width;
+            double glyphWidth = g.GetWidth();
             if (glyphWidth != 0)
             {
                 cursorX += glyphWidth * invHeight;
@@ -95,8 +93,8 @@ public class TextLine : VisualElement
                 break;
 
             // 2. Odwzorowanie dodawania odstępu między znakami
-            float nextBearingX = glyphs[text[i + 1]].BearingX;
-            float spacingWidth = g.Advance - g.Width - g.BearingX + nextBearingX;
+            double nextBearingX = fontManager.GetFontAtlas().GetGlyph(text[i + 1]).GetBearingX();
+            double spacingWidth = g.GetAdvance() - g.GetWidth() - g.GetBearingX() + nextBearingX;
 
             if (spacingWidth != 0)
             {
@@ -117,42 +115,54 @@ public class TextLine : VisualElement
         TextVertex[] _vertices = new TextVertex[(rightRange - leftRange) * 4 + 2];
         ushort[] _indices = new ushort[(rightRange - leftRange) * 4 + 2];
 
-        float _cursorX = 0;
+        double _cursorX = 0;
         int _j = 0;
-        float invHeight = 1f / textContainer.fontAtlas.height;
+        double invHeight = 1f / textContainer.fontManager.GetFontGeometry().GetMetrics().UniversalHeight;
 
         ReadOnlySpan<char> _text = Text.Span;
 
-        var _fcharGlyphData = textContainer.fontAtlas.GetGlyph(_text[leftRange]);
-        _vertices[0] = new TextVertex(new(0, 1, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMax.Y), _text[leftRange]);
-        _vertices[1] = new TextVertex(new(0, 0, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMin.Y), _text[leftRange]);
+        var _fontAtlas = textContainer.fontManager.GetFontAtlas();
+
+        var _fcharGlyphData = _fontAtlas.GetGlyph(_text[leftRange]);
+
+        //TODO - Włączenie koordynatów uv
+        // _vertices[0] = new TextVertex(new(0, 1, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMax.Y), _text[leftRange]);
+        // _vertices[1] = new TextVertex(new(0, 0, 0), new(_fcharGlyphData.UVMin.X, _fcharGlyphData.UVMin.Y), _text[leftRange]);
+
+        _vertices[0] = new TextVertex(new(0, 1, 0), new(0, 1), _text[leftRange]);
+        _vertices[1] = new TextVertex(new(0, 0, 0), new(0, 1), _text[leftRange]);
+
 
         _indices[0] = 1;
         _indices[1] = 0;
 
         for (int i = leftRange; i < rightRange; i++)
         {
-            var _glyphData = textContainer.fontAtlas.GetGlyph(_text[i]);
+            var _glyphData = _fontAtlas.GetGlyph(_text[i]);
 
-            float _width = _glyphData.Width;
+            double _width = _glyphData.GetWidth();
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, _width, _glyphData.UVMin, _glyphData.UVMax, _cursorX, _text[i], ref _j, false);
+                GenerateQuad(_vertices, _indices, (float)_width, new(0,0), new(1,1), (float)_cursorX, _text[i], ref _j, false);
+                //TODO - Włączenie koordynatów uv
+                // GenerateQuad(_vertices, _indices, _width, _glyphData.UVMin, _glyphData.UVMax, _cursorX, _text[i], ref _j, false);
                 _cursorX += _width;
             }
 
             if (i + 1 == rightRange)
                 break;
 
-            var _nextCharGlyphData = textContainer.fontAtlas.GetGlyph(_text[i + 1]);
+            var _nextCharGlyphData = _fontAtlas.GetGlyph(_text[i + 1]);
 
-            _width = _glyphData.GetAdvance() - _glyphData.Width - _glyphData.BearingX + textContainer.fontAtlas.Glyphs[_text[i + 1]].BearingX;
+            _width = _glyphData.GetAdvance() - _glyphData.GetWidth() - _glyphData.GetBearingX() + _nextCharGlyphData.GetBearingX();
 
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, _width, _nextCharGlyphData.UVMin, _nextCharGlyphData.UVMax, _cursorX, _text[i + 1], ref _j, true);
+                GenerateQuad(_vertices, _indices, (float)_width, new(0,0), new(1,1), (float)_cursorX, _text[i + 1], ref _j, true);
+                //TODO - Włączenie koordynatów uv
+                // GenerateQuad(_vertices, _indices, _width, _nextCharGlyphData.UVMin, _nextCharGlyphData.UVMax, _cursorX, _text[i + 1], ref _j, true);
                 _cursorX += _width;
             }
 
@@ -167,6 +177,8 @@ public class TextLine : VisualElement
         IndicesSlotData.Data = _indices;
         IndicesSlotData.dataCount = _j * 2 + 2;
 
+        AssetCore.AssetManager.RegisterModel()
+
         widthWithoutScale = _cursorX;
         UpdateBounds();
         AddFlag(RenderDirtyFlags.Model | RenderDirtyFlags.Matrix);
@@ -178,7 +190,7 @@ public class TextLine : VisualElement
 
     void UpdateBounds()
     {
-        bounds.Width = widthWithoutScale * textContainer.computedStyle.FontSize;
+        bounds.Width = (float)widthWithoutScale * textContainer.computedStyle.FontSize;
         bounds.Height = textContainer.computedStyle.FontSize;
     }
 

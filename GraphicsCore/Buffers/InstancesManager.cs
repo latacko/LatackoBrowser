@@ -6,7 +6,6 @@ namespace GraphicsCore.Buffers;
 public unsafe class InstancesManager: IDisposable
 {
     public static InstancesManager? Instance;
-    public const int MAX_OBJECTS = 1000;
     bool disposed;
 
     public Dictionary<ulong, InstancesBuffer> nodesBuffers = [];

@@ -12,7 +12,6 @@ public class InstancesBuffer : IDisposable
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;
     uint lastInstanceId = 0;
-    bool increseBufferInTheNextFrame;
     bool bufferHasIncresed = false;
     readonly uint[] buffersSize = new uint[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly BufferData[] buffers = new BufferData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];

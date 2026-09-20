@@ -13,5 +13,7 @@ namespace MsdfAtlasGen
         public double LineHeight;
         public double UnderlineY;
         public double UnderlineThickness;
+
+        public readonly double UniversalHeight => AscenderY / EmSize;
     }
 }

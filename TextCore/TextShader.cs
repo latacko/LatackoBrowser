@@ -144,7 +144,7 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
 
             textContainer.TryWriteObjectData(textContainerManager.GetDestinationSpan(_siteModelKey, frameInFlight, textContainer.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
 
-            ulong _characterBufferDeviceAddress = textContainer.fontAtlas.charactersBuffer.GetBuffer(frameInFlight).DeviceAddress;
+            ulong _characterBufferDeviceAddress = textContainer.fontManager.GetFontAtlas().charactersBuffer.GetBuffer(frameInFlight).DeviceAddress;
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), &_characterBufferDeviceAddress);
 
             uint _instanceIndex = textContainer.InstanceIndex;

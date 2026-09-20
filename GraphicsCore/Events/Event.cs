@@ -32,7 +32,7 @@ public class Event
     {
         for (int i = elements.Count - 1; i >= 0; i--)
         {
-            if (elements[i].GetBounds().Contains(pos))
+            if (elements[i].LayoutManager.GetBounds().Contains(pos))
             {
                 return elements[i];
             }

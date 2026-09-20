@@ -25,6 +25,10 @@ public class FontManager : IDisposable
         {
             path = "/usr/share/fonts/";
         }
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            path = "C:/Windows/Fonts/";
+        }
 
         path += name;
 
@@ -43,17 +47,20 @@ public class FontManager : IDisposable
         fontAtlas.Tick(frameInFlight);
     }
 
-    public FontAtlas GetFontAtlas()=>fontAtlas;
+    public FontAtlas GetFontAtlas() => fontAtlas;
+    public FontGeometry GetFontGeometry() => fontGeometry;
 
     public void LoadCharset(string charset)
     {
         var _face = new Face(library, path);
-        fontGeometry.LoadCharset(_face, 1, charset, true);
+        var (loaded, toLoadCharacters) = fontGeometry.LoadCharset(_face, 1, charset, true);
 
-        GlyphGeometry[] _characters = new GlyphGeometry[charset.Length];
-        for (int i = 0; i < charset.Length; i++)
+        if (toLoadCharacters == null) return;
+
+        GlyphGeometry[] _characters = new GlyphGeometry[toLoadCharacters.Length];
+        for (int i = 0; i < toLoadCharacters.Length; i++)
         {
-            _characters[i] = fontGeometry.GetGlyph(charset[i]);
+            _characters[i] = fontGeometry.GetGlyph(toLoadCharacters[i]);
         }
 
         _face.Dispose();

@@ -9,7 +9,7 @@ namespace TextCore.Text;
 
 public class TextContainer : VisualElement
 {
-    internal FontAtlas fontAtlas;
+    internal FontManager fontManager;
     public string Text;
     internal ReadOnlyMemory<char> TextMemory;
     internal List<TextLine> runtimeTexts = new();
@@ -21,8 +21,8 @@ public class TextContainer : VisualElement
 
         Text = text;
         TextMemory = Text.AsMemory();
-        fontAtlas = FontsManager.Instance.GetFontAtlas(Style.FontProperties.font);
-        fontAtlas.ScanText(Text);
+        fontManager = FontsManager.Instance.GetFontManager(Style.FontProperties.font);
+        fontManager.LoadCharset(Text);
     }
 
     public override void AddChild(VisualElement runtimeModelData)
@@ -53,7 +53,7 @@ public class TextContainer : VisualElement
         data = new TextContainerGPUData
         {
             Color = Style.FontProperties.TextColor,
-            TextureIndex = fontAtlas.Id,
+            TextureIndex = fontManager.GetFontAtlas().Id,
         };
 
         Console.WriteLine("Text color: " + data.Color + " " + renderDirty[frame]);

@@ -9,11 +9,11 @@ namespace TextCore;
 
 public class FontsManager : IDisposable
 {
-    public static FontsManager Instance;
-    Dictionary<string, FontManager> loadedFonts = new();
+    public static FontsManager? Instance;
+    readonly Dictionary<string, FontManager> loadedFonts = new();
     static Library library = new();
     
-    const string preload = "ABCDEFGHIJKLMNOPRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-–()[]{}'\"/\\@#";
+    const string preload = "ABCDEFGHIJKLMNOPRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,!?:;-()[]{}'\"/\\@#";
     
 
     public FontsManager()
@@ -48,7 +48,7 @@ public class FontsManager : IDisposable
         Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
-    public FontAtlas GetFontAtlas(string path) => loadedFonts[path].GetFontAtlas();
+    public FontManager GetFontManager(string path) => loadedFonts[path];
 
     public void Dispose()
     {

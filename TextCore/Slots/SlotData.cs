@@ -36,8 +36,8 @@ public class SlotData<BufferData> : ISlotInformation<BufferData> where BufferDat
     public BufferData[] GetDatas()=>Data;
 
 
-    public VulkanManager.BufferManager.Slot GetSlot() => slot;
-    public void UpdateSlot(VulkanManager.BufferManager.Slot newSlot)
+    public Slot GetSlot() => slot;
+    public void UpdateSlot(Slot newSlot)
     {
         slot = newSlot;
     }

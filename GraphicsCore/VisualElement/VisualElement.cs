@@ -20,10 +20,10 @@ public abstract class VisualElement : IDisposable
         public VisualElement runtimeModel;
         public BaseShader shader;
     }
-    public static HashSet<ObjectComileInfo> ObjectsToCompile = new();
+    public static readonly HashSet<ObjectComileInfo> ObjectsToCompile = new();
 
-    public readonly uint ModelId;
-    public uint InstanceIndex {get; private set;}
+    public uint ModelId { get; private set; }
+    public uint InstanceIndex { get; private set; }
 
     [Flags]
     internal protected enum RenderDirtyFlags : byte
@@ -46,12 +46,21 @@ public abstract class VisualElement : IDisposable
 
     public VisualElement? Parent;
 
-    public ILayoutManager LayoutManager {get; protected set;}
+    public ILayoutManager LayoutManager { get; protected set; }
 
     public readonly EventHelper Events;
 
     public Style? Style;
     internal protected ComputedStyle computedStyle;
+
+    public VisualElement(EventSystem? eventSystem, VisualElement? parent = null)
+    {
+        if (eventSystem != null)
+            Events = new(eventSystem, this);
+
+        if (parent != null)
+            Parent = parent;
+    }
 
     public VisualElement(uint modelId, uint instanceIndex, EventSystem? eventSystem, VisualElement? parent = null)
     {
@@ -134,6 +143,16 @@ public abstract class VisualElement : IDisposable
     {
         // Style = StylesManager.GetStyle(name);
         return this;
+    }
+
+    public void SetModelId(uint modelId)
+    {
+        ModelId = modelId;
+    }
+
+    public void SetInstanceIndex(uint instanceIndex)
+    {
+        InstanceIndex = instanceIndex;
     }
 
     protected internal abstract bool TryWriteObjectData(Span<byte> destination, uint frame);

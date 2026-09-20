@@ -37,24 +37,24 @@ public struct TextContainerLayoutManager : ILayoutManager
     {
         Console.WriteLine("============================= Update layout width: " + width + "px =============================");
         stopwatch.Restart();
-        ReadOnlySpan<char> _remainingText = Text.AsSpan();
+        ReadOnlySpan<char> _remainingText = textContainer.Text.AsSpan();
         int _leftSlice = 0;
 
 
         int _runtimeTextToReuse = 0;
-        int _runtimeTextCount = runtimeTexts.Count;
+        int _runtimeTextCount = textContainer.runtimeTexts.Count;
         sthChanged = false;
 
         int _usedTexts = -1;
-        while (_leftSlice < TextMemory.Length)
+        while (_leftSlice < textContainer.TextMemory.Length)
         {
             if (_runtimeTextToReuse >= _runtimeTextCount)
             {
                 _runtimeTextToReuse = -1;
             }
 
-            float _measuredTextWidth = TextLine.GetTextWidth(fontAtlas, _remainingText[_leftSlice..], computedStyle.FontSize);
-            Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth + " computet font size: " + computedStyle.FontSize);
+            float _measuredTextWidth = (float)TextLine.GetTextWidth(textContainer.fontManager, _remainingText[_leftSlice..], textContainer.computedStyle.FontSize);
+            Console.WriteLine("For text: " + _remainingText[_leftSlice..].ToString() + " width is " + _measuredTextWidth + " computet font size: " + textContainer.computedStyle.FontSize);
             if (_measuredTextWidth > width - cursorX)
             {
                 Console.WriteLine("Too much slicing");
@@ -65,8 +65,8 @@ public struct TextContainerLayoutManager : ILayoutManager
             else
             {
                 Console.WriteLine("Good adding all");
-                AddText(_runtimeTextToReuse, _leftSlice, Text.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
-                _leftSlice = Text.Length;
+                AddText(_runtimeTextToReuse, _leftSlice, textContainer.Text.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                _leftSlice = textContainer.Text.Length;
                 _runtimeTextToReuse++;
             }
             _usedTexts++;
@@ -118,7 +118,8 @@ public struct TextContainerLayoutManager : ILayoutManager
             var _size = _runtimeText.LayoutManager.GetLayoutSize();
 
             _runtimeText.SetPosition(cursorX, cursorY);
-            Console.WriteLine("Line gap: " + fontAtlas.lineGap + " px font size: " + computedStyle.FontSize);
+            //TODO - LINE GAP TO IMPLEMENT
+            Console.WriteLine("Line gap: " + textContainer.fontManager.GetFontGeometry().GetMetrics() + " line gap to imlement px font size: " + textContainer.computedStyle.FontSize);
             // updatedSizeOfLine.Invoke(fontAtlas.lineGap * computedStyle.FontSize + _size.Y);
             updatedSizeOfLine.Invoke(textContainer.computedStyle.FontSize);
 
@@ -152,7 +153,7 @@ public struct TextContainerLayoutManager : ILayoutManager
         for (int i = 0; i < breakOpportunities.Count; i++)
         {
             int breakPos = breakOpportunities[i];
-            float segmentWidth = TextLine.GetTextWidth(fontAtlas, text[prevBreak..breakPos], computedStyle.FontSize);
+            float segmentWidth = (float)TextLine.GetTextWidth(textContainer.fontManager, text[prevBreak..breakPos], textContainer.computedStyle.FontSize);
             // Console.WriteLine("For segment: " + text[prevBreak..breakPos].ToString() + " width is: " + segmentWidth + " font size is: " + computedStyle.FontSize);
             prefixWidths[i] = (i == 0 ? 0f : prefixWidths[i - 1]) + segmentWidth;
             prevBreak = breakPos;

@@ -75,9 +75,10 @@ BrowserWindow browserWindow = new();
 RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
 
 ShaderCreator<NodeShader> nodeShaderCreator = new();
+ShaderCreator<TextShader> textShaderCreator = new();
 
 renderEngine.RegisterShader(nodeShaderCreator.CreateShader("shaders/Compiled/uiShader.spv"));
-renderEngine.RegisterShader(new TextShader());
+renderEngine.RegisterShader(textShaderCreator.CreateShader("shaders/Compiled/textShader.spv"));
 unsafe
 {
     renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);

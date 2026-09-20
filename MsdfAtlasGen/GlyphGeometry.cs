@@ -28,6 +28,9 @@ namespace MsdfAtlasGen
 
         // Store original metrics before geometry scaling for FNT export
         private double _advanceUnscaled;   // advance in pixels at target font size (no extra scaling later)
+
+        private double _width;      // scaled advance in pixels at target font size
+        private double _bearing;      // scaled advance in pixels at target font size
         private Shape.Bounds _boundsUnscaled; // bounds in font-space (fontSize = 1.0) for reference
 
         private struct Box
@@ -65,6 +68,9 @@ namespace MsdfAtlasGen
             character = char_index;
             _advance = face.Glyph.Advance.X * geometryScale;
             _advanceUnscaled = _advance;
+
+            _width = face.Glyph.Metrics.Width;
+            _bearing = face.Glyph.Metrics.HorizontalBearingX;
 
             _shape.Normalize();
             _bounds = _shape.GetBounds();
@@ -325,6 +331,8 @@ namespace MsdfAtlasGen
         /// Returns the glyph's advance in pixels.
         /// </summary>
         public double GetAdvance() => _advance;
+        public double GetWidth() => _width;
+        public double GetBearingX() => _bearing;
 
         /// <summary>
         /// Returns the calculated rectangle for the glyph's box.

@@ -94,8 +94,8 @@
       ],
       "connectors": [],
       "pan": {
-        "x": -334,
-        "y": 28
+        "x": -196,
+        "y": -115
       },
       "scale": 1
     },
@@ -116,7 +116,7 @@
           "y": -6,
           "type": "column",
           "w": 326,
-          "h": 314,
+          "h": 401,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -162,6 +162,19 @@
                 "es": "Dodanie do geometry data informacji o szerokości aby móc obliczać szerokość i włączyć generacje geometri.",
                 "en": "Dodanie do geometry data informacji o szerokości aby móc obliczać szerokość i włączyć generacje geometri."
               }
+            },
+            {
+              "id": "it-1789858360429-3249",
+              "x": 276,
+              "y": 228,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Line gap w text container layout manager",
+                "en": "Line gap w text container layout manager"
+              }
             }
           ]
         },
@@ -200,7 +213,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 140,
+          "h": 227,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -220,14 +233,27 @@
                 "es": "Ogarnięcie vertext buffer and indices buffer aby była auto rejestracja",
                 "en": "Ogarnięcie vertext buffer and indices buffer aby była auto rejestracja"
               }
+            },
+            {
+              "id": "it-1789853373856-1676",
+              "x": 643,
+              "y": 80.00000000000011,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Dodanie brakujących informacji o kształcie glyphu",
+                "en": "Dodanie brakujących informacji o kształcie glyphu"
+              }
             }
           ]
         }
       ],
       "connectors": [],
       "pan": {
-        "x": -89.99999999999909,
-        "y": 165.00000000000006
+        "x": -29.99999999999909,
+        "y": 179.00000000000006
       },
       "scale": 0.9999999999999988
     }
