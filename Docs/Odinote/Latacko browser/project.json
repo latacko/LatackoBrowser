@@ -4,8 +4,7 @@
       "kind": "canvas",
       "projectId": "proj-1789434357375-6324",
       "trail": [
-        "proj-1789434357375-6324",
-        "b-1789777727907-5096"
+        "proj-1789434357375-6324"
       ]
     },
     "lang": "en",
@@ -24,7 +23,7 @@
       "es": "ahora",
       "en": "just now"
     },
-    "items": 5
+    "items": 6
   },
   "canvases": {
     "proj-1789434357375-6324": {
@@ -39,7 +38,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 227,
+          "h": 430,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -74,13 +73,39 @@
                 "es": "<a class=\"odi-link\" data-odi-node=\"it-1789777826362-5985\" data-odi-canvas=\"b-1789777727907-5096\">Zamienić InstanceManager na interfejs</a>",
                 "en": "<a class=\"odi-link\" data-odi-node=\"it-1789777826362-5985\" data-odi-canvas=\"b-1789777727907-5096\">Zamienić InstanceManager na interfejs</a>"
               }
+            },
+            {
+              "id": "it-1790028096444-1578",
+              "x": 656,
+              "y": 141,
+              "type": "note",
+              "w": 300,
+              "h": 109,
+              "color": "white",
+              "content": {
+                "es": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>",
+                "en": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>"
+              }
+            },
+            {
+              "id": "it-1790028221361-2734",
+              "x": 609,
+              "y": 280.3333435058594,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)",
+                "en": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)"
+              }
             }
           ]
         },
         {
           "id": "it-1789777727907-181",
-          "x": 678,
-          "y": 333,
+          "x": 719,
+          "y": 504,
           "type": "board",
           "w": 300,
           "h": 240,
@@ -91,6 +116,48 @@
             "es": "Przepiswywanie textCore",
             "en": "Przepiswywanie textCore"
           }
+        },
+        {
+          "id": "it-1790028014108-4378",
+          "x": 924,
+          "y": -6,
+          "type": "column",
+          "w": 320,
+          "h": 227,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "W trakcie",
+            "en": "W trakcie"
+          },
+          "children": [
+            {
+              "id": "it-1790027976469-2786",
+              "x": 1102,
+              "y": 158,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Zamienić managers z static na instance finder",
+                "en": "Zamienić managers z static na instance finder"
+              }
+            },
+            {
+              "id": "it-1790028162386-5020",
+              "x": 924,
+              "y": 69,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Poprawianie bufferów vertexowych z pamięci reBAR na lokalny vram",
+                "en": "Poprawianie bufferów vertexowych z pamięci reBAR na lokalny vram"
+              }
+            }
+          ]
         }
       ],
       "connectors": [],
@@ -117,7 +184,7 @@
           "y": -6,
           "type": "column",
           "w": 326,
-          "h": 401,
+          "h": 488,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -175,6 +242,19 @@
               "content": {
                 "es": "Line gap w text container layout manager",
                 "en": "Line gap w text container layout manager"
+              }
+            },
+            {
+              "id": "it-1789949941315-9121",
+              "x": 238.9999999999996,
+              "y": 294.0000000000004,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Zmienić aktualny ring buffer na coś co bardziej zoptymalizuje",
+                "en": "Zmienić aktualny ring buffer na coś co bardziej zoptymalizuje"
               }
             }
           ]

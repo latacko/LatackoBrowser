@@ -3,19 +3,21 @@ using Silk.NET.Vulkan;
 
 namespace VulkanManager.BufferManager;
 
-public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanaged
+public class DynamicBuffer<BufferData> : IDisposable, IRenderTick where BufferData : unmanaged
 {
     List<RingBuffer<BufferData>> freeBuffers = [];
     List<RingBuffer<BufferData>> fullBuffers = [];
-    uint bucketSizeMultiplier;
+    byte bucketSizeMultiplier;
     uint bufferSize;
+    byte threadId;
     BufferUsageFlags usage;
 
-    public DynamicBuffer(uint bufferSize, uint bucketSizeMultiplier, BufferUsageFlags usage)
+    public DynamicBuffer(byte threadId, uint bufferSize, byte bucketSizeMultiplier, BufferUsageFlags usage)
     {
         this.bufferSize = bufferSize;
         this.bucketSizeMultiplier = bucketSizeMultiplier;
         this.usage = usage;
+        this.threadId = threadId;
     }
 
     public (bool, RingBuffer<BufferData>) GetBuffer()
@@ -25,7 +27,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
             // Console.WriteLine($"Returning free buffer {bucketSizeMultiplier} from list. Buffer: frame 0: {freeBuffers[0].buffersInfo[0].Buffer.Handle} frame 1: {freeBuffers[0].buffersInfo[1].Buffer.Handle}");
             return (false, freeBuffers[0]);
         }
-        return (true, new RingBuffer<BufferData>(bufferSize, bucketSizeMultiplier, usage));
+        return (true, new RingBuffer<BufferData>(threadId, bufferSize, bucketSizeMultiplier, usage));
     }
 
     public void Update(ISlotInformation<BufferData> slotInformation)
@@ -75,7 +77,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
         // Console.WriteLine("Żaden buffer nie pasował więc robimy nowy");
 
         //? Żaden buffer nie pasował robimy nowy
-        _ringBuffer = new RingBuffer<BufferData>(bufferSize, bucketSizeMultiplier, usage);
+        _ringBuffer = new RingBuffer<BufferData>(threadId, bufferSize, bucketSizeMultiplier, usage);
         _ringBuffer.Update(slotInformation);
         freeBuffers.Add(_ringBuffer);
         // Console.WriteLine("Adding to free buffers: ring buffer with handle of: " + _ringBuffer.buffersInfo[0].Buffer.Handle);
@@ -106,7 +108,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
 
     int lastFreeCount = 0;
     int lastFullCount = 0;
-    public void CopyToBuffer(uint frameInFlight)
+    public void RenderTick(uint frameInFlight)
     {
         if (lastFreeCount != freeBuffers.Count)
         {
@@ -115,7 +117,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
         }
         foreach (var item in freeBuffers)
         {
-            item.CopyToBuffer(frameInFlight);
+            item.RenderTick(frameInFlight);
         }
 
         if (lastFullCount != fullBuffers.Count)
@@ -125,7 +127,7 @@ public class DynamicBuffer<BufferData> : IDisposable where BufferData : unmanage
         }
         foreach (var item in fullBuffers)
         {
-            item.CopyToBuffer(frameInFlight);
+            item.RenderTick(frameInFlight);
         }
     }
 

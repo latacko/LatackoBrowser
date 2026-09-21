@@ -4,10 +4,11 @@ using AtlasGeneratorCore;
 using Msdfgen;
 using SharpFont;
 using Silk.NET.Vulkan;
+using VulkanManager;
 
 namespace TextCore;
 
-public class FontsManager : IDisposable
+public class FontsManager : IDisposable, IRenderTick
 {
     public static FontsManager? Instance;
     readonly Dictionary<string, FontManager> loadedFonts = new();
@@ -21,11 +22,11 @@ public class FontsManager : IDisposable
         Instance = this;
     }
 
-    public void Tick(uint frameInFlight)
+    public void RenderTick(uint frameInFlight)
     {
         foreach (var item in loadedFonts)
         {
-            item.Value.Tick(frameInFlight);
+            item.Value.RenderTick(frameInFlight);
         }
     }
 

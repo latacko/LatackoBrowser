@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Silk.NET.Vulkan;
 using Buffer = Silk.NET.Vulkan.Buffer;
 namespace Vulkan;
@@ -42,6 +43,15 @@ static public class BufferHelper
         }
 
         CreateVulkan.vk.BindBufferMemory(LogicalDevice.device, buffer, bufferMemory, 0);
+    }
+
+    public static unsafe (BufferData bufferData, ulong size) CreateStagingBuffer<Data>(uint elements) where Data : unmanaged
+    {
+        BufferData _data = new();
+        ulong _size = (ulong)Unsafe.SizeOf<Data>()*elements;
+        CreateBuffer(_size, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _data.Buffer, ref _data.Memory);
+        CreateVulkan.vk.MapMemory(LogicalDevice.device, _data.Memory, 0, (ulong)Unsafe.SizeOf<Data>()*elements, 0, ref _data.Mapped);
+        return (_data, _size);
     }
 
     public static unsafe void CopyBuffer(CommandPool commandPool, Buffer srcBuffer, Buffer dstBuffer, ulong size)

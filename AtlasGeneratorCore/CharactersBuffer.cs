@@ -6,10 +6,11 @@ using MsdfAtlasGen;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager;
 
 namespace AtlasGeneratorCore;
 
-public class CharactersBuffer : IDisposable
+public class CharactersBuffer : IDisposable, IRenderTick
 {
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;

@@ -21,6 +21,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     }
 
     public readonly uint UniqueId;
+    public readonly byte ThreadId;
 
     static uint LastUniqueId;
 
@@ -55,9 +56,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
     CommandBufferSubmitInfo[]? subSiteCommandBuffers;
     #endregion
 
-    public SiteRenderer()
+    public SiteRenderer(byte threadId)
     {
         UniqueId = LastUniqueId++;
+        this.ThreadId = threadId;
         if (RenderEngine.Instance == null)
             throw new System.NullReferenceException("The render engine hasn't been initialized");
         RenderEngine.Instance.RegisterSite(this);

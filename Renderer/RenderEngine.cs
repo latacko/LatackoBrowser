@@ -2,11 +2,13 @@ using System;
 using GraphicsCore;
 using GraphicsCore.Buffers;
 using GraphicsCore.Shaders;
+using InstanceFinderCore;
 using Silk.NET.Input.Sdl;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Silk.NET.Windowing;
 using Vulkan;
+using VulkanManager;
 using VulkanManager.BufferManager;
 
 namespace Renderer;
@@ -31,6 +33,9 @@ public class RenderEngine : IDisposable
 
         logicalDevice = new(DeviceExtensions);
         physicalDevice = new(DeviceExtensions, khrSurface, surfaceKHR);
+
+        InstanceFinder.AddInstance<TransferCommandPoolManager>();
+        InstanceFinder.AddInstance<RingBufferManager>();
 
         Window.PrioritizeSdl();
         Silk.NET.Windowing.Sdl.SdlWindowing.Use();

@@ -4,10 +4,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager;
 
 namespace GraphicsCore.Buffers;
 
-public class InstancesBuffer : IDisposable
+public class InstancesBuffer : IDisposable, IRenderTick
 {
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;

@@ -2,11 +2,12 @@ using System;
 using System.Net.Http.Headers;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace PrimitiveCore.Textures;
 
-public class TexturesManager : IDisposable
+public class TexturesManager : IDisposable, IRenderTick
 {
     static uint id = 0;
     static Semaphore timelineSemaphore;
@@ -61,7 +62,7 @@ public class TexturesManager : IDisposable
         return _texture;
     }
 
-    public static void Tick()
+    public void RenderTick(uint frameInFlight)
     {
         CreateVulkan.vk.GetSemaphoreCounterValue(LogicalDevice.device, timelineSemaphore, out var _currentValue);
         for (int i = texturesStagingBuffer.Count-1; i >= 0; i--)

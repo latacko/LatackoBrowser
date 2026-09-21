@@ -2,12 +2,12 @@
 using PrimitiveCore.Textures;
 using Silk.NET.Vulkan;
 using TextCore;
+using VulkanManager;
 
 namespace CoreManager;
 
-public class CoreManager : IDisposable
+public class CoreManager : IDisposable, IRenderTick
 {
-    public static CoreManager Instance;
     BufferManager bufferManager = new();
 
     internal FontsManager fontManager = new();
@@ -15,11 +15,6 @@ public class CoreManager : IDisposable
     // internal NodesManager objectsManager = new();
     // public ObjectManager objectManager = new();
     public TexturesManager texturesManager = new();
-
-    public CoreManager()
-    {
-        Instance = this;
-    }
 
     public void InitBuffers()
     {
@@ -41,15 +36,15 @@ public class CoreManager : IDisposable
 
         if (_ticksToReset == 1000)
         {
-            TexturesManager.Tick();
             _ticksToReset = 0;
         }
     }
 
-    public void OnRender(uint frameInFlight)
+    public void RenderTick(uint frameInFlight)
     {
-        fontManager.Tick(frameInFlight);
-        textManager.CopyToBuffer(frameInFlight);
+        fontManager.RenderTick(frameInFlight);
+        textManager.RenderTick(frameInFlight);
+        texturesManager.RenderTick(frameInFlight);
     }
 
     // public void RenderShader(CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)

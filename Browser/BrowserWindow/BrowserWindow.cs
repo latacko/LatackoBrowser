@@ -144,7 +144,7 @@ public unsafe partial class BrowserWindow
         // UpdateUniformBuffer(frameInFlight);
         // coreManager.OnRender(frameInFlight);
         // StylesManager.ComputeStyles();
-        var _imageData = textureRenderer.GetImage();
+        var _imageData = textureRenderer.GetImage(frameInFlight);
         RecordCommandBuffer(commandBuffers[frameInFlight], imageIndex, _imageData.image);
         // StylesManager.SetFrameAsNotDirty(frameInFlight);
 

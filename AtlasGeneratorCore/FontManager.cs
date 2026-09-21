@@ -2,10 +2,11 @@ using System;
 using System.Runtime.InteropServices;
 using MsdfAtlasGen;
 using SharpFont;
+using VulkanManager;
 
 namespace AtlasGeneratorCore;
 
-public class FontManager : IDisposable
+public class FontManager : IDisposable, IRenderTick
 {
     static uint lastId = 0;
 
@@ -42,9 +43,9 @@ public class FontManager : IDisposable
         fontGeometry = new();
     }
 
-    public void Tick(uint frameInFlight)
+    public void RenderTick(uint frameInFlight)
     {
-        fontAtlas.Tick(frameInFlight);
+        fontAtlas.RenderTick(frameInFlight);
     }
 
     public FontAtlas GetFontAtlas() => fontAtlas;

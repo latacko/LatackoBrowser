@@ -7,6 +7,7 @@ using Browser;
 using GraphicsCore.Buffers;
 using GraphicsCore.Shaders;
 using HTMLParser;
+using InstanceFinderCore;
 using PrimitiveCore;
 using Renderer;
 using Silk.NET.Maths;
@@ -83,7 +84,8 @@ unsafe
 {
     renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);
 }
-SiteRenderer mainBrowser = new();
+byte threadId = InstanceFinder.RegisterSiteThread();
+SiteRenderer mainBrowser = new(threadId);
 
 browserWindow.Run(mainBrowser);
 

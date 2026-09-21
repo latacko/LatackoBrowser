@@ -4,11 +4,12 @@ using Msdfgen;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
+using VulkanManager;
 using VulkanManager.BufferManager;
 
 namespace AtlasGeneratorCore;
 
-public class FontAtlas : IDisposable
+public class FontAtlas : IDisposable, IRenderTick
 {
     public uint Id { get; private set; } = 0;
     internal string name { get; private set; } = "";
@@ -92,9 +93,9 @@ public class FontAtlas : IDisposable
     }
 
     #region Atlas functions
-    public void Tick(uint frameInFlight)
+    public void RenderTick(uint frameInFlight)
     {
-        var _currentValue = FontAtlasesManager.Instance!.GetCurrentDoneSignalValue();
+        var _currentValue = TransferCommandPoolManager.Instance!.GetCurrentDoneSignalValue();
         int _removed = inFlight.RemoveAll(r => r.timelineValue <= _currentValue);
         progress?.Report((double)_removed / (inFlight.Count + _removed + WaitingCharacters.Count));
 
@@ -234,7 +235,7 @@ public class FontAtlas : IDisposable
         if (uploadList.Count == 0)
             return;
 
-        var _actualCommandBuffer = CmdHelper.BeginSingleTimeCommands(FontAtlasesManager.Instance!.CommandPools[frameInFlight]);
+        var _actualCommandBuffer = CmdHelper.BeginSingleTimeCommands(TransferCommandPoolManager.GetCommandPool(frameInFlight));
 
         var srcLayout = !_atlasInitialized
             ? ImageLayout.Undefined
@@ -274,7 +275,7 @@ public class FontAtlas : IDisposable
 
         uploadList.Clear();
 
-        FontAtlasesManager.RegisterCommandBuffer(_actualCommandBuffer);
+        TransferCommandPoolManager.AddCommandBuffer(frameInFlight, _actualCommandBuffer);
 
         _atlasInitialized = true;
 

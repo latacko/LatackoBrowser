@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Units/Units.csproj" />
+    <ProjectReference Include="..\InstanceFinderCore\InstanceFinderCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

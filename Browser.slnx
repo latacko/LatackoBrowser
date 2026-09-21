@@ -6,6 +6,7 @@
   <Project Path="EventCore/EventCore.csproj" />
   <Project Path="GraphicsCore/GraphicsCore.csproj" />
   <Project Path="HTMLParser/HTMLParser.csproj" />
+  <Project Path="InstanceFinderCore/InstanceFinderCore.csproj" />
   <Project Path="MsdfAtlasGen/MsdfAtlasGen.csproj" />
   <Project Path="PrimitiveCore/PrimitiveCore.csproj" />
   <Project Path="Renderer/Renderer.csproj" />

@@ -5,15 +5,16 @@ using Silk.NET.Vulkan;
 using TextCore.Text;
 using Units;
 using Vulkan;
+using VulkanManager;
 using VulkanManager.BufferManager;
 using VulkanManager.Helpers;
 using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace TextCore;
 
-public class TextManager : BufferManager
+public class TextManager : BufferManager, IRenderTick
 {
-    internal static TextManager Instance;
+    byte threadId;
     internal DynamicBuffer<TextVertex> vertexBuffer;
     internal DynamicBuffer<ushort> indicesBuffer;
 
@@ -29,12 +30,7 @@ public class TextManager : BufferManager
 
     Sampler fontSampler;
 
-    public TextManager()
-    {
-        Instance = this;
-    }
-
-    internal static TextLine AddModelText(ReadOnlyMemory<char> text, int leftRange, int rightRange, TextContainer parent)
+    internal TextLine AddModelText(ReadOnlyMemory<char> text, int leftRange, int rightRange, TextContainer parent)
     {
         uint objectIndex = LastCreatedIndex++;
         TextLine runtimeModelData = new(text, leftRange, rightRange, parent);
@@ -46,7 +42,7 @@ public class TextManager : BufferManager
         return runtimeModelData;
     }
 
-    public static TextContainer AddText(string text, VisualElement parent)
+    public TextContainer AddText(string text, BaseShader shader, VisualElement parent)
     {
         uint objectIndex = LastCreatedIndex++;
         TextContainer runtimeTextContainer = new(text, objectIndex, parent);
@@ -55,18 +51,18 @@ public class TextManager : BufferManager
         VisualElement.ObjectsToCompile.Add(new()
         {
             runtimeModel = runtimeTextContainer,
-            shader = TextShader
+            shader = shader
         });
 
-        Console.WriteLine("Adding text to the textShader." + TextShader.GetHashCode());
+        Console.WriteLine("Adding text to the textShader." + shader.GetHashCode());
 
         return runtimeTextContainer;
     }
 
     public override void RegisterBuffer()
     {
-        vertexBuffer = new(10000, 2, BufferUsageFlags.VertexBufferBit);
-        indicesBuffer = new(5000, 2, BufferUsageFlags.IndexBufferBit);
+        vertexBuffer = new(threadId, 4096, 2, BufferUsageFlags.VertexBufferBit);
+        indicesBuffer = new(threadId, 4096, 2, BufferUsageFlags.IndexBufferBit);
 
         CreateFontSampler();
         CreateDescriptorsPool();
@@ -210,12 +206,12 @@ public class TextManager : BufferManager
         indicesBuffer.Update(text.IndicesSlotData);
     }
 
-    public unsafe void CopyToBuffer(uint frameInFlight)
+    public unsafe void RenderTick(uint frameInFlight)
     {
         // Console.WriteLine("Vertex:");
-        vertexBuffer.CopyToBuffer(frameInFlight);
+        vertexBuffer.RenderTick(frameInFlight);
         // Console.WriteLine("Indices:");
-        indicesBuffer.CopyToBuffer(frameInFlight);
+        indicesBuffer.RenderTick(frameInFlight);
         // foreach (var text in activeTexts)
         // {
         //     if (!text.dirty[frameInFlight].HasFlag(RuntimeModelData.DirtyFlags.Model)) continue;
@@ -234,7 +230,6 @@ public class TextManager : BufferManager
 
     public override unsafe void Dispose()
     {
-        TextShader.Dispose();
         TextDescriptorAllocatorGrowable.DestroyPools();
         CreateVulkan.vk.DestroyDescriptorSetLayout(LogicalDevice.device, textDescriptorLayout, null);
 
