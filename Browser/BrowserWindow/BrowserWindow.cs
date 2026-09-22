@@ -9,6 +9,8 @@ using GraphicsCore.Styles;
 using System.Diagnostics;
 using Vulkan;
 using VulkanManager;
+using VulkanManager.BufferManager;
+using InstanceFinderCore;
 
 namespace Browser;
 
@@ -25,6 +27,9 @@ public unsafe partial class BrowserWindow
     public Action OnStart;
 
     TextureRenderer textureRenderer;
+
+    RingBufferManager ringBufferManager;
+    TransferCommandPoolManager transferCommandPoolManager;
 
     public BrowserWindow()
     {
@@ -106,6 +111,9 @@ public unsafe partial class BrowserWindow
     private void Start()
     {
         // coreManager.Start();
+        transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>(textureRenderer.GetThreadId());
+        ringBufferManager = InstanceFinder.GetInstance<RingBufferManager>(textureRenderer.GetThreadId());
+        ringBufferManager.SetTransferCommandPoolManager(transferCommandPoolManager);
         Console.WriteLine("==============================  STARTING ADDING OBJECTS  ==============================");
         // browserUI.Create();
     }
@@ -144,7 +152,15 @@ public unsafe partial class BrowserWindow
         // UpdateUniformBuffer(frameInFlight);
         // coreManager.OnRender(frameInFlight);
         // StylesManager.ComputeStyles();
+        ringBufferManager.BeginRecording(frameInFlight);
         var _imageData = textureRenderer.GetImage(frameInFlight);
+
+        var _sthWasAddedToTransfer = ringBufferManager.EndRecording(frameInFlight);
+        if (_sthWasAddedToTransfer)
+            transferCommandPoolManager.AddCommandBuffer(frameInFlight, ringBufferManager.GetCommandBuffer(frameInFlight));
+
+        transferCommandPoolManager.RenderTick(frameInFlight);
+
         RecordCommandBuffer(commandBuffers[frameInFlight], imageIndex, _imageData.image);
         // StylesManager.SetFrameAsNotDirty(frameInFlight);
 

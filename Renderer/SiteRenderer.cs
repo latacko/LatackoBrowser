@@ -137,6 +137,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     public override VulkanEngine GetVulkanEngine() => vulkanEngine;
 
     public override uint GetId() => UniqueId;
+    public override byte GetThreadId() => ThreadId;
     public override ulong GetCameraBufferDeviceAddress() => cameraBuffers.shaderDataBuffersForCamera[FrameInFlight].DeviceAddress;
 
     #endregion

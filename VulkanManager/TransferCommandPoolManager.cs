@@ -30,7 +30,7 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
         CommandPoolCreateInfo commandPoolCI = new()
         {
             SType = StructureType.CommandPoolCreateInfo,
-            Flags = CommandPoolCreateFlags.None,
+            Flags = CommandPoolCreateFlags.TransientBit,
             QueueFamilyIndex = LogicalDevice.Indices.TransferFamily!.Value,
         };
 

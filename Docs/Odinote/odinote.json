@@ -37,7 +37,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 430,
+          "h": 343,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -85,19 +85,6 @@
                 "es": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>",
                 "en": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>"
               }
-            },
-            {
-              "id": "it-1790028221361-2734",
-              "x": 609,
-              "y": 280.3333435058594,
-              "type": "note",
-              "w": 300,
-              "h": 80,
-              "color": "white",
-              "content": {
-                "es": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)",
-                "en": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)"
-              }
             }
           ]
         },
@@ -122,7 +109,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 227,
+          "h": 314,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -154,6 +141,19 @@
               "content": {
                 "es": "Poprawianie bufferów vertexowych z pamięci reBAR na lokalny vram",
                 "en": "Poprawianie bufferów vertexowych z pamięci reBAR na lokalny vram"
+              }
+            },
+            {
+              "id": "it-1790028221361-2734",
+              "x": 924,
+              "y": 169,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)",
+                "en": "Universalny ładowywacz tekstur (że osobny thread i można dawać tylko requesty)"
               }
             }
           ]

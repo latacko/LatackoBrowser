@@ -12,6 +12,7 @@ public abstract class TextureRenderer
     public abstract VulkanEngine GetVulkanEngine();
 
     public abstract uint GetId();
+    public abstract byte GetThreadId();
     public abstract ulong GetCameraBufferDeviceAddress();
 
     public abstract void CreateVulkanEngine();

@@ -5,7 +5,7 @@ namespace InstanceFinderCore;
 public static class InstanceFinder
 {
     static List<Type> instanceToCreate = [];
-    static Dictionary<uint, Dictionary<Type, object>> instances = [];
+    static Dictionary<byte, Dictionary<Type, object>> instances = [];
 
     static byte newSiteThrad = 0;
 
@@ -29,7 +29,7 @@ public static class InstanceFinder
         instanceToCreate.Add(typeof(Type));
     }
 
-    public static Type GetInstance<Type>(uint thread)
+    public static Type GetInstance<Type>(byte thread)
     {
         return (Type)instances[thread][typeof(Type)];
     }
