@@ -56,9 +56,12 @@ public class SiteRenderer : TextureRenderer, IDisposable
     CommandBufferSubmitInfo[]? subSiteCommandBuffers;
     #endregion
 
-    public SiteRenderer(byte threadId)
+    ISiteController siteController;
+
+    public SiteRenderer(byte threadId, ISiteController siteController)
     {
         UniqueId = LastUniqueId++;
+        this.siteController = siteController;
         this.ThreadId = threadId;
         if (RenderEngine.Instance == null)
             throw new System.NullReferenceException("The render engine hasn't been initialized");
@@ -68,9 +71,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
     #region Setup
     public override void Init(uint width, uint height)
     {
-
         CreateResources(width, height);
         cameraBuffers.CreateBuffers();
+        siteController.Start();
     }
 
     //TODO - Clear prev image and render to new texture
@@ -485,7 +488,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     #region Texture Renderer
     public override void Update(double deltaTime)
     {
-
+        siteController.Update();
     }
 
     public override (Image, Semaphore) GetImage(uint frameInFlight)

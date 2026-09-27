@@ -18,7 +18,7 @@ namespace MsdfAtlasGen
             public bool PxAlignOriginY;
         }
 
-        public uint? CharacterBufferId {get; private set;} = null;
+        public uint? CharacterBufferId { get; private set; } = null;
 
         private char character;
         private double _geometryScale;
@@ -61,7 +61,6 @@ namespace MsdfAtlasGen
             if (face == null)
                 return false;
             face.LoadChar(char_index, LoadFlags.NoScale | LoadFlags.NoBitmap, LoadTarget.Normal);
-
             BuildShape(face, char_index, 0, 0, false);
 
             _geometryScale = geometryScale;
@@ -114,6 +113,8 @@ namespace MsdfAtlasGen
                 return new Vector2(pos.X.Value - leftPadding, pos.Y.Value + topPadding);
             }
             var outline = face.Glyph.Outline;
+            if (outline.Contours == null)
+                return new();
             var shape = new Shape();
 
             int contourStart = 0;

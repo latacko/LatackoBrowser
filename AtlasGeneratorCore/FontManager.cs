@@ -6,7 +6,7 @@ using VulkanManager;
 
 namespace AtlasGeneratorCore;
 
-public class FontManager : IDisposable, IRenderTick
+public class FontManager : IDisposable
 {
     static uint lastId = 0;
 
@@ -16,12 +16,11 @@ public class FontManager : IDisposable, IRenderTick
     readonly string name;
     readonly Library library;
 
-    public FontManager(Library library, string name, Action<Silk.NET.Vulkan.ImageView, uint> registerTextureCB, IProgress<double>? progress = null)
+    public FontManager(Library library, string name, Action<Silk.NET.Vulkan.ImageView, uint> registerTextureCB, IProgress<uint>? progress = null)
     {
         this.name = name;
         this.library = library;
 
-        string path = "";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             path = "/usr/share/fonts/";
@@ -43,20 +42,15 @@ public class FontManager : IDisposable, IRenderTick
         fontGeometry = new();
     }
 
-    public void RenderTick(uint frameInFlight)
-    {
-        fontAtlas.RenderTick(frameInFlight);
-    }
-
     public FontAtlas GetFontAtlas() => fontAtlas;
     public FontGeometry GetFontGeometry() => fontGeometry;
 
-    public void LoadCharset(string charset)
+    public uint LoadCharset(string charset)
     {
         var _face = new Face(library, path);
         var (loaded, toLoadCharacters) = fontGeometry.LoadCharset(_face, 1, charset, true);
 
-        if (toLoadCharacters == null) return;
+        if (toLoadCharacters == null) return 0;
 
         GlyphGeometry[] _characters = new GlyphGeometry[toLoadCharacters.Length];
         for (int i = 0; i < toLoadCharacters.Length; i++)
@@ -67,6 +61,7 @@ public class FontManager : IDisposable, IRenderTick
         _face.Dispose();
 
         fontAtlas.AddCharacters(_characters);
+        return (uint)toLoadCharacters.Length;
     }
 
     public void Dispose()

@@ -87,8 +87,6 @@ public class PrimitiveModelsDb : IDisposable
         CreateVulkan.vk.UnmapMemory(LogicalDevice.device, primitiveBufferMemory);
     }
 
-
-
     public MeshData<ushort> Get(PrimitiveUIModel model)
     {
         return uiDb[model];

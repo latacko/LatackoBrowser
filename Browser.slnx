@@ -12,6 +12,7 @@
   <Project Path="Renderer/Renderer.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />
   <Project Path="TextCore/TextCore.csproj" />
+  <Project Path="TextureCore/TextureCore.csproj" />
   <Project Path="Units/Units.csproj" />
   <Project Path="VulkanManager/VulkanManager.csproj" />
 </Solution>

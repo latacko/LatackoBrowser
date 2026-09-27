@@ -9,7 +9,7 @@ using VulkanManager.BufferManager;
 
 namespace AtlasGeneratorCore;
 
-public class FontAtlas : IDisposable, IRenderTick
+public class FontAtlas : IDisposable
 {
     public uint Id { get; private set; } = 0;
     internal string name { get; private set; } = "";
@@ -28,7 +28,7 @@ public class FontAtlas : IDisposable, IRenderTick
         public byte[] pixels;
         public int index;
     }
-    
+
     #region CONSTS
     public const int GLYPHD_IN_LINE = 16;
     public const uint STAGING_BUFFER_GLYPH_COUNT = 10;
@@ -61,54 +61,47 @@ public class FontAtlas : IDisposable, IRenderTick
 
     ushort createdGlyphs;
 
-    Image atlasImage = default;
-    DeviceMemory atlasMemory = default;
-    ImageView imageView;
+    ImageData mainAtlas;
+    ImageData stageUploadAtlas;
+    readonly HashSet<BufferImageCopy2> uploadList = new();
+    readonly HashSet<BufferImageCopy2> prevUploadList = new();
+
+
     bool _atlasInitialized = false;
-
-    readonly AtlasRingBuffer stagingBuffer = new(STAGING_BUFFER_GLYPH_COUNT, MSDFLevelData);
-
-    readonly List<UploadRegion> inFlight = new();
-
-    readonly List<BufferImageCopy> uploadList = new();
 
     public readonly Queue<WaitingCharacter> WaitingCharacters = new();
 
     public CharactersBuffer charactersBuffer;
-    IProgress<double>? progress = null;
+    IProgress<uint>? progress = null;
 
-    public FontAtlas(uint id, string name, Action<ImageView, uint> registerTextureCB, IProgress<double>? progress = null)
+    public FontAtlas(uint id, string name, Action<ImageView, uint> registerTextureCB, IProgress<uint>? progress = null)
     {
         this.Id = id;
         this.name = name;
         this.progress = progress;
 
         charactersBuffer = new();
-        ImageHelper.CreateImage(MSDFLevelData.AtlasSize, MSDFLevelData.AtlasSize, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, 1, ref atlasImage, ref atlasMemory);
-        imageView = ImageHelper.CreateImageView(atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit, 1);
+        ImageHelper.CreateImage(MSDFLevelData.AtlasSize, MSDFLevelData.AtlasSize, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, 1, ref mainAtlas.atlasImage, ref mainAtlas.atlasMemory);
+        mainAtlas.imageView = ImageHelper.CreateImageView(mainAtlas.atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit, 1);
 
-        stagingBuffer.Init();
+        ImageHelper.CreateImage(MSDFLevelData.AtlasSize, MSDFLevelData.AtlasSize, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, 1, ref stageUploadAtlas.atlasImage, ref stageUploadAtlas.atlasMemory);
+        stageUploadAtlas.imageView = ImageHelper.CreateImageView(stageUploadAtlas.atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit, 1);
 
-        registerTextureCB.Invoke(imageView, id);
+        registerTextureCB.Invoke(stageUploadAtlas.imageView, id);
     }
 
     #region Atlas functions
-    public void RenderTick(uint frameInFlight)
+    public void RecordTransfer(CommandBuffer commandBuffer, BufferData stagingBufferData, ref uint elementHead)
     {
-        var _currentValue = TransferCommandPoolManager.Instance!.GetCurrentDoneSignalValue();
-        int _removed = inFlight.RemoveAll(r => r.timelineValue <= _currentValue);
-        progress?.Report((double)_removed / (inFlight.Count + _removed + WaitingCharacters.Count));
-
-        if (WaitingCharacters.Count > 0 && _removed > 0)
+        if (WaitingCharacters.Count > 0)
         {
             uint _remaining = WaitingCharacters.Count > STAGING_BUFFER_GLYPH_COUNT ? STAGING_BUFFER_GLYPH_COUNT : (uint)WaitingCharacters.Count;
-            StartRecording(_remaining);
             for (int i = 0; i < _remaining; i++)
             {
                 var waiting = WaitingCharacters.Peek();
 
                 var _glyphGeometry = Glyphs[waiting.character];
-                if (AddGlyph(_glyphGeometry, waiting.pixels, waiting.index))
+                if (AddGlyph(_glyphGeometry, waiting.pixels, stagingBufferData, ref elementHead))
                 {
                     WaitingCharacters.Dequeue();
                     Glyphs[waiting.character] = _glyphGeometry;
@@ -118,18 +111,15 @@ public class FontAtlas : IDisposable, IRenderTick
                     break;
                 }
             }
-            EndRecording(frameInFlight);
+            EndRecording(commandBuffer, stagingBufferData);
         }
 
-        charactersBuffer.RenderTick(frameInFlight);
+        charactersBuffer.RenderTick(0);
     }
 
-    public void StartRecording(uint glyphCount)
+    public void ReportProgress()
     {
-        if (glyphCount > STAGING_BUFFER_GLYPH_COUNT)
-            throw new Exception("Max glyph count in one recording is 10");
-
-        uploadList.Clear();
+        progress?.Report((uint)WaitingCharacters.Count);
     }
 
     internal void AddCharacters(GlyphGeometry[] characters)
@@ -165,52 +155,65 @@ public class FontAtlas : IDisposable, IRenderTick
                 _pixels[k * 4 + 3] = 255;
             }
 
-            AddGlyph(_character, _pixels);
+            WaitingCharacters.Enqueue(new()
+            {
+                character = _character.GetCharacter(),
+                pixels = _pixels,
+                index = createdGlyphs
+            });
         });
     }
 
-    internal bool AddGlyph(GlyphGeometry character, byte[] pixels, int index = -1)
+    unsafe bool AddGlyph(GlyphGeometry character, byte[] pixels, BufferData stagingBufferData, ref uint elementHead)
     {
-        int _glyphIndex = index == -1 ? createdGlyphs : index;
+        int _glyphIndex = createdGlyphs;
+        createdGlyphs++;
 
         int imageX = _glyphIndex % GLYPHD_IN_LINE;
         int imageY = _glyphIndex / GLYPHD_IN_LINE;
 
 
         uint visualSize = MSDFLevelData.GlyphSize - MSDFLevelData.Padding * 2;
-        if (index == -1)
+        // if (index == -1)
+        // {
+        //TODO - To implement uv save
+        // float _uvWidthPx = Math.Min(glyph.OccupiedWidthPx, visualSize);
+        // float _uvHeightPx = Math.Min(glyph.OccupiedHeightPx, visualSize);
+
+        // glyph.UVMin = new Vector2D<float>(
+        //     (imageX * MSDFLevelData.GlyphSize + MSDFLevelData.Padding) / (float)MSDFLevelData.AtlasSize,
+        //     (imageY * MSDFLevelData.GlyphSize + MSDFLevelData.Padding) / (float)MSDFLevelData.AtlasSize
+        // );
+
+        // glyph.UVMax = new Vector2D<float>(
+        //     (imageX * MSDFLevelData.GlyphSize + MSDFLevelData.Padding + _uvWidthPx) / (float)MSDFLevelData.AtlasSize,
+        //     (imageY * MSDFLevelData.GlyphSize + MSDFLevelData.Padding + _uvHeightPx) / (float)MSDFLevelData.AtlasSize
+        // );
+        // }
+
+        uploadList.Add(new()
         {
-            //TODO - To implement uv save
-            // float _uvWidthPx = Math.Min(glyph.OccupiedWidthPx, visualSize);
-            // float _uvHeightPx = Math.Min(glyph.OccupiedHeightPx, visualSize);
+            BufferOffset = elementHead,
+            BufferRowLength = MSDFLevelData.GlyphSize,
+            BufferImageHeight = MSDFLevelData.GlyphSize,
 
-            // glyph.UVMin = new Vector2D<float>(
-            //     (imageX * MSDFLevelData.GlyphSize + MSDFLevelData.Padding) / (float)MSDFLevelData.AtlasSize,
-            //     (imageY * MSDFLevelData.GlyphSize + MSDFLevelData.Padding) / (float)MSDFLevelData.AtlasSize
-            // );
-
-            // glyph.UVMax = new Vector2D<float>(
-            //     (imageX * MSDFLevelData.GlyphSize + MSDFLevelData.Padding + _uvWidthPx) / (float)MSDFLevelData.AtlasSize,
-            //     (imageY * MSDFLevelData.GlyphSize + MSDFLevelData.Padding + _uvHeightPx) / (float)MSDFLevelData.AtlasSize
-            // );
-            createdGlyphs += 1;
-        }
-
-        ulong _offset = stagingBuffer.GetOffset();
-        bool _isBlocked = inFlight.Any(r => _offset >= r.startOffset && _offset < r.endOffset);
-
-        if (_isBlocked)
-        {
-            WaitingCharacters.Enqueue(new()
+            ImageSubresource = new()
             {
-                character = character.GetCharacter(),
-                pixels = pixels,
-                index = _glyphIndex
-            });
-            return false;
-        }
+                AspectMask = ImageAspectFlags.ColorBit,
+                MipLevel = 0,
+                BaseArrayLayer = 0,
+                LayerCount = 1,
+            },
+            ImageOffset = new((int)(imageX * MSDFLevelData.GlyphSize), (int)(imageY * MSDFLevelData.GlyphSize), 0),
+            ImageExtent = new()
+            {
+                Width = MSDFLevelData.GlyphSize,
+                Height = MSDFLevelData.GlyphSize,
+                Depth = 1,
+            },
+        });
 
-        stagingBuffer.UploadPixels(pixels, uploadList, imageX, imageY);
+        pixels.AsSpan().CopyTo(new Span<byte>((void*)((nint)stagingBufferData.Mapped + (nint)elementHead), (int)(MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize * 4)));
 
         charactersBuffer.EnqueueCharacter(character);
 
@@ -230,40 +233,50 @@ public class FontAtlas : IDisposable, IRenderTick
         return true;
     }
 
-    public unsafe void EndRecording(uint frameInFlight)
+    public ImageMemoryBarrier2 GetTransferImageBarrier()
     {
-        if (uploadList.Count == 0)
-            return;
-
-        var _actualCommandBuffer = CmdHelper.BeginSingleTimeCommands(TransferCommandPoolManager.GetCommandPool(frameInFlight));
-
         var srcLayout = !_atlasInitialized
             ? ImageLayout.Undefined
             : ImageLayout.ShaderReadOnlyOptimal;
-        var _barrierTexImage = ImageHelper.TransitionImageLayout(atlasImage, srcLayout, ImageLayout.TransferDstOptimal);
-        DependencyInfo _barrierTexInfo = new()
+        return ImageHelper.TransitionImageLayout(stageUploadAtlas.atlasImage, srcLayout, ImageLayout.TransferDstOptimal);
+    }
+
+    public ImageMemoryBarrier2 GetShaderOptimalImageBarrier()
+    {
+        return ImageHelper.TransitionImageLayout(stageUploadAtlas.atlasImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
+    }
+
+    unsafe void EndRecording(CommandBuffer commandBuffer, BufferData stagingBufferData)
+    {
+        BufferImageCopy2* _uploadRegions = stackalloc BufferImageCopy2[uploadList.Count + prevUploadList.Count];
+        int i = 0;
+        foreach (var item in prevUploadList)
         {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = 1,
-            PImageMemoryBarriers = &_barrierTexImage
-        };
-        CreateVulkan.vk.CmdPipelineBarrier2(_actualCommandBuffer, &_barrierTexInfo);
+            _uploadRegions[i] = item;
+            i++;
+        }
+        prevUploadList.Clear();
 
-
-        fixed (BufferImageCopy* uploadPtr = uploadList.ToArray())
-            CreateVulkan.vk.CmdCopyBufferToImage(_actualCommandBuffer, stagingBuffer.Buffer, atlasImage, ImageLayout.TransferDstOptimal, (uint)uploadList.Count, uploadPtr);
-
-        var _barrierTexRead = ImageHelper.TransitionImageLayout(atlasImage, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);
-
-        _barrierTexInfo = new()
+        foreach (var item in uploadList)
         {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = 1,
-            PImageMemoryBarriers = &_barrierTexRead
+            _uploadRegions[i] = item;
+            prevUploadList.Add(item);
+            i++;
+        }
+
+        uploadList.Clear();
+
+        CopyBufferToImageInfo2 _copyBufferToImageInfo = new()
+        {
+            SrcBuffer = stagingBufferData.Buffer,
+            DstImage = stageUploadAtlas.atlasImage,
+
+            PRegions = _uploadRegions,
+            RegionCount = (uint)(uploadList.Count + prevUploadList.Count),
+            DstImageLayout = ImageLayout.TransferDstOptimal,
         };
 
-        CreateVulkan.vk.CmdPipelineBarrier2(_actualCommandBuffer, &_barrierTexInfo);
-        CreateVulkan.vk.EndCommandBuffer(_actualCommandBuffer);
+        CreateVulkan.vk.CmdCopyBufferToImage2(commandBuffer, in _copyBufferToImageInfo);
 
 
         // inFlight.Add(new UploadRegion
@@ -272,10 +285,6 @@ public class FontAtlas : IDisposable, IRenderTick
         //     size = (ulong)(BUFFER_GLYPH_SIZE * uploadList.Count),
         //     timelineValue = timelineValue
         // });
-
-        uploadList.Clear();
-
-        TransferCommandPoolManager.AddCommandBuffer(frameInFlight, _actualCommandBuffer);
 
         _atlasInitialized = true;
 
@@ -310,23 +319,18 @@ public class FontAtlas : IDisposable, IRenderTick
 
 
     #endregion
-    
+
     #region Getters
     public GlyphGeometry GetGlyph(char character)
     {
         return Glyphs[character];
     }
     #endregion
-    public unsafe void Dispose()
+    public void Dispose()
     {
         charactersBuffer.Dispose();
-        stagingBuffer.Dispose();
 
-        if (imageView.Handle != 0)
-            CreateVulkan.vk.DestroyImageView(LogicalDevice.device, imageView, null);
-        if (atlasImage.Handle != 0)
-            CreateVulkan.vk.DestroyImage(LogicalDevice.device, atlasImage, null);
-        if (atlasMemory.Handle != 0)
-            CreateVulkan.vk.FreeMemory(LogicalDevice.device, atlasMemory, null);
+        mainAtlas.Dispose();
+        stageUploadAtlas.Dispose();
     }
 }

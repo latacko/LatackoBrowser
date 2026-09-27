@@ -48,9 +48,9 @@ static public class BufferHelper
     public static unsafe (BufferData bufferData, ulong size) CreateStagingBuffer<Data>(uint elements) where Data : unmanaged
     {
         BufferData _data = new();
-        ulong _size = (ulong)Unsafe.SizeOf<Data>()*elements;
+        ulong _size = (ulong)Unsafe.SizeOf<Data>() * elements;
         CreateBuffer(_size, BufferUsageFlags.TransferSrcBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _data.Buffer, ref _data.Memory);
-        CreateVulkan.vk.MapMemory(LogicalDevice.device, _data.Memory, 0, (ulong)Unsafe.SizeOf<Data>()*elements, 0, ref _data.Mapped);
+        CreateVulkan.vk.MapMemory(LogicalDevice.device, _data.Memory, 0, (ulong)Unsafe.SizeOf<Data>() * elements, 0, ref _data.Mapped);
         return (_data, _size);
     }
 
@@ -82,6 +82,12 @@ static public class BufferHelper
             }
         }
         throw new Exception("Failed to find suitable memory type!");
+    }
+
+    public static void DestroyBuffer(BufferData bufferData)
+    {
+        CreateVulkan.vk.UnmapMemory(LogicalDevice.device, bufferData.Memory);
+        DestroyBuffer(bufferData.Buffer, bufferData.Memory);
     }
 
     public static unsafe void DestroyBuffer(Buffer buffer, DeviceMemory memory)

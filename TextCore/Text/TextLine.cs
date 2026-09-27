@@ -177,13 +177,14 @@ public class TextLine : VisualElement
         IndicesSlotData.Data = _indices;
         IndicesSlotData.dataCount = _j * 2 + 2;
 
-        AssetCore.AssetManager.RegisterModel()
+        //TODO - Register model
+        // AssetCore.AssetManager.RegisterModel()
 
         widthWithoutScale = _cursorX;
         UpdateBounds();
         AddFlag(RenderDirtyFlags.Model | RenderDirtyFlags.Matrix);
 
-        TextManager.Instance.Update(this);
+        // TextManager.Instance.Update(this);
         // if (VertexSlotData != null && VertexSlotData.GetRingBuffer() != null && VertexSlotData.GetRingBuffer().buffersInfo[0] != null && IndicesSlotData != null)
         //     Console.WriteLine("New Vertex buffer: " + VertexSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle + " index buffer " + +IndicesSlotData.GetRingBuffer().buffersInfo[0].Buffer.Handle);
     }

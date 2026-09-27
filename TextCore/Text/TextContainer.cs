@@ -13,10 +13,12 @@ public class TextContainer : VisualElement
     public string Text;
     internal ReadOnlyMemory<char> TextMemory;
     internal List<TextLine> runtimeTexts = new();
+    internal TextManager textManager;
     protected internal override int ObjectDataSize => Unsafe.SizeOf<TextContainerGPUData>();
 
-    public TextContainer(string text, uint objectIndex, VisualElement? parent = null) : base(0, objectIndex, null, parent)
+    public TextContainer(string text, uint objectIndex, TextManager textManager, VisualElement? parent = null) : base(0, objectIndex, null, parent)
     {
+        this.textManager = textManager;
         SetStyle(TextManager.TextDefaultStyle);
 
         Text = text;

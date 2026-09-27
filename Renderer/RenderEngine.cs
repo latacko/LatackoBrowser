@@ -24,15 +24,12 @@ public class RenderEngine : IDisposable
 
     readonly HashSet<BaseShader> shaders = [];
 
-    public RenderEngine(string[] deviceExtensions, KhrSurface khrSurface, SurfaceKHR surfaceKHR)
+    public RenderEngine(string[] deviceExtensions)
     {
         if (Instance != null)
             throw new Exception("Only one render engine can exist.");
         Instance = this;
         DeviceExtensions = deviceExtensions;
-
-        logicalDevice = new(DeviceExtensions);
-        physicalDevice = new(DeviceExtensions, khrSurface, surfaceKHR);
 
         InstanceFinder.AddInstance<TransferCommandPoolManager>();
         InstanceFinder.AddInstance<RingBufferManager>();
@@ -48,6 +45,12 @@ public class RenderEngine : IDisposable
     public unsafe void Init(byte** requiredExtensions, uint count)
     {
         createVulkan.Create(requiredExtensions, count);
+    }
+
+    public void PickDevice(KhrSurface khrSurface, SurfaceKHR surfaceKHR)
+    {
+        logicalDevice = new(DeviceExtensions);
+        physicalDevice = new(DeviceExtensions, khrSurface, surfaceKHR);
 
         physicalDevice.Pick();
         logicalDevice.Create();
@@ -59,9 +62,12 @@ public class RenderEngine : IDisposable
         }
     }
 
-    public void RegisterShader(BaseShader shader)
+    public void RegisterShaders(params BaseShader[] shaders)
     {
-        shaders.Add(shader);
+        foreach (var shader in shaders)
+        {
+            this.shaders.Add(shader);
+        }
     }
 
     public void RegisterSite(SiteRenderer site)

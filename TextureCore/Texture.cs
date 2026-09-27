@@ -2,7 +2,7 @@ using System;
 using Silk.NET.Vulkan;
 using Vulkan;
 
-namespace PrimitiveCore.Textures;
+namespace TextureCore;
 
 public class Texture : IDisposable
 {
@@ -13,7 +13,7 @@ public class Texture : IDisposable
     internal ushort width;
     internal ushort height;
     internal byte bitsPerPixel;
-    internal ulong imgSize=>(ulong)(width * height * bitsPerPixel / 8);
+    internal uint imgSize=>(uint)(width * height * bitsPerPixel / 8);
     
 
     internal Image Image = default;
@@ -30,5 +30,10 @@ public class Texture : IDisposable
     public void Dispose()
     {
         ImageHelper.DestroyTexture(Image, Memory, imageView);
+    }
+
+    public void Load()
+    {
+        TexturesManager.LoadTexture(this);
     }
 }

@@ -1,4 +1,5 @@
 using System.Drawing;
+using AtlasGeneratorCore;
 using GraphicsCore;
 using GraphicsCore.Buffers;
 using GraphicsCore.Shaders;
@@ -38,7 +39,7 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
 
     public override DescriptorSetLayout[] GetLayouts()
     {
-        return [TextManager.Instance.textDescriptorLayout];
+        return [FontsManager.textDescriptorLayout];
     }
 
     // // override depth — UI has no depth test
@@ -107,7 +108,7 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
     {
         CreateVulkan.vk.CmdBindPipeline(commandBuffer, PipelineBindPoint.Graphics, wireFrameRendering ? PipelineWireframe : Pipeline);
 
-        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref TextManager.Instance.textDescriptorSet, 0, null);
+        CreateVulkan.vk.CmdBindDescriptorSets(commandBuffer, PipelineBindPoint.Graphics, PipelineLayout, 0, 1, ref FontsManager.textDescriptorSet, 0, null);
 
         ulong* addresses = stackalloc ulong[3]
         {

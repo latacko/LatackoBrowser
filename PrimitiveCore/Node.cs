@@ -3,8 +3,8 @@ using System.Runtime.CompilerServices;
 using GraphicsCore;
 using GraphicsCore.Events;
 using GraphicsCore.Styles;
-using PrimitiveCore.Textures;
 using Silk.NET.Maths;
+using TextureCore;
 using Vulkan;
 
 namespace PrimitiveCore;
@@ -23,11 +23,11 @@ public class Node : VisualElement
     internal Vector2D<float> worldPosition;
 
     public List<VisualElement>? Children;
-    public Texture texture;
+    public Texture? texture;
 
     protected internal override int ObjectDataSize => Unsafe.SizeOf<ModelGPUData>();
 
-    public Node(uint modelId, uint objectIndex, Texture texture, EventSystem eventSystem, VisualElement? parent = null) : base(modelId, objectIndex, eventSystem, parent)
+    public Node(uint modelId, uint objectIndex, Texture? texture, EventSystem eventSystem, VisualElement? parent = null) : base(modelId, objectIndex, eventSystem, parent)
     {
         this.texture = texture;
         this.LayoutManager = new NodeLayoutManager();

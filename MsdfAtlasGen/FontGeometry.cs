@@ -42,7 +42,7 @@ namespace MsdfAtlasGen
         private double _geometryScale = 1;
         private FontMetrics _metrics = new();
         private List<GlyphGeometry> _glyphs = new();
-        private string loaded_charset;
+        private string loaded_charset = "";
         private readonly Dictionary<char, int> _glyphsByCharacter = new();
         private readonly Dictionary<(int, int), double> _kerning = new();
         private string _name = string.Empty;

@@ -93,7 +93,7 @@ public class Style
         return this;
     }
 
-    public ComputedStyle ComputeStyles(bool forceUpdate = false, bool updatePercentage = false, Vector2D<float> parentSize = default, Vector2D<float> objectSize = default, bool shouldMarkAsDirty = false)
+    internal ComputedStyle ComputeStyles(bool forceUpdate = false, bool updatePercentage = false, Vector2D<float> parentSize = default, Vector2D<float> objectSize = default, bool shouldMarkAsDirty = false)
     {
         bool _shouldForce = forceUpdate || updatePercentage;
         if (dirty == DirtyFlag.None && !_shouldForce)

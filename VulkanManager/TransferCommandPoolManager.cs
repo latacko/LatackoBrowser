@@ -10,8 +10,8 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
     Silk.NET.Vulkan.Semaphore transferDoneSemaphore;
     ulong currentTransferDoneSignalValue;
     ulong nextTransferDoneSignalValue = 1;
-    uint[] registeredCB = [];
-    readonly CommandBufferSubmitInfo[][] transferCommandBuffers = [];
+    uint[] registeredCB = new uint[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly CommandBufferSubmitInfo[][] transferCommandBuffers = new CommandBufferSubmitInfo[VulkanEngine.MAX_FRAMES_IN_FLIGHT][];
 
     public TransferCommandPoolManager()
     {

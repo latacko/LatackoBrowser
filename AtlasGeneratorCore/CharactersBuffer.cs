@@ -15,14 +15,14 @@ public class CharactersBuffer : IDisposable, IRenderTick
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;
     uint lastInstanceId = 0;
-    readonly BufferData[] buffers = new BufferData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly BufferData[] buffers = new BufferData[2];
     readonly int gpuDataSize = Unsafe.SizeOf<CharacterDataGPU>();
-    readonly Queue<GlyphGeometry>[] charactersToAdd = new Queue<GlyphGeometry>[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    readonly Queue<GlyphGeometry>[] charactersToAdd = new Queue<GlyphGeometry>[2];
 
 
     public CharactersBuffer()
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < 2; i++)
         {
             buffers[i] = CreateBuffer();
             charactersToAdd[i] = new();
@@ -35,9 +35,7 @@ public class CharactersBuffer : IDisposable, IRenderTick
         BufferData _bufferData = new();
         ulong _bufferSize = (ulong)gpuDataSize * NODES_COUNT_PER_INCREASE * incresedTimes;
         BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _bufferData.Buffer, ref _bufferData.Memory);
-        void* data;
-        CreateVulkan.vk.MapMemory(LogicalDevice.device, _bufferData.Memory, 0, _bufferSize, 0, &data);
-        _bufferData.Mapped = data;
+        CreateVulkan.vk.MapMemory(LogicalDevice.device, _bufferData.Memory, 0, _bufferSize, 0, ref _bufferData.Mapped);
 
         BufferDeviceAddressInfo addrInfo = new()
         {
@@ -79,7 +77,7 @@ public class CharactersBuffer : IDisposable, IRenderTick
 
     public void EnqueueCharacter(GlyphGeometry character)
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < 2; i++)
         {
             charactersToAdd[i].Enqueue(character);
         }
@@ -126,7 +124,7 @@ public class CharactersBuffer : IDisposable, IRenderTick
 
     public void Dispose()
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < 2; i++)
         {
             buffers[i].Dispose();
         }

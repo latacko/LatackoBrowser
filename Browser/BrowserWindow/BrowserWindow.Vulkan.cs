@@ -30,11 +30,8 @@ public unsafe partial class BrowserWindow
     readonly Semaphore[] imageAcquiredSemaphores = new Semaphore[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
 
-    void SetupVulkan()
+    public void SetupVulkan()
     {
-        CreateSurface();
-
-        swapchain = new(window.FramebufferSize, khrSurface, surface);
         swapchain.CreateSwapChain();
         swapchain.CreateImageViews();
 
@@ -71,7 +68,7 @@ public unsafe partial class BrowserWindow
         }
     }
 
-    void CreateSurface()
+    public void CreateSurfaceAndSwapchain()
     {
         if (!Vulkan.CreateVulkan.vk!.TryGetInstanceExtension(Vulkan.CreateVulkan.vulkanInstance, out khrSurface))
         {
@@ -79,6 +76,7 @@ public unsafe partial class BrowserWindow
         }
 
         surface = window!.VkSurface!.Create<AllocationCallbacks>(Vulkan.CreateVulkan.vulkanInstance.ToHandle(), null).ToSurface();
+        swapchain = new(window.FramebufferSize, khrSurface, surface);
     }
 
     void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex, Image siteRendererImg)

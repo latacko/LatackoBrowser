@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
+    <ProjectReference Include="../TextureCore/TextureCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -26,7 +26,6 @@ public unsafe class CreateVulkan : IDisposable
     public void Create(byte** requiredExtensions, uint count)
     {
         vk = Vk.GetApi();
-
         CreateInstance(requiredExtensions, count);
         SetUpDebugMessenger();
     }

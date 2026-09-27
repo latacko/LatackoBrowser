@@ -154,6 +154,7 @@ public unsafe class PhysicalDevice
 
             if (_hasTransfer && !_hasGraphics && !_hasCompute)
             {
+                Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
                 indices.TransferFamily = i;
             }
             

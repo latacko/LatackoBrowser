@@ -4,7 +4,9 @@ using System.Xml;
 using System.Xml.Linq;
 using BenchmarkDotNet.Running;
 using Browser;
+using Browser.BrowserUI;
 using GraphicsCore.Buffers;
+using GraphicsCore.Events;
 using GraphicsCore.Shaders;
 using HTMLParser;
 using InstanceFinderCore;
@@ -73,21 +75,47 @@ using TextCore;
 // Environment.SetEnvironmentVariable("socket","x11");
 BrowserWindow browserWindow = new();
 
-RenderEngine renderEngine = new([KhrSwapchain.ExtensionName], browserWindow.khrSurface, browserWindow.surface);
+RenderEngine renderEngine = new([KhrSwapchain.ExtensionName]);
 
-ShaderCreator<NodeShader> nodeShaderCreator = new();
-ShaderCreator<TextShader> textShaderCreator = new();
 
-renderEngine.RegisterShader(nodeShaderCreator.CreateShader("shaders/Compiled/uiShader.spv"));
-renderEngine.RegisterShader(textShaderCreator.CreateShader("shaders/Compiled/textShader.spv"));
 unsafe
 {
     renderEngine.Init(browserWindow.window.VkSurface.GetRequiredExtensions(out uint count), count);
 }
-byte threadId = InstanceFinder.RegisterSiteThread();
-SiteRenderer mainBrowser = new(threadId);
 
-browserWindow.Run(mainBrowser);
+Console.WriteLine("Set up vulkan");
+browserWindow.CreateSurfaceAndSwapchain();
+Console.WriteLine("Picking the best device");
+renderEngine.PickDevice(browserWindow.khrSurface, browserWindow.surface);
+
+ShaderCreator<NodeShader> nodeShaderCreator = new();
+ShaderCreator<TextShader> textShaderCreator = new();
+
+var defaultNodeShader = nodeShaderCreator.CreateShader("shaders/Compiled/uiShader.spv");
+NodeCreator.SetDefaultShader(defaultNodeShader);
+
+var defaultTextShader = textShaderCreator.CreateShader("shaders/Compiled/textShader.spv");
+
+renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
+
+TextureCore.TexturesManager texturesManager = new();
+texturesManager.Init();
+
+FontsManager fontManager = new();
+fontManager.LoadFont("google-noto/NotoSerif-Regular.ttf");
+// fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
+// fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
+
+EventSystem eventSystem = new();
+
+byte threadId = InstanceFinder.RegisterSiteThread();
+SiteRenderer mainBrowser = new(threadId, new LoginSite());
+browserWindow.SetTextureRenderer(mainBrowser);
+browserWindow.Run();
+
+
+texturesManager.Dispose();
+fontManager.Dispose();
 
 
 // SvgLoader.Loader.Parse(_document);

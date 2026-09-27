@@ -17,6 +17,7 @@
     <ProjectReference Include="../Renderer/Renderer.csproj" />
     <ProjectReference Include="../SvgLoader/SvgLoader.csproj" />
     <ProjectReference Include="../TextCore/TextCore.csproj" />
+    <ProjectReference Include="../TextureCore/TextureCore.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
     <ProjectReference Include="..\InstanceFinderCore\InstanceFinderCore.csproj" />

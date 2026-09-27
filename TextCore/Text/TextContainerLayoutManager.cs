@@ -102,7 +102,7 @@ public struct TextContainerLayoutManager : ILayoutManager
             TextLine _runtimeText;
             if (runtimeTextToReuse == -1)
             {
-                _runtimeText = TextManager.AddModelText(textContainer.Text.AsMemory(), leftSlice, rightSlice, textContainer);
+                _runtimeText = textContainer.textManager.AddModelText(textContainer.Text.AsMemory(), leftSlice, rightSlice, textContainer);
                 sthChanged = true;
             }
             else

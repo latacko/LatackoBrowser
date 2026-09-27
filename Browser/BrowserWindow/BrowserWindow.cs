@@ -33,20 +33,20 @@ public unsafe partial class BrowserWindow
 
     public BrowserWindow()
     {
+        CreateWindow("Browser");
     }
 
-    public void Run(TextureRenderer textureRenderer)
+    public void Run()
     {
-        textureRenderer.CreateVulkanEngine();
-        CreateCommandBuffers(textureRenderer.GetVulkanEngine());
         SetupVulkan();
-        CreateWindow("Browser");
+        Console.WriteLine("Test0");
         OnStart?.Invoke();
+        Console.WriteLine("Test1");
         MainLoop();
         CleanUp();
     }
 
-    void CreateWindow(string title)
+    public void CreateWindow(string title)
     {
         var options = WindowOptions.DefaultVulkan;
         // options.WindowBorder = WindowBorder.Hidden;
@@ -83,9 +83,15 @@ public unsafe partial class BrowserWindow
 
         //Assign events.
         OnStart += Start;
-        window.Update += textureRenderer.Update;
         window.Render += OnRender;
         window.FramebufferResize += OnFramebufferResize;
+    }
+
+    public void SetTextureRenderer(TextureRenderer textureRenderer)
+    {
+        textureRenderer.CreateVulkanEngine();
+        CreateCommandBuffers(textureRenderer.GetVulkanEngine());
+        window.Update += textureRenderer.Update;
     }
 
     public void SetTitle(string title)
@@ -114,6 +120,9 @@ public unsafe partial class BrowserWindow
         transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>(textureRenderer.GetThreadId());
         ringBufferManager = InstanceFinder.GetInstance<RingBufferManager>(textureRenderer.GetThreadId());
         ringBufferManager.SetTransferCommandPoolManager(transferCommandPoolManager);
+
+        textureRenderer.Init(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
+
         Console.WriteLine("==============================  STARTING ADDING OBJECTS  ==============================");
         // browserUI.Create();
     }
@@ -121,6 +130,7 @@ public unsafe partial class BrowserWindow
     private void OnFramebufferResize(Vector2D<int> newSize)
     {
         framebufferResized = true;
+        textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
     }
 
     int lastSecondFps = 0;
