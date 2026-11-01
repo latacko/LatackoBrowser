@@ -16,7 +16,7 @@ public class LoginSite: ISiteController
 
     public void Start()
     {
-        var _background = document.CreateElement()
+        var _background = document.CreateElement(0)
         .SetStyle(new Style("Backround")
             .SetLayout(layout=>layout
                 .SetWidth(new(100, UnitType.lvw))
@@ -27,7 +27,7 @@ public class LoginSite: ISiteController
             )
         );
 
-        var _form = document.CreateElement()
+        var _form = document.CreateElement(0)
         .SetStyle(new Style("form")
             .SetLayout(layout=>layout
                 .SetWidth(new(50, UnitType.lvw))

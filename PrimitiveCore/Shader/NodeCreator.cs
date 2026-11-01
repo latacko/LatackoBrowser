@@ -1,23 +1,30 @@
 using System;
 using GraphicsCore;
 using GraphicsCore.Events;
-using PrimitiveCore.Model;
 using TextureCore;
+using PrimitiveCore.Shader;
+using PrimitiveCore;
 
-namespace PrimitiveCore;
+namespace Vulkan;
 
-public static class NodeCreator
+public class NodeCreator
 {
-    public static readonly HashSet<Node> Elements = [];
-    public static uint LastCreatedIndex = 0;
+    uint siteId;
+    public readonly HashSet<Node> Elements = [];
+    public uint LastCreatedIndex = 0;
     static NodeShader defaultNodeShader;
+
+    public NodeCreator(uint siteId)
+    {
+        this.siteId = siteId;
+    }
 
     public static void SetDefaultShader(NodeShader shader)
     {
         defaultNodeShader = shader;
     }
 
-    public static Node Create(uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
+    public Node Create(uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
     {
         uint objectIndex = LastCreatedIndex++;
         Node runtimeModelData = new(modelId, objectIndex, texture, EventSystem.Instance, parent);

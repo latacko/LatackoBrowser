@@ -126,41 +126,49 @@ public class FontAtlas : IDisposable
     {
         Parallel.For(0, characters.Length, (i) =>
         {
-            var _character = characters[i];
-
-            double pixelsPerUnit = glyphScale * _character.GetGeometryScale();
-            var attribs = new GlyphGeometry.GlyphAttributes
+            try
             {
-                // Pixels-per-font-unit: packer scale * glyph geometry scale.
-                Scale = pixelsPerUnit, // will be overridden per glyph below
-                Range = glyphUnitRange + glyphPxRange / pixelsPerUnit, // base; per-glyph addition below
-                InnerPadding = glyphInnerPadding + glyphInnerPxPadding / pixelsPerUnit,
-                OuterPadding = glyphOuterPadding + glyphOuterPxPadding / pixelsPerUnit,
-                MiterLimit = glyphMiterLimit,
-                PxAlignOriginX = glyphAlignOriginX,
-                PxAlignOriginY = glyphAlignOriginY
-            };
+                var _character = characters[i];
 
-            _character.WrapBox(attribs);
+                double pixelsPerUnit = glyphScale * _character.GetGeometryScale();
+                var attribs = new GlyphGeometry.GlyphAttributes
+                {
+                    // Pixels-per-font-unit: packer scale * glyph geometry scale.
+                    Scale = pixelsPerUnit, // will be overridden per glyph below
+                    Range = glyphUnitRange + glyphPxRange / pixelsPerUnit, // base; per-glyph addition below
+                    InnerPadding = glyphInnerPadding + glyphInnerPxPadding / pixelsPerUnit,
+                    OuterPadding = glyphOuterPadding + glyphOuterPxPadding / pixelsPerUnit,
+                    MiterLimit = glyphMiterLimit,
+                    PxAlignOriginX = glyphAlignOriginX,
+                    PxAlignOriginY = glyphAlignOriginY
+                };
 
-            var _glyphBitmap = new Bitmap<float>((int)MSDFLevelData.GlyphSize, (int)MSDFLevelData.GlyphSize, 4);
-            MsdfGenerator.GenerateMSDF(_glyphBitmap, _character.GetShape(), _character.GetBoxProjection(), _character.GetBoxRange(), new());
+                _character.WrapBox(attribs);
 
-            byte[] _pixels = new byte[MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize * 4];
-            for (int k = 0; k < MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize; k++)
+                var _glyphBitmap = new Bitmap<float>((int)MSDFLevelData.GlyphSize, (int)MSDFLevelData.GlyphSize, 4);
+                MsdfGenerator.GenerateMSDF(_glyphBitmap, _character.GetShape(), _character.GetBoxProjection(), _character.GetBoxRange(), new());
+
+                byte[] _pixels = new byte[MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize * 4];
+                for (int k = 0; k < MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize; k++)
+                {
+                    _pixels[k * 4 + 0] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 0] * 255f, 0, 255);
+                    _pixels[k * 4 + 1] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 1] * 255f, 0, 255);
+                    _pixels[k * 4 + 2] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 2] * 255f, 0, 255);
+                    _pixels[k * 4 + 3] = 255;
+                }
+
+                WaitingCharacters.Enqueue(new()
+                {
+                    character = _character.GetCharacter(),
+                    pixels = _pixels,
+                    index = createdGlyphs
+                });
+            } catch (Exception e)
             {
-                _pixels[k * 4 + 0] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 0] * 255f, 0, 255);
-                _pixels[k * 4 + 1] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 1] * 255f, 0, 255);
-                _pixels[k * 4 + 2] = (byte)Math.Clamp(_glyphBitmap.Pixels[k * 4 + 2] * 255f, 0, 255);
-                _pixels[k * 4 + 3] = 255;
+                Console.WriteLine(e);
             }
 
-            WaitingCharacters.Enqueue(new()
-            {
-                character = _character.GetCharacter(),
-                pixels = _pixels,
-                index = createdGlyphs
-            });
+
         });
     }
 

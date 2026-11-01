@@ -1,4 +1,4 @@
-namespace PrimitiveCore;
+namespace Vulkan;
 
 public enum PrimitiveUIModel
 {

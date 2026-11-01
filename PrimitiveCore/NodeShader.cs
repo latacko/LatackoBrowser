@@ -9,7 +9,7 @@ using Vulkan;
 using VulkanManager;
 using VulkanManager.BufferManager;
 
-namespace PrimitiveCore;
+namespace PrimitiveCore.Shader;
 
 public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
 {
@@ -23,9 +23,9 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
         this.instanceManager = instanceManager;
     }
 
-    public static NodeShader Create(string shaderPath, Func<Type, InstancesManager> objectsManagerFunc)
+    public static NodeShader Create(string shaderPath, Type meshData, Type instanceData, Func<Type, Type, InstancesManager> objectsManagerFunc)
     {
-        return new NodeShader(shaderPath, objectsManagerFunc.Invoke(typeof(ModelGPUData)));
+        return new NodeShader(shaderPath, objectsManagerFunc.Invoke(meshData, instanceData));
     }
 
     public override void Init()

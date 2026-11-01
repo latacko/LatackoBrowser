@@ -2,8 +2,9 @@ using System;
 using GraphicsCore;
 using GraphicsCore.Styles;
 using Silk.NET.Maths;
+using Vulkan;
 
-namespace PrimitiveCore;
+namespace PrimitiveCore.Shader;
 
 public struct NodeLayoutManager : ILayoutManager
 {

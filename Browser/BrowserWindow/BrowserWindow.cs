@@ -4,7 +4,7 @@ using Silk.NET.Vulkan;
 using Silk.NET.Windowing;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
 using Silk.NET.Input.Sdl;
-using PrimitiveCore;
+using Vulkan;
 using GraphicsCore.Styles;
 using System.Diagnostics;
 using Vulkan;
@@ -117,8 +117,8 @@ public unsafe partial class BrowserWindow
     private void Start()
     {
         // coreManager.Start();
-        transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>(textureRenderer.GetThreadId());
-        ringBufferManager = InstanceFinder.GetInstance<RingBufferManager>(textureRenderer.GetThreadId());
+        transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+        ringBufferManager = InstanceFinder.GetInstance<RingBufferManager>();
         ringBufferManager.SetTransferCommandPoolManager(transferCommandPoolManager);
 
         textureRenderer.Init(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);

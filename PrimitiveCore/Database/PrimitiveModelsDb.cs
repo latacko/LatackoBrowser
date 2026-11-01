@@ -5,7 +5,7 @@ using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
 
-namespace PrimitiveCore;
+namespace Vulkan;
 
 public class PrimitiveModelsDb : IDisposable
 {
@@ -24,6 +24,8 @@ public class PrimitiveModelsDb : IDisposable
             ],
             [0, 1, 2, 2, 3, 0])
     };
+
+    
 
     /// <summary>
     /// Creates two buffers for primitives models. Vertex and Indices buffer
@@ -75,7 +77,7 @@ public class PrimitiveModelsDb : IDisposable
         ulong _indicesSize = (ulong)(sizeof(TIndices) * indices.Length);
         ulong _bufferSize = _vertexSize + _indicesSize;
 
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit, MemoryPropertyFlags.DeviceLocalBit | MemoryPropertyFlags.HostVisibleBit, ref primitiveBuffer, ref primitiveBufferMemory);
+        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit | BufferUsageFlags.TransferDstBit, MemoryPropertyFlags.DeviceLocalBit | MemoryPropertyFlags.HostVisibleBit, ref primitiveBuffer, ref primitiveBufferMemory);
 
         void* data;
         CreateVulkan.vk.MapMemory(LogicalDevice.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);

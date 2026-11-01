@@ -5,29 +5,29 @@ using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Units;
 
-namespace PrimitiveCore.Model
+namespace PrimitiveCore.Model;
+
+public struct MeshVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVertex
 {
-    public struct MeshVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVertex
+    public Vector3D<float> Pos = pos;
+    public Vector2D<float> TextCoord = textCoord;
+
+    public static VertexInputBindingDescription GetBindingDescription()
     {
-        public Vector3D<float> Pos = pos;
-        public Vector2D<float> TextCoord = textCoord;
-
-        public static VertexInputBindingDescription GetBindingDescription()
+        VertexInputBindingDescription bindingDescription = new()
         {
-            VertexInputBindingDescription bindingDescription = new()
-            {
-                Binding = 0,
-                Stride = (uint)Unsafe.SizeOf<MeshVertex>(),
-                InputRate = VertexInputRate.Vertex,
-            };
+            Binding = 0,
+            Stride = (uint)Unsafe.SizeOf<MeshVertex>(),
+            InputRate = VertexInputRate.Vertex,
+        };
 
-            return bindingDescription;
-        }
+        return bindingDescription;
+    }
 
-        public static VertexInputAttributeDescription[] GetAttributeDescriptions()
+    public static VertexInputAttributeDescription[] GetAttributeDescriptions()
+    {
+        var attributeDescriptions = new[]
         {
-            var attributeDescriptions = new[]
-            {
                 new VertexInputAttributeDescription()
                 {
                     Binding = 0,
@@ -44,7 +44,6 @@ namespace PrimitiveCore.Model
                 }
             };
 
-            return attributeDescriptions;
-        }
+        return attributeDescriptions;
     }
 }

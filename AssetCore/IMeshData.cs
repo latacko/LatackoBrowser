@@ -10,6 +10,11 @@ public abstract class IMeshData
     public Buffer indexBuffer;
     public uint indexOffset;
 
+    /// <summary>
+    /// If true the model has been loaded on the gpu
+    /// </summary>
+    public bool Loaded;
+
     public abstract int GetVertexCount();
     public abstract int GetIndicesCount();
 }

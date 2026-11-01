@@ -1,0 +1,10 @@
+Oddinote apartó aquí archivos de la bóveda que no usa ninguna nota:
+copias repetidas y archivos de nodos que ya no existen.
+Esta carpeta se borra sola a los 30 días. Si antes de eso una nota
+vuelve a pedir uno de estos archivos, Oddinote lo devuelve a su sitio.
+Si quieres el espacio ya, puedes borrar esta carpeta.
+
+Oddinote moved here vault files that no note uses: repeated copies
+and files of nodes that no longer exist. This folder deletes itself
+after 30 days. If a note asks for one of these files before then,
+Oddinote puts it back. To get the space now, delete this folder.

@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using GraphicsCore;
 using GraphicsCore.Events;
 using GraphicsCore.Styles;
+using PrimitiveCore.Model;
+using PrimitiveCore.Shader;
 using Silk.NET.Maths;
 using TextureCore;
 using Vulkan;

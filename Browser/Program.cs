@@ -1,21 +1,14 @@
-﻿using System.Diagnostics;
-using System.Reflection;
-using System.Xml;
-using System.Xml.Linq;
-using BenchmarkDotNet.Running;
-using Browser;
+﻿using Browser;
 using Browser.BrowserUI;
-using GraphicsCore.Buffers;
 using GraphicsCore.Events;
 using GraphicsCore.Shaders;
-using HTMLParser;
 using InstanceFinderCore;
-using PrimitiveCore;
+using Vulkan;
 using Renderer;
-using Silk.NET.Maths;
 using Silk.NET.Vulkan.Extensions.KHR;
-using Silk.NET.Windowing;
 using TextCore;
+using PrimitiveCore.Shader;
+using PrimitiveCore.Model;
 
 // HttpClient httpClient = new();
 
@@ -91,7 +84,7 @@ renderEngine.PickDevice(browserWindow.khrSurface, browserWindow.surface);
 ShaderCreator<NodeShader> nodeShaderCreator = new();
 ShaderCreator<TextShader> textShaderCreator = new();
 
-var defaultNodeShader = nodeShaderCreator.CreateShader("shaders/Compiled/uiShader.spv");
+var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("shaders/Compiled/uiShader.spv");
 NodeCreator.SetDefaultShader(defaultNodeShader);
 
 var defaultTextShader = textShaderCreator.CreateShader("shaders/Compiled/textShader.spv");
@@ -107,9 +100,9 @@ fontManager.LoadFont("google-noto/NotoSerif-Regular.ttf");
 // fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
 
 EventSystem eventSystem = new();
+InstanceFinder.CreateInstances();
 
-byte threadId = InstanceFinder.RegisterSiteThread();
-SiteRenderer mainBrowser = new(threadId, new LoginSite());
+SiteRenderer mainBrowser = new(new LoginSite());
 browserWindow.SetTextureRenderer(mainBrowser);
 browserWindow.Run();
 

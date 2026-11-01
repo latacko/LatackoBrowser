@@ -1,6 +1,6 @@
 using System;
 using GraphicsCore.Styles;
-using PrimitiveCore;
+using Vulkan;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
 using Vulkan;
@@ -21,7 +21,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
     }
 
     public readonly uint UniqueId;
-    public readonly byte ThreadId;
 
     static uint LastUniqueId;
 
@@ -58,14 +57,21 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     ISiteController siteController;
 
-    public SiteRenderer(byte threadId, ISiteController siteController)
+    Document document;
+
+    NodeCreator nodeCreator;
+
+
+    public SiteRenderer(ISiteController siteController)
     {
         UniqueId = LastUniqueId++;
         this.siteController = siteController;
-        this.ThreadId = threadId;
         if (RenderEngine.Instance == null)
             throw new System.NullReferenceException("The render engine hasn't been initialized");
         RenderEngine.Instance.RegisterSite(this);
+
+        nodeCreator = new(UniqueId);
+        document = new(nodeCreator);
     }
 
     #region Setup
@@ -140,7 +146,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
     public override VulkanEngine GetVulkanEngine() => vulkanEngine;
 
     public override uint GetId() => UniqueId;
-    public override byte GetThreadId() => ThreadId;
     public override ulong GetCameraBufferDeviceAddress() => cameraBuffers.shaderDataBuffersForCamera[FrameInFlight].DeviceAddress;
 
     #endregion

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Silk.NET.Maths;
 using Silk.NET.Vulkan;
-namespace Vulkan;
+namespace PrimitiveCore.Model;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct ModelGPUData // pad 16

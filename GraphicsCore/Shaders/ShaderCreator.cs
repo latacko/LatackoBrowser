@@ -1,19 +1,24 @@
 using System;
+using AssetCore;
 using GraphicsCore.Buffers;
 using VulkanManager.BufferManager;
 
 namespace GraphicsCore.Shaders;
 
-public class ShaderCreator<TBaseShader> where TBaseShader: BaseShader, IShaderFactory<TBaseShader>
+public class ShaderCreator<TBaseShader> where TBaseShader : BaseShader, IShaderFactory<TBaseShader>
 {
-    public TBaseShader CreateShader(string shaderPath)
+    public TBaseShader CreateShader<TMeshData, TInstanceData>(string shaderPath)
+    where TMeshData : IMeshData
+    where TInstanceData : struct
     {
-        return TBaseShader.Create(shaderPath, CreateObjectsManager);
+        Type meshData = typeof(TMeshData);
+        Type instanceData = typeof(TInstanceData);
+        return TBaseShader.Create(shaderPath, meshData, instanceData, CreateObjectsManager);
     }
-    protected InstancesManager CreateObjectsManager(Type gpuDataType)
+    protected InstancesManager CreateObjectsManager(Type meshData, Type gpuDataType)
     {
-        if (!BaseShader.InstancesManagerByType.ContainsKey(gpuDataType))
-            BaseShader.InstancesManagerByType.Add(gpuDataType, new InstancesManager(gpuDataType));
-        return BaseShader.InstancesManagerByType[gpuDataType];
+        if (!BaseShader.InstancesManagerByType.ContainsKey(meshData))
+            BaseShader.InstancesManagerByType.Add(meshData, new InstancesManager(meshData, gpuDataType));
+        return BaseShader.InstancesManagerByType[meshData];
     }
 }

@@ -27,7 +27,7 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
         this.textLineManager = textLineManager;
     }
 
-    public static TextShader Create(string shaderPath, Func<Type, InstancesManager> objectsManagerFunc)
+    public static TextShader Create(string shaderPath, Type meshData, Type instanceData, Func<Type, InstancesManager> objectsManagerFunc)
     {
         return new TextShader(shaderPath, objectsManagerFunc.Invoke(typeof(TextContainerGPUData)), objectsManagerFunc.Invoke(typeof(TextLineGPUData)));
     }

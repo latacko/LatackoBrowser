@@ -5,23 +5,14 @@ namespace InstanceFinderCore;
 public static class InstanceFinder
 {
     static List<Type> instanceToCreate = [];
-    static Dictionary<byte, Dictionary<Type, object>> instances = [];
+    static Dictionary<Type, object> instances = [];
 
-    static byte newSiteThrad = 0;
-
-    public static byte RegisterSiteThread()
+    public static void CreateInstances()
     {
-        var _siteId = newSiteThrad;
-        newSiteThrad++;
-
-        instances.Add(_siteId, new());
-
         foreach (var item in instanceToCreate)
         {
-            instances[_siteId].Add(item, Activator.CreateInstance(item));
+            instances.Add(item, Activator.CreateInstance(item));
         }
-
-        return _siteId;
     }
 
     public static void AddInstance<Type>()
@@ -29,8 +20,8 @@ public static class InstanceFinder
         instanceToCreate.Add(typeof(Type));
     }
 
-    public static Type GetInstance<Type>(byte thread)
+    public static Type GetInstance<Type>()
     {
-        return (Type)instances[thread][typeof(Type)];
+        return (Type)instances[typeof(Type)];
     }
 }

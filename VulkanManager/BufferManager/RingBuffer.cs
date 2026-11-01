@@ -14,13 +14,11 @@ public class RingBuffer<BufferData> : IDisposable, IRenderTick where BufferData 
     byte bucketSizeMultiplier;
     uint elementOffset = 0;
     uint maxElementsCount = 0;
-    byte threadId = 0;
 
-    public RingBuffer(byte threadId, uint maxElementsCount, byte bucketSizeMultiplier, BufferUsageFlags usage)
+    public RingBuffer(uint maxElementsCount, byte bucketSizeMultiplier, BufferUsageFlags usage)
     {
         this.maxElementsCount = maxElementsCount;
         this.bucketSizeMultiplier = bucketSizeMultiplier;
-        this.threadId = threadId;
         for (int i = 0; i < Vulkan.VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             buffersInfo[i] = new(maxElementsCount, usage);
@@ -159,7 +157,7 @@ public class RingBuffer<BufferData> : IDisposable, IRenderTick where BufferData 
             i++;
         }
 
-        InstanceFinder.GetInstance<RingBufferManager>(threadId).AddTransfer(frameInFlight, _bufferData.Buffer, buffersInfo[frameInFlight].Buffer, _bc);
+        InstanceFinder.GetInstance<RingBufferManager>().AddTransfer(frameInFlight, _bufferData.Buffer, buffersInfo[frameInFlight].Buffer, _bc);
     }
 
 

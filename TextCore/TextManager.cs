@@ -14,7 +14,6 @@ namespace TextCore;
 
 public class TextManager : BufferManager, IRenderTick
 {
-    byte threadId;
     internal DynamicBuffer<TextVertex> vertexBuffer;
     internal DynamicBuffer<ushort> indicesBuffer;
 
@@ -55,8 +54,8 @@ public class TextManager : BufferManager, IRenderTick
 
     public override void RegisterBuffer()
     {
-        vertexBuffer = new(threadId, 4096, 2, BufferUsageFlags.VertexBufferBit);
-        indicesBuffer = new(threadId, 4096, 2, BufferUsageFlags.IndexBufferBit);
+        vertexBuffer = new(4096, 2, BufferUsageFlags.VertexBufferBit);
+        indicesBuffer = new(4096, 2, BufferUsageFlags.IndexBufferBit);
 
         TextDefaultStyle = new Style("Default text style")
             .SetFontProperties((FontProperties) => FontProperties

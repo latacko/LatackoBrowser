@@ -11,24 +11,30 @@ public unsafe class InstancesManager: IDisposable
 
     public Dictionary<ulong, InstancesBuffer> nodesBuffers = [];
     public static ulong MakeKey(uint siteId, uint modelId) => ((ulong)siteId << 32) | modelId;
-    readonly Type gpuDataType;
-    public InstancesManager(Type gpuDataType)
+    readonly Type meshData;
+    readonly Type instanceData;
+    public InstancesManager(Type meshData, Type instanceData)
     {
         Instance = this;
-        this.gpuDataType = gpuDataType;
+        this.meshData = meshData;
+        this.instanceData = instanceData;
+        if (meshData.GetType().BaseType != typeof(IMeshData))
+        {
+            throw new ArgumentException("Gpu data must by IMeshData");
+        }
     }
 
     public void RegisterBuffers(uint siteId)
     {
         MethodInfo openMethod = typeof(AssetManager).GetMethod(nameof(AssetManager.GetIdsOfModelType))!;
 
-        MethodInfo closedMethod = openMethod.MakeGenericMethod(gpuDataType);
+        MethodInfo closedMethod = openMethod.MakeGenericMethod(instanceData);
 
         uint[] _idsOfModels = (uint[])closedMethod.Invoke(null, null)!;
 
         foreach (var modelId in _idsOfModels)
         {
-            nodesBuffers[MakeKey(siteId, modelId)] = new(gpuDataType);
+            nodesBuffers[MakeKey(siteId, modelId)] = new(instanceData);
         }
     }
 
