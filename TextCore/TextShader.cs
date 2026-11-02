@@ -5,31 +5,26 @@ using GraphicsCore.Buffers;
 using GraphicsCore.Shaders;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
+using TextCore.Buffer;
 using TextCore.Text;
 using Vulkan;
 using VulkanManager;
 
 namespace TextCore;
 
-public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
+
+public unsafe class TextShader<TextLineData> : BaseShader where TextLineData : struct
 {
     public Dictionary<uint, List<TextContainer>> elements = new();
 
     public static bool ShowMSDF;
     public static bool ShowLOD;
 
-    InstancesManager textContainerManager;
-    InstancesManager textLineManager;
+    readonly TextInstancesManager textInstancesManager;
 
-    public TextShader(string shaderPath, InstancesManager textContainerManager, InstancesManager textLineManager) : base(shaderPath)
+    public TextShader(string shaderPath) : base(shaderPath)
     {
-        this.textContainerManager = textContainerManager;
-        this.textLineManager = textLineManager;
-    }
-
-    public static TextShader Create(string shaderPath, Type meshData, Type instanceData, Func<Type, InstancesManager> objectsManagerFunc)
-    {
-        return new TextShader(shaderPath, objectsManagerFunc.Invoke(typeof(TextContainerGPUData)), objectsManagerFunc.Invoke(typeof(TextLineGPUData)));
+        this.textInstancesManager = TextInstancesManager.Get<TextLineData>();
     }
 
     public override void Init()
@@ -82,7 +77,8 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
         new()
         {
             StageFlags = ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit,
-            Size       = sizeof(ulong)*4 + sizeof(uint) * 2 // camera ubo & text data & objects ubo
+            Size       = sizeof(ulong)*4 + sizeof(uint) * 3 // ulong: camera ubo & text container instances & text line instances & character instances
+                                                            // ints: mask & container instance id & line
         },
     ];
 
@@ -113,10 +109,16 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
         ulong* addresses = stackalloc ulong[3]
         {
             textureRenderer.GetCameraBufferDeviceAddress(),
-            textContainerManager.GetBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
-            textLineManager.GetBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
+            textInstancesManager.GetTextContainerBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
+            textInstancesManager.GetTextLineBufferDeviceAddress(textureRenderer.GetId(), frameInFlight),
         };
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, 0, sizeof(ulong) * 3, addresses);
+
+        uint _dataMask = 0;
+
+        _dataMask |= ShowMSDF ? 1 << 0 : 0u;
+        _dataMask |= ShowLOD ? 1 << 1 : 0u;
+        CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), ref _dataMask);
 
         // Parallel.ForEach(elements, item =>
         // {
@@ -132,31 +134,25 @@ public unsafe class TextShader : BaseShader, IShaderFactory<TextShader>
         Silk.NET.Vulkan.Buffer _lastIndexBuffer = default;
         ulong vOffset = 0;
 
-        uint _dataMask = 0;
-
-        _dataMask |= ShowMSDF ? 1 << 0 : 0u;
-        _dataMask |= ShowLOD ? 1 << 1 : 0u;
-
         foreach (var textContainer in elements[siteId])
         {
-            var _siteModelKey = InstancesManager.MakeKey(siteId, textContainer.ModelId);
+            textInstancesManager.RenderTick(siteId, frameInFlight);
 
-            textContainerManager.RenderTick(_siteModelKey, frameInFlight);
-
-            textContainer.TryWriteObjectData(textContainerManager.GetDestinationSpan(_siteModelKey, frameInFlight, textContainer.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
+            textContainer.TryWriteObjectData(textInstancesManager.GetTextContainerDestinationSpan(siteId, frameInFlight, textContainer.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
 
             ulong _characterBufferDeviceAddress = textContainer.fontManager.GetFontAtlas().charactersBuffer.GetBuffer(frameInFlight).DeviceAddress;
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 3, sizeof(ulong), &_characterBufferDeviceAddress);
 
-            uint _instanceIndex = textContainer.InstanceIndex;
-            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4, sizeof(uint), &_instanceIndex);
-            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), ref _dataMask);
+            uint _containerInstanceIndex = textContainer.InstanceIndex;
+            CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint), sizeof(uint), &_containerInstanceIndex);
 
             foreach (var textLine in textContainer.runtimeTexts)
             {
-                var _siteModelKeyTextLine = InstancesManager.MakeKey(siteId, textLine.ModelId);
-                textLine.TryWriteObjectData(textLineManager.GetDestinationSpan(_siteModelKeyTextLine, frameInFlight, textLine.InstanceIndex, textContainer.ObjectDataSize), frameInFlight);
+                uint _lineInstanceIndex = textLine.InstanceIndex;
+                CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit | ShaderStageFlags.FragmentBit, sizeof(ulong) * 4 + sizeof(uint) * 2, sizeof(uint), &_lineInstanceIndex);
                 
+                textLine.TryWriteObjectData(textInstancesManager.GetTextLineDestinationSpan(siteId, frameInFlight, _lineInstanceIndex, textLine.ObjectDataSize), frameInFlight);
+
                 var _vertexBuffer = textLine.VertexSlotData.GetRingBuffer().buffersInfo[frameInFlight].Buffer;
                 var _indexBuffer = textLine.IndicesSlotData.GetRingBuffer().buffersInfo[frameInFlight].Buffer;
 

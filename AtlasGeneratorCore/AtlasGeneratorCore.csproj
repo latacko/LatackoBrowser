@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../MsdfAtlasGen/MsdfAtlasGen.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>

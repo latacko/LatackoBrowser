@@ -13,6 +13,7 @@ public class ShaderCreator<TBaseShader> where TBaseShader : BaseShader, IShaderF
     {
         Type meshData = typeof(TMeshData);
         Type instanceData = typeof(TInstanceData);
+        Console.WriteLine("Mesh data: " + meshData);
         return TBaseShader.Create(shaderPath, meshData, instanceData, CreateObjectsManager);
     }
     protected InstancesManager CreateObjectsManager(Type meshData, Type gpuDataType)

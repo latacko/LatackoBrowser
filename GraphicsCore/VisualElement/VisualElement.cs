@@ -7,13 +7,14 @@ using Units;
 using Vulkan;
 using GraphicsCore.Events;
 using System.Runtime.InteropServices;
+using GraphicsCore.Buffers;
 
 [assembly: InternalsVisibleTo("PrimitiveCore")]
 [assembly: InternalsVisibleTo("TextCore")]
 namespace GraphicsCore;
 
 
-public abstract class VisualElement : IDisposable
+public abstract class VisualElement : IDisposable, IInstance
 {
     public struct ObjectComileInfo
     {

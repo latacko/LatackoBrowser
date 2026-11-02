@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
+using GraphicsCore.Buffers;
 using Msdfgen;
 using SharpFont;
 
 namespace MsdfAtlasGen
 {
-    public class GlyphGeometry
+    public class GlyphGeometry: IInstance
     {
         public struct GlyphAttributes
         {
@@ -47,7 +48,7 @@ namespace MsdfAtlasGen
         {
         }
 
-        public void SetCharacterBufferId(uint id)
+        public void ChangeInstanceId(uint id)
         {
             CharacterBufferId = id;
         }

@@ -70,18 +70,18 @@ public class RenderEngine : IDisposable
         }
     }
 
+    
+
     public void RegisterSite(SiteRenderer site)
     {
-        foreach (var objectsManager in BaseShader.InstancesManagerByType)
-        {
-            objectsManager.Value.RegisterBuffers(site.GetId());
-        }
-
+        // foreach (var objectsManager in BaseShader.InstancesManagerByType)
+        // {
+        //     objectsManager.Value.RegisterBuffers(site.GetId());
+        // }
         foreach (var shader in shaders)
         {
             shader.AddSite(site);
         }
-
     }
 
 

@@ -1,4 +1,5 @@
 using System;
+using GraphicsCore.Buffers;
 using MsdfAtlasGen;
 using Msdfgen;
 using Silk.NET.Maths;
@@ -71,7 +72,7 @@ public class FontAtlas : IDisposable
 
     public readonly Queue<WaitingCharacter> WaitingCharacters = new();
 
-    public CharactersBuffer charactersBuffer;
+    public InstancesBuffer<GlyphGeometry> charactersBuffer;
     IProgress<uint>? progress = null;
 
     public FontAtlas(uint id, string name, Action<ImageView, uint> registerTextureCB, IProgress<uint>? progress = null)
@@ -80,7 +81,7 @@ public class FontAtlas : IDisposable
         this.name = name;
         this.progress = progress;
 
-        charactersBuffer = new();
+        charactersBuffer = new(typeof(CharacterDataGPU));
         ImageHelper.CreateImage(MSDFLevelData.AtlasSize, MSDFLevelData.AtlasSize, Silk.NET.Vulkan.Format.R8G8B8A8Unorm, Silk.NET.Vulkan.ImageTiling.Optimal, Silk.NET.Vulkan.ImageUsageFlags.TransferDstBit | Silk.NET.Vulkan.ImageUsageFlags.SampledBit, Silk.NET.Vulkan.MemoryPropertyFlags.DeviceLocalBit, 1, ref mainAtlas.atlasImage, ref mainAtlas.atlasMemory);
         mainAtlas.imageView = ImageHelper.CreateImageView(mainAtlas.atlasImage, Format.R8G8B8A8Unorm, ImageAspectFlags.ColorBit, 1);
 
@@ -223,7 +224,7 @@ public class FontAtlas : IDisposable
 
         pixels.AsSpan().CopyTo(new Span<byte>((void*)((nint)stagingBufferData.Mapped + (nint)elementHead), (int)(MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize * 4)));
 
-        charactersBuffer.EnqueueCharacter(character);
+        charactersBuffer.EnqueueInstance(character);
 
         // ((CharacterDataGPU*)charactersBuffer.GetBuffer().Mapped)[(uint)character] = new()
         // {

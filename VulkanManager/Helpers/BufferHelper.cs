@@ -37,9 +37,10 @@ static public class BufferHelper
             PNext = (usage & BufferUsageFlags.ShaderDeviceAddressBit) != 0 ? &allocFlags : null,
         };
 
-        if (CreateVulkan.vk.AllocateMemory(LogicalDevice.device, ref allocInfo, null, out bufferMemory) != Result.Success)
+        var _result = CreateVulkan.vk.AllocateMemory(LogicalDevice.device, ref allocInfo, null, out bufferMemory);
+        if (_result != Result.Success)
         {
-            throw new Exception("Failed to allocate vertex buffer memory!");
+            throw new Exception("Failed to allocate vertex buffer memory! " + _result);
         }
 
         CreateVulkan.vk.BindBufferMemory(LogicalDevice.device, buffer, bufferMemory, 0);

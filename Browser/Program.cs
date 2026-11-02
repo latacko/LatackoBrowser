@@ -9,6 +9,7 @@ using Silk.NET.Vulkan.Extensions.KHR;
 using TextCore;
 using PrimitiveCore.Shader;
 using PrimitiveCore.Model;
+using TextCore.Text;
 
 // HttpClient httpClient = new();
 
@@ -82,12 +83,11 @@ Console.WriteLine("Picking the best device");
 renderEngine.PickDevice(browserWindow.khrSurface, browserWindow.surface);
 
 ShaderCreator<NodeShader> nodeShaderCreator = new();
-ShaderCreator<TextShader> textShaderCreator = new();
 
 var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("shaders/Compiled/uiShader.spv");
 NodeCreator.SetDefaultShader(defaultNodeShader);
 
-var defaultTextShader = textShaderCreator.CreateShader("shaders/Compiled/textShader.spv");
+var defaultTextShader = new TextShader<TextLineGPUData>("shaders/Compiled/textShader.spv");
 
 renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
 

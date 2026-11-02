@@ -8,39 +8,42 @@ using VulkanManager;
 
 namespace GraphicsCore.Buffers;
 
-public class InstancesBuffer : IDisposable, IRenderTick
+public class InstancesBuffer<Instance> : IDisposable, IRenderTick where Instance : IInstance
 {
     public const int NODES_COUNT_PER_INCREASE = 100;
     uint incresedTimes = 1;
     uint lastInstanceId = 0;
     bool bufferHasIncresed = false;
+    uint maxSize = 0;
     readonly uint[] buffersSize = new uint[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+
     readonly BufferData[] buffers = new BufferData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    VisualElement[] instances = [];
+    Instance[] instances = [];
     readonly List<uint> freeSlots = [];
-    readonly Queue<VisualElement> addInstanceQueue = [];
+    readonly Queue<Instance> addInstanceQueue = [];
 
     readonly int gpuDataSize;
 
     public InstancesBuffer(Type gpuDataType)
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            buffers[i] = CreateBuffer();
-        }
-
         MethodInfo openMethod = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf))!;
-
         MethodInfo closedMethod = openMethod.MakeGenericMethod(gpuDataType);
 
         gpuDataSize = (int)closedMethod.Invoke(null, null)!;
+
+        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            (buffers[i], ulong _newBufferSize) = CreateBuffer();
+            buffersSize[i] = (uint)_newBufferSize;
+        }
     }
 
     #region Buffer functions
-    public unsafe BufferData CreateBuffer()
+    public unsafe (BufferData, ulong) CreateBuffer()
     {
         BufferData _bufferData = new();
         ulong _bufferSize = (ulong)gpuDataSize * NODES_COUNT_PER_INCREASE * incresedTimes;
+
         BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref _bufferData.Buffer, ref _bufferData.Memory);
         void* data;
         CreateVulkan.vk.MapMemory(LogicalDevice.device, _bufferData.Memory, 0, _bufferSize, 0, &data);
@@ -53,15 +56,20 @@ public class InstancesBuffer : IDisposable, IRenderTick
         };
 
         _bufferData.DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
-        return _bufferData;
+
+        if (_bufferSize > maxSize)
+        {
+            maxSize = (uint)_bufferSize;
+        }
+        return (_bufferData, _bufferSize);
     }
 
     public unsafe void IncreseBuffer(int frameInFlight, uint newIncresedTimes)
     {
         ulong _bufferSize = (ulong)gpuDataSize * NODES_COUNT_PER_INCREASE * incresedTimes;
         incresedTimes = newIncresedTimes;
-        BufferData _newBuffer = CreateBuffer();
-        ulong _newBufferSize = (ulong)gpuDataSize * NODES_COUNT_PER_INCREASE * incresedTimes;
+        (BufferData _newBuffer, ulong _newBufferSize) = CreateBuffer();
+        buffersSize[frameInFlight] = (uint)_newBufferSize;
 
         new Span<byte>(buffers[frameInFlight].Mapped, (int)_bufferSize).CopyTo(new Span<byte>(_newBuffer.Mapped, (int)_newBufferSize));
         buffers[frameInFlight].Dispose();
@@ -83,51 +91,28 @@ public class InstancesBuffer : IDisposable, IRenderTick
         return incresedTimes + i;
     }
     #endregion
-    public void EnqueueInstance(VisualElement element)
+    public void EnqueueInstance(Instance element)
     {
         addInstanceQueue.Enqueue(element);
     }
 
     public void RenderTick(uint frameInFlight)
     {
-        if (addInstanceQueue.Count == 0)
+        #region Test if the buffer is correct size
+        if (addInstanceQueue.Count == 0 && buffersSize[frameInFlight] != maxSize)
         {
-            if (!bufferHasIncresed) return;
-
-            uint _maxSize = 0;
-            bool _isTheSame = false;
-            for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-            {
-                if (buffersSize[i] > _maxSize)
-                {
-                    _maxSize = buffersSize[i];
-                }
-                else
-                {
-                    _isTheSame = buffersSize[i] == _maxSize;
-                }
-            }
-            if (_isTheSame)
-            {
-                bufferHasIncresed = false;
-            }
-
-            if (buffersSize[frameInFlight] != _maxSize)
-            {
-                IncreseBuffer((int)frameInFlight, _maxSize);
-            }
-            return;
+            IncreseBuffer((int)frameInFlight, maxSize);
         }
 
+        #endregion
 
         #region Test if it is required to create new buffer with larger size
         uint _newSize = GetNewSize(lastInstanceId + (uint)addInstanceQueue.Count);
         if (_newSize != incresedTimes)
         {
-            buffersSize[frameInFlight] = _newSize;
             IncreseBuffer((int)frameInFlight, _newSize);
             var _oldInstances = instances;
-            instances = new VisualElement[_newSize];
+            instances = new Instance[_newSize];
             Array.Copy(_oldInstances, instances, _oldInstances.Length);
             bufferHasIncresed = true;
         }
@@ -140,6 +125,7 @@ public class InstancesBuffer : IDisposable, IRenderTick
 
         if (freeSlots.Count == 0) return;
 
+        #region Moving instances from the back to the first free slot
         foreach (var freeSlot in freeSlots)
         {
             UpdateLastInstanceId();
@@ -147,6 +133,7 @@ public class InstancesBuffer : IDisposable, IRenderTick
             instances[freeSlot].ChangeInstanceId(freeSlot);
         }
         freeSlots.Clear();
+        #endregion
     }
 
     void UpdateLastInstanceId()
@@ -170,7 +157,7 @@ public class InstancesBuffer : IDisposable, IRenderTick
         return lastInstanceId++;
     }
 
-    void AddInstance(VisualElement element)
+    void AddInstance(Instance element)
     {
         var _newInstanceId = GetNewInstanceId();
         element.ChangeInstanceId(_newInstanceId);

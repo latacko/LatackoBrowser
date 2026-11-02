@@ -3,6 +3,7 @@ using GraphicsCore;
 using Renderer;
 using Silk.NET.Input;
 using TextCore;
+using TextCore.Text;
 
 namespace Browser;
 
@@ -19,10 +20,10 @@ public partial class BrowserWindow
             wireFrameRendering = !wireFrameRendering;
         } else if (key == Key.M)
         {
-            TextShader.ShowMSDF = !TextShader.ShowMSDF;
+            TextShader<TextLineGPUData>.ShowMSDF = !TextShader<TextLineGPUData>.ShowMSDF;
         } else if (key == Key.L)
         {
-            TextShader.ShowLOD = !TextShader.ShowLOD;
+            TextShader<TextLineGPUData>.ShowLOD = !TextShader<TextLineGPUData>.ShowLOD;
         } else if (key == Key.Right)
         {
             // browserUI.TextTest.Style.SetFontProperties(fontProperties=>fontProperties.SetFontSize(new(++fontSize)));
