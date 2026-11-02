@@ -10,6 +10,7 @@
   <Project Path="MsdfAtlasGen/MsdfAtlasGen.csproj" />
   <Project Path="PrimitiveCore/PrimitiveCore.csproj" />
   <Project Path="Renderer/Renderer.csproj" />
+  <Project Path="SpeedScopeTrace/SpeedScopeTrace.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />
   <Project Path="TextCore/TextCore.csproj" />
   <Project Path="TextureCore/TextureCore.csproj" />

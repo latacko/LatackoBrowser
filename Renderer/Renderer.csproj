@@ -11,6 +11,7 @@
     <ProjectReference Include="../CoreManager/CoreManager.csproj" />
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../PrimitiveCore/PrimitiveCore.csproj" />
+    <ProjectReference Include="../SpeedScopeTrace/SpeedScopeTrace.csproj" />
     <ProjectReference Include="../TextCore/TextCore.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />

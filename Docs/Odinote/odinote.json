@@ -37,7 +37,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 343,
+          "h": 448,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -84,6 +84,19 @@
               "content": {
                 "es": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>",
                 "en": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>"
+              }
+            },
+            {
+              "id": "it-1793630080395-5716",
+              "x": 533,
+              "y": 257,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "usunięcie staging buffers po transferze",
+                "en": "usunięcie staging buffers po transferze"
               }
             }
           ]

@@ -7,6 +7,7 @@ using Silk.NET.Input.Sdl;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
 using Silk.NET.Windowing;
+using TextCore;
 using Vulkan;
 using VulkanManager;
 using VulkanManager.BufferManager;
@@ -23,6 +24,7 @@ public class RenderEngine : IDisposable
     public readonly string[] DeviceExtensions;
 
     readonly HashSet<BaseShader> shaders = [];
+    internal readonly HashSet<TextShader> textShaders = [];
 
     public RenderEngine(string[] deviceExtensions)
     {
@@ -33,6 +35,7 @@ public class RenderEngine : IDisposable
 
         InstanceFinder.AddInstance<TransferCommandPoolManager>();
         InstanceFinder.AddInstance<RingBufferManager>();
+        InstanceFinder.AddInstance<PrimitiveModelsDb>();
 
         Window.PrioritizeSdl();
         Silk.NET.Windowing.Sdl.SdlWindowing.Use();
@@ -66,11 +69,13 @@ public class RenderEngine : IDisposable
     {
         foreach (var shader in shaders)
         {
+            if (shader is TextShader textShader)
+            {
+                textShaders.Add(textShader);
+            }
             this.shaders.Add(shader);
         }
     }
-
-    
 
     public void RegisterSite(SiteRenderer site)
     {
@@ -83,7 +88,6 @@ public class RenderEngine : IDisposable
             shader.AddSite(site);
         }
     }
-
 
     public void Dispose()
     {

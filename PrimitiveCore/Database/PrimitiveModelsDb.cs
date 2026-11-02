@@ -1,17 +1,25 @@
 using System.Numerics;
+using AssetCore;
 using GraphicsCore;
+using InstanceFinderCore;
 using PrimitiveCore.Model;
 using Silk.NET.Vulkan;
 using Units;
 using Vulkan;
+using VulkanManager;
 
 namespace Vulkan;
 
-public class PrimitiveModelsDb : IDisposable
+public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 {
+    CommandBuffer[] transferCommandBuffers;
+    uint currentTransferCommandBuffer;
+    TransferCommandPoolManager transferCommandPoolManager;
     internal static Silk.NET.Vulkan.Buffer primitiveBuffer;
+    internal static DeviceMemory primitiveBufferMemory;
     internal static ulong indicesOffset;
-    DeviceMemory primitiveBufferMemory;
+
+    bool sthWasAdded = false;
 
     readonly Dictionary<PrimitiveUIModel, MeshData<ushort>> uiDb = new()
     {
@@ -25,12 +33,24 @@ public class PrimitiveModelsDb : IDisposable
             [0, 1, 2, 2, 3, 0])
     };
 
-    
+    public void Init()
+    {
+        AssetManager.RegisterMeshDataBufferManager<MeshData<ushort>>(MeshGpuRegister);
+        this.transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+        transferCommandBuffers = transferCommandPoolManager.CreateManagerCommandBuffers();
+        CreateBuffers();
+    }
+
+    public MeshData<ushort> Get(PrimitiveUIModel model)
+    {
+        return uiDb[model];
+    }
+
 
     /// <summary>
     /// Creates two buffers for primitives models. Vertex and Indices buffer
     /// </summary>
-    public unsafe void CreateBuffers()
+    void CreateBuffers()
     {
         foreach (var primitiveModelInfo in uiDb)
             AssetCore.AssetManager.RegisterModel(primitiveModelInfo.Value);
@@ -71,27 +91,55 @@ public class PrimitiveModelsDb : IDisposable
         // Console.WriteLine("Created vertices buffer " + primitiveBuffer);
     }
 
-    public unsafe void CreateVertexAndIndicesBuffer<TIndices>(MeshVertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>
+    unsafe void CreateVertexAndIndicesBuffer<TIndices>(MeshVertex[] vertices, TIndices[] indices) where TIndices : unmanaged, IBinaryInteger<TIndices>
     {
-        ulong _vertexSize = (ulong)(sizeof(MeshVertex) * vertices.Length);
-        ulong _indicesSize = (ulong)(sizeof(TIndices) * indices.Length);
-        ulong _bufferSize = _vertexSize + _indicesSize;
+        uint _vertexSize = (uint)(sizeof(MeshVertex) * vertices.Length);
+        uint _indicesSize = (uint)(sizeof(TIndices) * indices.Length);
+        uint _bufferSize = _vertexSize + _indicesSize;
 
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit | BufferUsageFlags.TransferDstBit, MemoryPropertyFlags.DeviceLocalBit | MemoryPropertyFlags.HostVisibleBit, ref primitiveBuffer, ref primitiveBufferMemory);
+        (BufferData bufferData, ulong size) = BufferHelper.CreateStagingBuffer<byte>(_bufferSize);
+        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.IndexBufferBit | BufferUsageFlags.VertexBufferBit | BufferUsageFlags.TransferDstBit, MemoryPropertyFlags.DeviceLocalBit, ref primitiveBuffer, ref primitiveBufferMemory);
 
-        void* data;
-        CreateVulkan.vk.MapMemory(LogicalDevice.device, primitiveBufferMemory, 0, _bufferSize, 0, &data);
-        byte* ptr = (byte*)data;
-        vertices.CopyTo(new Span<MeshVertex>(ptr, vertices.Length));
+        vertices.CopyTo(new Span<MeshVertex>(bufferData.Mapped, vertices.Length));
         indicesOffset = (ulong)(sizeof(MeshVertex) * vertices.Length);
-        ptr += indicesOffset;
-        indices.CopyTo(new Span<TIndices>(ptr, indices.Length));
-        CreateVulkan.vk.UnmapMemory(LogicalDevice.device, primitiveBufferMemory);
+        indices.CopyTo(new Span<TIndices>(((byte*)bufferData.Mapped) + indicesOffset, indices.Length));
+
+        BufferCopy2 _bc = new()
+        {
+            SrcOffset = 0,
+            DstOffset = 0,
+            Size = _bufferSize,
+        };
+
+        CopyBufferInfo2 _cbI = new()
+        {
+            SrcBuffer = bufferData.Buffer,
+            PRegions = &_bc,
+            RegionCount = 1,
+            DstBuffer = primitiveBuffer,
+        };
+
+        Console.WriteLine(currentTransferCommandBuffer);
+        Console.WriteLine(transferCommandBuffers);
+        Console.WriteLine(transferCommandBuffers[currentTransferCommandBuffer]);
+
+        CreateVulkan.vk.CmdCopyBuffer2(transferCommandBuffers[currentTransferCommandBuffer], ref _cbI);
+
+        transferCommandPoolManager.AddStagingBuffer(currentTransferCommandBuffer, bufferData);
+        sthWasAdded = true;
     }
 
-    public MeshData<ushort> Get(PrimitiveUIModel model)
+    public CommandBuffer? GetCommandBuffer(uint frameInFlight)
     {
-        return uiDb[model];
+        if (!sthWasAdded)
+            return null;
+        return transferCommandBuffers[frameInFlight];
+    }
+    public void SetNextCommandBuffer(uint nextFrameInFlight) => currentTransferCommandBuffer = nextFrameInFlight;
+
+    void MeshGpuRegister(IMeshData meshData)
+    {
+
     }
 
     public void Dispose()

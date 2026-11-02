@@ -22,7 +22,7 @@ public unsafe class VulkanEngine : IDisposable
     public Semaphore[] renderCompleteSemaphores = new Semaphore[MAX_FRAMES_IN_FLIGHT];
     #endregion
 
-    public CommandPool[] commandPools;
+    public CommandPool[] commandPools = new CommandPool[MAX_FRAMES_IN_FLIGHT];
 
 
     public VulkanEngine()
@@ -58,6 +58,9 @@ public unsafe class VulkanEngine : IDisposable
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
+            // Console.WriteLine(CreateVulkan.vk);
+            // Console.WriteLine(commandPools);
+            // Console.WriteLine(commandPools[i]);
             CreateVulkan.vk.CreateCommandPool(LogicalDevice.device, ref commandPoolCI, null, out commandPools[i]);
         }
     }

@@ -20,10 +20,10 @@ public partial class BrowserWindow
             wireFrameRendering = !wireFrameRendering;
         } else if (key == Key.M)
         {
-            TextShader<TextLineGPUData>.ShowMSDF = !TextShader<TextLineGPUData>.ShowMSDF;
+            TextShader.ShowMSDF = !TextShader.ShowMSDF;
         } else if (key == Key.L)
         {
-            TextShader<TextLineGPUData>.ShowLOD = !TextShader<TextLineGPUData>.ShowLOD;
+            TextShader.ShowLOD = !TextShader.ShowLOD;
         } else if (key == Key.Right)
         {
             // browserUI.TextTest.Style.SetFontProperties(fontProperties=>fontProperties.SetFontSize(new(++fontSize)));

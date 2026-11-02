@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../AssetCore/AssetCore.csproj" />
+    <ProjectReference Include="../SpeedScopeTrace/SpeedScopeTrace.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />
     <ProjectReference Include="../VulkanManager/VulkanManager.csproj" />
   </ItemGroup>

@@ -6,22 +6,37 @@ namespace VulkanManager;
 
 public class TransferCommandPoolManager : IDisposable, IRenderTick
 {
-    internal CommandPool[] CommandPools = new CommandPool[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    Silk.NET.Vulkan.Semaphore transferDoneSemaphore;
+    public const uint TransferCommandBuffers = 4;
+    public readonly CommandPool[] CommandPools = new CommandPool[TransferCommandBuffers];
+    Fence[] transferDoneFences = new Fence[TransferCommandBuffers];
     ulong currentTransferDoneSignalValue;
     ulong nextTransferDoneSignalValue = 1;
-    uint[] registeredCB = new uint[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    readonly CommandBufferSubmitInfo[][] transferCommandBuffers = new CommandBufferSubmitInfo[VulkanEngine.MAX_FRAMES_IN_FLIGHT][];
+    uint[] registeredCB = new uint[TransferCommandBuffers];
+    readonly CommandBufferSubmitInfo[][] transferCommandBuffers = new CommandBufferSubmitInfo[TransferCommandBuffers][];
+    readonly List<BufferData>[] stagingBuffers = new List<BufferData>[TransferCommandBuffers];
+    readonly List<ITransfer> transfersManagers = [];
+
+    uint currentCommandBuffer = 0;
+    private int isTransferRunning = 0; // 0 = idle, 1 = running
 
     public TransferCommandPoolManager()
     {
         CreateCommandPools();
-        CreateSemaphore();
+        CreateFences();
 
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < TransferCommandBuffers; i++)
         {
             registeredCB[i] = 0;
             transferCommandBuffers[i] = [];
+            stagingBuffers[i] = [];
+        }
+    }
+
+    public void RegisterTransferManagers(params ITransfer[] transfers)
+    {
+        foreach (var transfer in transfers)
+        {
+            transfersManagers.Add(transfer);
         }
     }
 
@@ -34,65 +49,102 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
             QueueFamilyIndex = LogicalDevice.Indices.TransferFamily!.Value,
         };
 
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (int i = 0; i < TransferCommandBuffers; i++)
         {
             CreateVulkan.vk.CreateCommandPool(LogicalDevice.device, ref commandPoolCI, null, out CommandPools[i]);
         }
     }
 
-    unsafe void CreateSemaphore()
+    unsafe void CreateFences()
     {
-        SemaphoreTypeCreateInfo _typeInfo = new()
+        FenceCreateInfo fenceCI = new()
         {
-            SType = StructureType.SemaphoreTypeCreateInfo,
-            SemaphoreType = SemaphoreType.Timeline,
-            InitialValue = 0,
+            SType = StructureType.FenceCreateInfo,
+            Flags = FenceCreateFlags.SignaledBit,
         };
 
-        SemaphoreCreateInfo _semCI = new()
+        fixed (Fence* fencesPtr = transferDoneFences)
         {
-            SType = StructureType.SemaphoreCreateInfo,
-            PNext = &_typeInfo,
-        };
-
-        CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, ref _semCI, null, out transferDoneSemaphore);
-    }
-
-    public ulong GetNextDoneSignalValue() => nextTransferDoneSignalValue;
-    public ulong GetCurrentDoneSignalValue() => currentTransferDoneSignalValue;
-
-    public CommandPool GetCommandPool(uint frameInFlight)
-    {
-        return CommandPools[frameInFlight];
+            for (int i = 0; i < TransferCommandBuffers; i++)
+            {
+                CreateVulkan.vk.CreateFence(LogicalDevice.device, &fenceCI, null, &fencesPtr[i]);
+            }
+        }
     }
 
     public void ResetCommandPool(uint frameInFlight)
     {
-        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, GetCommandPool(frameInFlight), CommandPoolResetFlags.None);
+        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, CommandPools[frameInFlight], CommandPoolResetFlags.None);
     }
 
-    public void AddCommandBuffer(uint frameInFlight, CommandBuffer commandBuffer)
+    public unsafe CommandBuffer[] CreateManagerCommandBuffers()
     {
-        registeredCB[frameInFlight]++;
-
-        if (registeredCB[frameInFlight] > transferCommandBuffers[frameInFlight].Length)
+        CommandBuffer[] _commandBuffers = new CommandBuffer[TransferCommandBuffers];
+        for (int i = 0; i < TransferCommandBuffers; i++)
         {
-            var _newCBArray = new CommandBufferSubmitInfo[registeredCB[frameInFlight]];
-            Array.Copy(transferCommandBuffers, _newCBArray, transferCommandBuffers.Length);
-            transferCommandBuffers[frameInFlight] = _newCBArray;
+            CommandBufferAllocateInfo commandBufferCI = new()
+            {
+                SType = StructureType.CommandBufferAllocateInfo,
+                CommandPool = CommandPools[i],
+                CommandBufferCount = 1
+            };
+
+            fixed (CommandBuffer* commandBufferPtr = &_commandBuffers[i])
+                CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
         }
 
-        transferCommandBuffers[frameInFlight][(int)registeredCB[frameInFlight]] = new()
+        return _commandBuffers;
+    }
+
+    void AddCommandBuffer(CommandBuffer commandBuffer)
+    {
+        registeredCB[currentCommandBuffer]++;
+
+        if (registeredCB[currentCommandBuffer] > transferCommandBuffers[currentCommandBuffer].Length)
+        {
+            var _newCBArray = new CommandBufferSubmitInfo[registeredCB[currentCommandBuffer]];
+            Array.Copy(transferCommandBuffers, _newCBArray, transferCommandBuffers.Length);
+            transferCommandBuffers[currentCommandBuffer] = _newCBArray;
+        }
+
+        transferCommandBuffers[currentCommandBuffer][(int)registeredCB[currentCommandBuffer]] = new()
         {
             SType = StructureType.CommandBufferSubmitInfo,
             CommandBuffer = commandBuffer,
         };
     }
 
-    public unsafe void RenderTick(uint frameInFlight)
+    public void AddStagingBuffer(uint transferCommandBuffer, BufferData stagingBuffer)
     {
-        CreateVulkan.vk.GetSemaphoreCounterValue(LogicalDevice.device, transferDoneSemaphore, out currentTransferDoneSignalValue);
-        if (registeredCB[frameInFlight] == 0) return;
+        stagingBuffers[transferCommandBuffer].Add(stagingBuffer);
+    }
+
+    public unsafe void RenderTick(uint appFrameInFlight)
+    {
+        // The transfer on the current cb is not done 
+        if (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[currentCommandBuffer]) == Result.Success) return;
+        stagingBuffers[currentCommandBuffer].Clear();
+        uint _nextCommandBuffer = (currentCommandBuffer + 1) % TransferCommandBuffers;
+
+        bool _isSthToTransfer = false;
+        registeredCB[currentCommandBuffer] = 0;
+        foreach (var transfer in transfersManagers)
+        {
+            var _cb = transfer.GetCommandBuffer(currentCommandBuffer);
+            if (!_cb.HasValue) continue;
+
+            AddCommandBuffer(_cb.Value);
+            _isSthToTransfer = true;
+        }
+
+        if (!_isSthToTransfer) return;
+
+        foreach (var transfer in transfersManagers)
+        {
+            transfer.SetNextCommandBuffer(_nextCommandBuffer);
+        }
+
+        if (registeredCB[currentCommandBuffer] == 0) return;
 
         SubmitInfo2 submitInfo = new()
         {
@@ -100,30 +152,52 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
             WaitSemaphoreInfoCount = 0,
         };
 
-        submitInfo.CommandBufferInfoCount = registeredCB[frameInFlight];
-
-        fixed (CommandBufferSubmitInfo* ptrCB = transferCommandBuffers[frameInFlight])
+        submitInfo.CommandBufferInfoCount = registeredCB[currentCommandBuffer];
+        fixed (CommandBufferSubmitInfo* ptrCB = transferCommandBuffers[currentCommandBuffer])
             submitInfo.PCommandBufferInfos = ptrCB;
 
-        SemaphoreSubmitInfo _signalSemaphoreInfo = new()
-        {
-            SType = StructureType.SemaphoreSubmitInfo,
-            Semaphore = transferDoneSemaphore,
-            Value = nextTransferDoneSignalValue
-        };
-        nextTransferDoneSignalValue++;
-
-        submitInfo.SignalSemaphoreInfoCount = 1;
-        submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
-
-        if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.TransferQueue, 1, &submitInfo, default) != Result.Success)
+        if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.TransferQueue, 1, &submitInfo, transferDoneFences[currentCommandBuffer]) != Result.Success)
         {
             throw new Exception("Failed to submit command buffer!");
         }
 
-        registeredCB[frameInFlight] = 0;
-        ResetCommandPool(frameInFlight);
+        ResetCommandPool(currentCommandBuffer);
+
+        if (Interlocked.CompareExchange(ref isTransferRunning, 1, 0) != 0)
+        {
+            // Someone else already has it running — do nothing.
+            return;
+        }
+
+        Task.Run(() =>
+        {
+            try
+            {
+                WaitForTransferToEnd(currentCommandBuffer);
+            }
+            finally
+            {
+                // Reset so a future request can start it again.
+                Interlocked.Exchange(ref isTransferRunning, 0);
+            }
+        });
+        currentCommandBuffer = _nextCommandBuffer;
     }
+
+    void WaitForTransferToEnd(uint currentCommandBuffer)
+    {
+        uint _currentCb = currentCommandBuffer;
+        while (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[_currentCb]) == Result.Success)
+        {
+            CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in transferDoneFences[_currentCb], Vk.True, ulong.MaxValue);
+
+            
+
+            _currentCb = (_currentCb + 1) % TransferCommandBuffers;
+        }
+    }
+
+
 
     public unsafe void Dispose()
     {

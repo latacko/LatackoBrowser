@@ -96,39 +96,35 @@ public unsafe partial class BrowserWindow
             throw new Exception("Failed to begin recording command buffer!");
         }
 
-        ImageMemoryBarrier2[] _outputBarriers = [
-            new()
-            {
-                SType = StructureType.ImageMemoryBarrier2,
-                SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                SrcAccessMask=0,
 
-                DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                DstAccessMask = AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
-
-                OldLayout = ImageLayout.Undefined,
-                NewLayout = ImageLayout.AttachmentOptimal,
-
-                Image = swapchain.swapChainImages[imageIndex],
-                SubresourceRange = new()
-                {
-                    AspectMask = ImageAspectFlags.ColorBit,
-                    LevelCount = 1,
-                    LayerCount = 1,
-                },
-            },
-        ];
-
-        fixed (ImageMemoryBarrier2* _outputBarriersPtr = _outputBarriers)
+        ImageMemoryBarrier2 _outputBarriers = new()
         {
-            DependencyInfo _barrierDependencyInfo = new()
+            SType = StructureType.ImageMemoryBarrier2,
+            SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
+            SrcAccessMask = 0,
+
+            DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
+            DstAccessMask = AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
+
+            OldLayout = ImageLayout.Undefined,
+            NewLayout = ImageLayout.AttachmentOptimal,
+
+            Image = swapchain.swapChainImages[imageIndex],
+            SubresourceRange = new()
             {
-                SType = StructureType.DependencyInfo,
-                ImageMemoryBarrierCount = (uint)_outputBarriers.Length,
-                PImageMemoryBarriers = _outputBarriersPtr,
-            };
-            Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
-        }
+                AspectMask = ImageAspectFlags.ColorBit,
+                LevelCount = 1,
+                LayerCount = 1,
+            },
+        };
+
+        DependencyInfo _barrierDependencyInfo = new()
+        {
+            SType = StructureType.DependencyInfo,
+            ImageMemoryBarrierCount = 1,
+            PImageMemoryBarriers = &_outputBarriers,
+        };
+        Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
 
         var copyRegion = new ImageCopy
         {

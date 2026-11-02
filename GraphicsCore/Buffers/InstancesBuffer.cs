@@ -26,10 +26,7 @@ public class InstancesBuffer<Instance> : IDisposable, IRenderTick where Instance
 
     public InstancesBuffer(Type gpuDataType)
     {
-        MethodInfo openMethod = typeof(Unsafe).GetMethod(nameof(Unsafe.SizeOf))!;
-        MethodInfo closedMethod = openMethod.MakeGenericMethod(gpuDataType);
-
-        gpuDataSize = (int)closedMethod.Invoke(null, null)!;
+        gpuDataSize = Marshal.SizeOf(gpuDataType);
 
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {

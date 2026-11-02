@@ -9,14 +9,14 @@ public class LoginSite: ISiteController
 {
     Document document;
 
-    public void SetSetDocument(Document document)
+    public void SetDocument(Document document)
     {
         this.document = document;
     }
 
     public void Start()
     {
-        var _background = document.CreateElement(0)
+        var _background = document.CreateElement(DocumentElements.Div)
         .SetStyle(new Style("Backround")
             .SetLayout(layout=>layout
                 .SetWidth(new(100, UnitType.lvw))
@@ -27,21 +27,21 @@ public class LoginSite: ISiteController
             )
         );
 
-        var _form = document.CreateElement(0)
-        .SetStyle(new Style("form")
-            .SetLayout(layout=>layout
-                .SetWidth(new(50, UnitType.lvw))
-                .SetHeight(new(50, UnitType.lvw))
-            )
-            .SetProperties(properties=>properties
-                .SetBackgroundColor(1,1,1,1)
-            )
-        )
-        .SetEvents(events=>events
-            .AddOnClick((e) =>
-            {
-                Console.WriteLine("Zostałem kliknięty ");
-            }));
+        // var _form = document.CreateElement(0)
+        // .SetStyle(new Style("form")
+        //     .SetLayout(layout=>layout
+        //         .SetWidth(new(50, UnitType.lvw))
+        //         .SetHeight(new(50, UnitType.lvw))
+        //     )
+        //     .SetProperties(properties=>properties
+        //         .SetBackgroundColor(1,1,1,1)
+        //     )
+        // )
+        // .SetEvents(events=>events
+        //     .AddOnClick((e) =>
+        //     {
+        //         Console.WriteLine("Zostałem kliknięty ");
+        //     }));
     }
 
     public void Update()

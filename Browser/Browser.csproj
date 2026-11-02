@@ -9,12 +9,20 @@
     <ShaderWorkingDirectory>$(ProjectDir)shaders</ShaderWorkingDirectory>
   </PropertyGroup>
 
+  <!-- <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishAot>true</PublishAot>
+    <SelfContained>true</SelfContained>
+    <Optimize>true</Optimize>
+    <StripSymbols>true</StripSymbols>
+  </PropertyGroup> -->
+
   <ItemGroup>
     <ProjectReference Include="../CoreManager/CoreManager.csproj" />
     <ProjectReference Include="../GraphicsCore/GraphicsCore.csproj" />
     <ProjectReference Include="../HTMLParser/HTMLParser.csproj" />
     <ProjectReference Include="../PrimitiveCore/PrimitiveCore.csproj" />
     <ProjectReference Include="../Renderer/Renderer.csproj" />
+    <ProjectReference Include="../SpeedScopeTrace/SpeedScopeTrace.csproj" />
     <ProjectReference Include="../SvgLoader/SvgLoader.csproj" />
     <ProjectReference Include="../TextCore/TextCore.csproj" />
     <ProjectReference Include="../TextureCore/TextureCore.csproj" />
@@ -49,8 +57,10 @@
   </ItemGroup>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
-    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat" WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
 
-    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh" WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
   </Target>
 </Project>

@@ -8,23 +8,31 @@ public static class AssetManager
     static readonly Dictionary<Type, Action<IMeshData>> addMeshDataToBuffer = [];
     static readonly Dictionary<uint, IMeshData> models = [];
 
-    public static uint RegisterModel(IMeshData meshData)
+    public static uint RegisterModel(IMeshData meshData, bool instantLoad = false)
     {
         if (!addMeshDataToBuffer.TryGetValue(meshData.GetType(), out var add))
             throw new System.NotSupportedException("This type of data doesn't have registered buffer action.");
 
-        add.Invoke(meshData);
+        uint _assetId = lastModelId++;
+        meshData.AssetId = _assetId;
 
+        if (instantLoad)
+            add.Invoke(meshData);
         models.Add(lastModelId, meshData);
-        return lastModelId++;
+        return meshData.AssetId;
     }
 
-    public static void RegisterMeshDataBufferManager(Type typeOfMeshData, Action<IMeshData> registerMeshData)
+    public static void LoadModel(uint assetId)
     {
-        if (typeOfMeshData.BaseType == null || !typeOfMeshData.BaseType.Equals(typeof(IMeshData))) 
-            throw new Exception("The Mesh data needs to directly inherit from IMeshData");
-        
-        addMeshDataToBuffer.Add(typeOfMeshData, registerMeshData);
+        IMeshData meshData = GetModel(assetId);
+        if (!addMeshDataToBuffer.TryGetValue(meshData.GetType(), out var add))
+            throw new System.NotSupportedException("This type of data doesn't have registered buffer action.");
+        add.Invoke(meshData);
+    }
+
+    public static void RegisterMeshDataBufferManager<TMeshData>(Action<IMeshData> registerMeshData) where TMeshData : IMeshData
+    {
+        addMeshDataToBuffer.Add(typeof(TMeshData), registerMeshData);
     }
 
     public static void RemoveModel(uint modelId)

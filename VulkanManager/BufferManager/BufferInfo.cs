@@ -29,7 +29,7 @@ public unsafe class BufferInfo<T> : IDisposable where T : unmanaged
     void CreateBuffer(ref Buffer buffer, ref DeviceMemory memory)
     {
         ulong _bufferSize = (ulong)sizeof(T) * maxElements;
-        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.ShaderDeviceAddressBit | usage, MemoryPropertyFlags.HostVisibleBit | MemoryPropertyFlags.HostCoherentBit, ref buffer, ref memory);
+        BufferHelper.CreateBuffer(_bufferSize, BufferUsageFlags.TransferDstBit | usage, MemoryPropertyFlags.DeviceLocalBit, ref buffer, ref memory);
     }
 
     public void Dispose()

@@ -6,32 +6,18 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace VulkanManager.BufferManager;
 
-public class RingBufferManager
+public class RingBufferManager: ITransfer, IInstanceInit
 {
-    CommandBuffer[] commandBuffers = new CommandBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    CommandBuffer[] transferCommandBuffers;
+    uint currentTransferCommandBuffer;
     TransferCommandPoolManager transferCommandPoolManager;
     bool sthWasAdded = false;
 
-    public void SetTransferCommandPoolManager(TransferCommandPoolManager transferCommandPoolManager)
+    public void Init()
     {
-        this.transferCommandPoolManager = transferCommandPoolManager;
-        CreateCommandBuffers();
-    }
-
-    unsafe void CreateCommandBuffers()
-    {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
-        {
-            CommandBufferAllocateInfo commandBufferCI = new()
-            {
-                SType = StructureType.CommandBufferAllocateInfo,
-                CommandPool = transferCommandPoolManager.CommandPools[i],
-                CommandBufferCount = 1
-            };
-
-            fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
-                CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
-        }
+        this.transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+        transferCommandBuffers = transferCommandPoolManager.CreateManagerCommandBuffers();
+        Console.WriteLine("Init ring buffer");
     }
 
     public unsafe void BeginRecording(uint frameInFlight)
@@ -45,32 +31,42 @@ public class RingBufferManager
             PInheritanceInfo = null,
         };
 
-        if (CreateVulkan.vk.BeginCommandBuffer(commandBuffers[frameInFlight], &_beginInfo) != Result.Success)
+        if (CreateVulkan.vk.BeginCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer], &_beginInfo) != Result.Success)
         {
             throw new Exception("Failed to begin recording command buffer!");
         }
     }
 
-    public bool EndRecording(uint frameInFlight)
+    public void EndRecording(uint frameInFlight)
     {
-        CreateVulkan.vk.EndCommandBuffer(commandBuffers[frameInFlight]);
-        return sthWasAdded;
+        CreateVulkan.vk.EndCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer]);
     }
 
-    public unsafe void AddTransfer(uint frameInFlight, Buffer srcBuffer, Buffer dstBuffer, BufferCopy2[] copyInfo)
+    public unsafe void AddTransfer(uint frameInFlight, BufferData srcBuffer, Buffer dstBuffer, BufferCopy2[] copyInfo)
     {
         fixed (BufferCopy2* copyListAddress = copyInfo)
         {
             CopyBufferInfo2 _cbI = new()
             {
-                SrcBuffer = srcBuffer,
+                SrcBuffer = srcBuffer.Buffer,
                 PRegions = copyListAddress,
                 RegionCount = (uint)copyInfo.Length,
                 DstBuffer = dstBuffer,
             };
-            CreateVulkan.vk.CmdCopyBuffer2(commandBuffers[frameInFlight], ref _cbI);
+            CreateVulkan.vk.CmdCopyBuffer2(transferCommandBuffers[currentTransferCommandBuffer], ref _cbI);
+            transferCommandPoolManager.AddStagingBuffer(currentTransferCommandBuffer, srcBuffer);
         }
     }
 
-    public CommandBuffer GetCommandBuffer(uint frameInFlight) => commandBuffers[frameInFlight];
+    public CommandBuffer? GetCommandBuffer(uint transferCommandBuffer)
+    {
+        if (!sthWasAdded)
+            return null;
+        return transferCommandBuffers[transferCommandBuffer];
+    }
+
+    public void SetNextCommandBuffer(uint nextCommandBuffer)
+    {
+        currentTransferCommandBuffer = nextCommandBuffer;
+    }
 }

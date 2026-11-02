@@ -10,6 +10,8 @@ using TextCore;
 using PrimitiveCore.Shader;
 using PrimitiveCore.Model;
 using TextCore.Text;
+using VulkanManager;
+using VulkanManager.BufferManager;
 
 // HttpClient httpClient = new();
 
@@ -87,7 +89,7 @@ ShaderCreator<NodeShader> nodeShaderCreator = new();
 var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("shaders/Compiled/uiShader.spv");
 NodeCreator.SetDefaultShader(defaultNodeShader);
 
-var defaultTextShader = new TextShader<TextLineGPUData>("shaders/Compiled/textShader.spv");
+var defaultTextShader = TextShader.Create<TextLineGPUData>("shaders/Compiled/textShader.spv");
 
 renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
 
@@ -100,13 +102,19 @@ fontManager.LoadFont("google-noto/NotoSerif-Regular.ttf");
 // fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
 
 EventSystem eventSystem = new();
+PrimitiveModelsDb primitiveModelsDb = new();
+
 InstanceFinder.CreateInstances();
+
+var _transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+
+_transferCommandPoolManager.RegisterTransferManagers(InstanceFinder.GetInstance<RingBufferManager>());
 
 SiteRenderer mainBrowser = new(new LoginSite());
 browserWindow.SetTextureRenderer(mainBrowser);
 browserWindow.Run();
 
-
+primitiveModelsDb.Dispose();
 texturesManager.Dispose();
 fontManager.Dispose();
 

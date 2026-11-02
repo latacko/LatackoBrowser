@@ -8,7 +8,7 @@ using VulkanManager.BufferManager;
 
 namespace TextCore.Buffer;
 
-public unsafe class TextInstancesManager : IDisposable
+internal unsafe class TextInstancesManager : IDisposable
 {
     static readonly Dictionary<Type, TextInstancesManager> textInstancesManagers = [];
     readonly Dictionary<uint, InstancesBuffer<VisualElement>> textContainerInstancesBuffer = [];
@@ -20,20 +20,29 @@ public unsafe class TextInstancesManager : IDisposable
         textInstancesManagers[instanceData] = this;
     }
 
-    public static TextInstancesManager Get<InstanceData>() where InstanceData : struct
+    public static TextInstancesManager Get(Type instanceData)
     {
-        var _instanceData = typeof(InstanceData);
-        if (textInstancesManagers.TryGetValue(_instanceData, out TextInstancesManager? value))
+        if (textInstancesManagers.TryGetValue(instanceData, out TextInstancesManager? value))
             return value;
 
-        textInstancesManagers[_instanceData] = new TextInstancesManager(_instanceData);
-        return textInstancesManagers[_instanceData];
+        textInstancesManagers[instanceData] = new TextInstancesManager(instanceData);
+        return textInstancesManagers[instanceData];
     }
 
     public void RegisterBufferForSite(uint siteId)
     {
         textContainerInstancesBuffer.Add(siteId, new(instanceData));
         textLineInstancesBuffer.Add(siteId, new(instanceData));
+    }
+
+    public void UnregisterBufferForSite(uint siteId)
+    {
+        if (!textContainerInstancesBuffer.ContainsKey(siteId)) return;
+        
+        textContainerInstancesBuffer[siteId].Dispose();
+        textLineInstancesBuffer[siteId].Dispose();
+        textContainerInstancesBuffer.Remove(siteId);
+        textLineInstancesBuffer.Remove(siteId);
     }
 
     public void RenderTick(uint siteid, uint frameInFlight)

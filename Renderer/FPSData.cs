@@ -5,8 +5,7 @@ namespace Renderer;
 
 public struct FPSData
 {
-    public uint[] FPS;
-    internal uint frameInFlight;
-
-    internal double _fpsTimer;
+    public double fpsTimer;
+    public int fpsFrames;
+    public double worstFrameMs;
 }

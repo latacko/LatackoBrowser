@@ -30,8 +30,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     readonly StylesManager stylesManager = new();
 
-    public readonly FPSData[] FPS = new FPSData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-
     #region Vulkan elements
     readonly ImageData[] imagesData = new ImageData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly Depth depth = new();
@@ -72,6 +70,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         nodeCreator = new(UniqueId);
         document = new(nodeCreator);
+
+        siteController.SetDocument(document);
     }
 
     #region Setup
@@ -154,15 +154,26 @@ public class SiteRenderer : TextureRenderer, IDisposable
     //TODO - Render to texture
     public unsafe void GetCommandBuffer(uint? frameInFlight)
     {
-        if (frameInFlight.HasValue)
-            FrameInFlight = frameInFlight.Value;
-        UpdateCameraUBO(FrameInFlight);
+        using (SpeedscopeTrace.Begin("Camera ubo"))
+        {
+            if (frameInFlight.HasValue)
+                FrameInFlight = frameInFlight.Value;
+            UpdateCameraUBO(FrameInFlight);
+        }
 
         // coreManager.OnRender(FrameInFlight);
-        stylesManager.ComputeStyles();
-
-        RecordCommandBuffer(commandBuffers[FrameInFlight], FrameInFlight);
-        stylesManager.SetFrameAsNotDirty(FrameInFlight);
+        using (SpeedscopeTrace.Begin("Compute Styles"))
+        {
+            stylesManager.ComputeStyles();
+        }
+        using (SpeedscopeTrace.Begin("Record command buffer"))
+        {
+            RecordCommandBuffer(commandBuffers[FrameInFlight], FrameInFlight);
+        }
+        using (SpeedscopeTrace.Begin("Set frame as not dirty"))
+        {
+            stylesManager.SetFrameAsNotDirty(FrameInFlight);
+        }
 
         // SubmitInfo submitInfo = new()
         // {
@@ -251,6 +262,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     //TODO - Rendering do zrobienia coding vibe o 2:45
     public unsafe void Render(uint frameInFlight)
     {
+        using var _ = SpeedscopeTrace.Begin("Site Renderer Render");
         FrameInFlight = frameInFlight;
         SubmitInfo2 submitInfo = new()
         {
@@ -260,65 +272,79 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[FrameInFlight], CommandPoolResetFlags.None);
 
-        GetCommandBuffer(null);
+        using (SpeedscopeTrace.Begin("Get Command Buffer"))
+        {
+            GetCommandBuffer(null);
+        }
         subSiteCommandBuffers![0].CommandBuffer = commandBuffers[FrameInFlight];
 
-        if (subSiteRenderers != null)
+        using (SpeedscopeTrace.Begin("Get sub renderers"))
         {
-            int i = 1;
-            foreach (var siteRenderer in subSiteRenderers)
+            if (subSiteRenderers != null)
             {
-                // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.FrameInFlight];
-                siteRenderer.GetCommandBuffer(FrameInFlight);
-                subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[FrameInFlight];
+                int i = 1;
+                foreach (var siteRenderer in subSiteRenderers)
+                {
+                    // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.FrameInFlight];
+                    siteRenderer.GetCommandBuffer(FrameInFlight);
+                    subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[FrameInFlight];
 
-                i++;
+                    i++;
+                }
             }
         }
 
 
-        submitInfo.CommandBufferInfoCount = (uint)subSiteCommandBuffers.Length;
-        fixed (CommandBufferSubmitInfo* ptrCB = subSiteCommandBuffers)
-            submitInfo.PCommandBufferInfos = ptrCB;
-
-        SemaphoreSubmitInfo _signalSemaphoreInfo = new()
+        using (SpeedscopeTrace.Begin("Submit"))
         {
-            SType = StructureType.SemaphoreSubmitInfo,
-            Semaphore = vulkanEngine.renderCompleteSemaphores[FrameInFlight],
-        };
+            submitInfo.CommandBufferInfoCount = (uint)subSiteCommandBuffers.Length;
+            fixed (CommandBufferSubmitInfo* ptrCB = subSiteCommandBuffers)
+                submitInfo.PCommandBufferInfos = ptrCB;
 
-        submitInfo.SignalSemaphoreInfoCount = 1;
-        submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
+            SemaphoreSubmitInfo _signalSemaphoreInfo = new()
+            {
+                SType = StructureType.SemaphoreSubmitInfo,
+                Semaphore = vulkanEngine.renderCompleteSemaphores[FrameInFlight],
+            };
 
-        if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, default) != Result.Success)
-        {
-            throw new Exception("Failed to submit command buffer!");
+            submitInfo.SignalSemaphoreInfoCount = 1;
+            submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
+
+            if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, default) != Result.Success)
+            {
+                throw new Exception("Failed to submit command buffer!");
+            }
         }
     }
 
     unsafe void RecordCommandBuffer(CommandBuffer commandBuffer, uint imageIndex)
     {
-        CommandBufferBeginInfo _beginInfo = new()
+        using (SpeedscopeTrace.Begin("Begin command buffer"))
         {
-            SType = StructureType.CommandBufferBeginInfo,
+            CommandBufferBeginInfo _beginInfo = new()
+            {
+                SType = StructureType.CommandBufferBeginInfo,
 
-            Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
-            PInheritanceInfo = null,
-        };
+                Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
+                PInheritanceInfo = null,
+            };
 
 
 
-        if (Vulkan.CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
-        {
-            throw new Exception("Failed to begin recording command buffer!");
+            if (Vulkan.CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
+            {
+                throw new Exception("Failed to begin recording command buffer!");
+            }
         }
 
-        ImageMemoryBarrier2[] _outputBarriers = [
-            new()
+        using (SpeedscopeTrace.Begin("Begin rendering"))
+        {
+            ImageMemoryBarrier2* _outputBarriers = stackalloc ImageMemoryBarrier2[2];
+            _outputBarriers[0] = new()
             {
                 SType = StructureType.ImageMemoryBarrier2,
                 SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                SrcAccessMask=0,
+                SrcAccessMask = 0,
 
                 DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
                 DstAccessMask = AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
@@ -333,8 +359,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
                     LevelCount = 1,
                     LayerCount = 1,
                 },
-            },
-            new()
+            };
+            _outputBarriers[1] = new()
             {
                 SType = StructureType.ImageMemoryBarrier2,
                 SrcStageMask = PipelineStageFlags2.LateFragmentTestsBit,
@@ -353,78 +379,77 @@ public class SiteRenderer : TextureRenderer, IDisposable
                     LevelCount = 1,
                     LayerCount = 1,
                 },
-            },
-        ];
+            };
 
-        fixed (ImageMemoryBarrier2* _outputBarriersPtr = _outputBarriers)
-        {
             DependencyInfo _barrierDependencyInfo = new()
             {
                 SType = StructureType.DependencyInfo,
-                ImageMemoryBarrierCount = (uint)_outputBarriers.Length,
-                PImageMemoryBarriers = _outputBarriersPtr,
+                ImageMemoryBarrierCount = 2,
+                PImageMemoryBarriers = _outputBarriers,
             };
-            Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
+            CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
+
+            RenderingAttachmentInfo _colorAttachmentInfo = new()
+            {
+                SType = StructureType.RenderingAttachmentInfo,
+                ImageView = imagesData[imageIndex].imageView,
+                ImageLayout = ImageLayout.AttachmentOptimal,
+                LoadOp = AttachmentLoadOp.Clear,
+                StoreOp = AttachmentStoreOp.Store,
+                ClearValue = new()
+                {
+                    Color = new(0, 0, 0, 1),
+                }
+            };
+
+            RenderingAttachmentInfo _depthAttachmentInfo = new()
+            {
+                SType = StructureType.RenderingAttachmentInfo,
+                ImageView = depth.depthImageView,
+                ImageLayout = ImageLayout.AttachmentOptimal,
+                LoadOp = AttachmentLoadOp.Clear,
+                StoreOp = AttachmentStoreOp.DontCare,
+                ClearValue = new()
+                {
+                    DepthStencil = new(1, 0),
+                }
+            };
+
+            RenderingInfo _renderingInfo = new()
+            {
+                SType = StructureType.RenderingInfo,
+                RenderArea = new()
+                {
+                    Offset = new(0, 0),
+                    Extent = screenExtent
+                },
+                LayerCount = 1,
+                ColorAttachmentCount = 1,
+                PColorAttachments = &_colorAttachmentInfo,
+                PDepthAttachment = &_depthAttachmentInfo
+            };
+
+            CreateVulkan.vk.CmdBeginRendering(commandBuffer, &_renderingInfo);
         }
-
-        RenderingAttachmentInfo _colorAttachmentInfo = new()
+        using (SpeedscopeTrace.Begin("Viewport & scissors"))
         {
-            SType = StructureType.RenderingAttachmentInfo,
-            ImageView = imagesData[imageIndex].imageView,
-            ImageLayout = ImageLayout.AttachmentOptimal,
-            LoadOp = AttachmentLoadOp.Clear,
-            StoreOp = AttachmentStoreOp.Store,
-            ClearValue = new()
+            Viewport _vp = new()
             {
-                Color = new(0, 0, 0, 1),
-            }
-        };
-
-        RenderingAttachmentInfo _depthAttachmentInfo = new()
-        {
-            SType = StructureType.RenderingAttachmentInfo,
-            ImageView = depth.depthImageView,
-            ImageLayout = ImageLayout.AttachmentOptimal,
-            LoadOp = AttachmentLoadOp.Clear,
-            StoreOp = AttachmentStoreOp.DontCare,
-            ClearValue = new()
-            {
-                DepthStencil = new(1, 0),
-            }
-        };
-
-        RenderingInfo _renderingInfo = new()
-        {
-            SType = StructureType.RenderingInfo,
-            RenderArea = new()
+                X = 0,
+                Y = 0,
+                Width = width,
+                Height = height,
+                MinDepth = 0,
+                MaxDepth = 1,
+            };
+            CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
+            Rect2D _scissors = new()
             {
                 Offset = new(0, 0),
                 Extent = screenExtent
-            },
-            LayerCount = 1,
-            ColorAttachmentCount = 1,
-            PColorAttachments = &_colorAttachmentInfo,
-            PDepthAttachment = &_depthAttachmentInfo
-        };
-
-        CreateVulkan.vk.CmdBeginRendering(commandBuffer, &_renderingInfo);
-
-        Viewport _vp = new()
-        {
-            X = 0,
-            Y = 0,
-            Width = width,
-            Height = height,
-            MinDepth = 0,
-            MaxDepth = 1,
-        };
-        CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
-        Rect2D _scissors = new()
-        {
-            Offset = new(0, 0),
-            Extent = screenExtent
-        };
-        CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
+            };
+            CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
+        }
 
         // foreach (var shader in loadedShaders)
         // {
@@ -435,57 +460,65 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         // if (swapchain.recreatedSwapChain)
         //     swapchain.recreatedSwapChain = false;
-
-        Vulkan.CreateVulkan.vk.CmdEndRendering(commandBuffer);
-
-        // ImageMemoryBarrier2 _barrierPresent = new()
-        // {
-        //     SType = StructureType.ImageMemoryBarrier2,
-        //     SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-        //     SrcAccessMask = AccessFlags2.ColorAttachmentWriteBit,
-
-        //     DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-        //     DstAccessMask = 0,
-
-        //     OldLayout = ImageLayout.AttachmentOptimal,
-        //     NewLayout = ImageLayout.PresentSrcKhr,
-
-        //     Image = swapchain.swapChainImages[imageIndex],
-        //     SubresourceRange = new()
-        //     {
-        //         AspectMask = ImageAspectFlags.ColorBit,
-        //         LevelCount = 1,
-        //         LayerCount = 1,
-        //     },
-        // };
-
-        // DependencyInfo _barrierPresentDependencyInfo = new()
-        // {
-        //     SType = StructureType.DependencyInfo,
-        //     ImageMemoryBarrierCount = 1,
-        //     PImageMemoryBarriers = &_barrierPresent,
-        // };
-
-        // Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierPresentDependencyInfo);
-
-        if (Vulkan.CreateVulkan.vk.EndCommandBuffer(commandBuffer) != Result.Success)
+        using (SpeedscopeTrace.Begin("End rendering"))
         {
-            throw new Exception("Failed to record command buffer");
+            Vulkan.CreateVulkan.vk.CmdEndRendering(commandBuffer);
+
+            // ImageMemoryBarrier2 _barrierPresent = new()
+            // {
+            //     SType = StructureType.ImageMemoryBarrier2,
+            //     SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
+            //     SrcAccessMask = AccessFlags2.ColorAttachmentWriteBit,
+
+            //     DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
+            //     DstAccessMask = 0,
+
+            //     OldLayout = ImageLayout.AttachmentOptimal,
+            //     NewLayout = ImageLayout.PresentSrcKhr,
+
+            //     Image = swapchain.swapChainImages[imageIndex],
+            //     SubresourceRange = new()
+            //     {
+            //         AspectMask = ImageAspectFlags.ColorBit,
+            //         LevelCount = 1,
+            //         LayerCount = 1,
+            //     },
+            // };
+
+            // DependencyInfo _barrierPresentDependencyInfo = new()
+            // {
+            //     SType = StructureType.DependencyInfo,
+            //     ImageMemoryBarrierCount = 1,
+            //     PImageMemoryBarriers = &_barrierPresent,
+            // };
+
+            // Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierPresentDependencyInfo);
+
+            if (Vulkan.CreateVulkan.vk.EndCommandBuffer(commandBuffer) != Result.Success)
+            {
+                throw new Exception("Failed to record command buffer");
+            }
         }
     }
 
     void UpdateCameraUBO(uint currentImage)
     {
-        if (!dirty.HasFlag(DirtyFlag.Size))
-            return;
+        using (SpeedscopeTrace.Begin("Clear flag"))
+        {
+            if (!dirty.HasFlag(DirtyFlag.Size))
+                return;
+        }
         dirty &= ~DirtyFlag.Size;
 
-        Vulkan.UICameraUBO ubo = new()
+        using (SpeedscopeTrace.Begin("Updating camera ubo"))
         {
-            Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, width, 0, height, -1000, 1000),
-        };
+            Vulkan.UICameraUBO ubo = new()
+            {
+                Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, width, 0, height, -1000, 1000),
+            };
 
-        cameraBuffers.Update(currentImage, ubo.Proj);
+            cameraBuffers.Update(currentImage, ubo);
+        }
     }
 
     #endregion
@@ -556,6 +589,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     public void Dispose()
     {
+        foreach (var item in RenderEngine.Instance.textShaders)
+        {
+            item.UnregisterBufferForSite(GetId());
+        }
         cameraBuffers.Dispose();
         DisposeImages();
     }

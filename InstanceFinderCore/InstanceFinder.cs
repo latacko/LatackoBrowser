@@ -1,5 +1,5 @@
 using System;
- 
+
 namespace InstanceFinderCore;
 
 public static class InstanceFinder
@@ -7,21 +7,35 @@ public static class InstanceFinder
     static List<Type> instanceToCreate = [];
     static Dictionary<Type, object> instances = [];
 
+    static List<IInstanceInit> initable = [];
+
     public static void CreateInstances()
     {
         foreach (var item in instanceToCreate)
         {
-            instances.Add(item, Activator.CreateInstance(item));
+            object? _instance = Activator.CreateInstance(item);
+            instances.Add(item, _instance!);
+            
+            if (_instance is IInstanceInit instanceInit)
+                initable.Add(instanceInit);
         }
     }
 
-    public static void AddInstance<Type>()
+    public static void InitInstances()
     {
-        instanceToCreate.Add(typeof(Type));
+        foreach (var item in initable)
+        {
+            item.Init();
+        }
     }
 
-    public static Type GetInstance<Type>()
+    public static void AddInstance<Instance>()
     {
-        return (Type)instances[typeof(Type)];
+        instanceToCreate.Add(typeof(Instance));
+    }
+
+    public static Instance GetInstance<Instance>()
+    {
+        return (Instance)instances[typeof(Instance)];
     }
 }

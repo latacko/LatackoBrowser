@@ -70,15 +70,21 @@ public class StylesManager
         // {
         //     item.computedStyles = item.ComputeStyles(_shouldForce, shouldMarkAsDirty:true);
         // });
-
-        foreach (var item in styles)
+        using (SpeedscopeTrace.Begin("Compute global styles"))
         {
-            item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
+            foreach (var item in styles)
+            {
+                item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
+            }
         }
 
-        foreach (var item in inlineStyles)
+
+        using (SpeedscopeTrace.Begin("Compute inline styles"))
         {
-            item.computedStyles = item.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
+            foreach (var item in inlineStyles)
+            {
+                item.computedStyles = item.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
+            }
         }
 
 
@@ -90,15 +96,24 @@ public class StylesManager
 
     public void SetFrameAsNotDirty(uint frame)
     {
-        Parallel.ForEach(styles, item =>
+        // Parallel.ForEach(styles, item =>
+        // {
+        //     item.Value.ShouldObjectUpdate[frame] = false;
+        // });
+
+        foreach (var item in styles)
         {
             item.Value.ShouldObjectUpdate[frame] = false;
-        });
+        }
 
-
-        Parallel.ForEach(inlineStyles, item =>
+        foreach (var item in inlineStyles)
         {
             item.ShouldObjectUpdate[frame] = false;
-        });
+        }
+
+        // Parallel.ForEach(inlineStyles, item =>
+        // {
+        //     item.ShouldObjectUpdate[frame] = false;
+        // });
     }
 }

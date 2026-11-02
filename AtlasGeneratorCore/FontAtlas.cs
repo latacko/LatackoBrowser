@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using GraphicsCore.Buffers;
 using MsdfAtlasGen;
 using Msdfgen;
@@ -127,8 +128,8 @@ public class FontAtlas : IDisposable
     {
         Parallel.For(0, characters.Length, (i) =>
         {
-            try
-            {
+            // try
+            // {
                 var _character = characters[i];
 
                 double pixelsPerUnit = glyphScale * _character.GetGeometryScale();
@@ -158,16 +159,20 @@ public class FontAtlas : IDisposable
                     _pixels[k * 4 + 3] = 255;
                 }
 
+
+            lock (WaitingCharacters)
+            {
                 WaitingCharacters.Enqueue(new()
                 {
                     character = _character.GetCharacter(),
                     pixels = _pixels,
                     index = createdGlyphs
                 });
-            } catch (Exception e)
-            {
-                Console.WriteLine(e);
             }
+            // } catch (Exception e)
+            // {
+            //     // Console.WriteLine(e);
+            // }
 
 
         });

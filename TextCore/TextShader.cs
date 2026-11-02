@@ -13,7 +13,7 @@ using VulkanManager;
 namespace TextCore;
 
 
-public unsafe class TextShader<TextLineData> : BaseShader where TextLineData : struct
+public unsafe class TextShader : BaseShader 
 {
     public Dictionary<uint, List<TextContainer>> elements = new();
 
@@ -22,9 +22,19 @@ public unsafe class TextShader<TextLineData> : BaseShader where TextLineData : s
 
     readonly TextInstancesManager textInstancesManager;
 
-    public TextShader(string shaderPath) : base(shaderPath)
+    TextShader(string shaderPath, Type textLineData) : base(shaderPath)
     {
-        this.textInstancesManager = TextInstancesManager.Get<TextLineData>();
+        this.textInstancesManager = TextInstancesManager.Get(textLineData);
+    }
+
+    public static TextShader Create<TextLineData>(string shaderPath) where TextLineData : struct
+    {
+        return new TextShader(shaderPath, typeof(TextLineData));
+    }
+
+    public void UnregisterBufferForSite(uint siteId)
+    {
+        textInstancesManager.UnregisterBufferForSite(siteId);
     }
 
     public override void Init()

@@ -5,8 +5,7 @@
             "name": "C#: Browser Debug",
             "type": "dotnet",
             "request": "launch",
-            "preLaunchTask": "build",
-            "projectPath": "${workspaceFolder}/Browser/Browser.csproj"
+            "projectPath": "${workspaceFolder}/Browser/Browser.csproj",
         }
     ]
 }
