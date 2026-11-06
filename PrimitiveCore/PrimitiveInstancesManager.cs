@@ -1,12 +1,14 @@
 using System;
 using GraphicsCore;
+using InstanceFinderCore;
 using Silk.NET.Vulkan;
 using Vulkan;
 using VulkanManager.Helpers;
 
 namespace PrimitiveCore;
 
-public class PrimitiveInstancesManager : BufferManager
+[InstanceFinderCore.Instance]
+public class PrimitiveInstancesManager : BufferManager, IInstanceInit
 {
     public static PrimitiveInstancesManager Instance;
 
@@ -14,15 +16,44 @@ public class PrimitiveInstancesManager : BufferManager
     internal DescriptorSetLayout objectDescriptorLayout;
     internal DescriptorSet objectDescriptorSet = new();
 
+    Sampler imageSampler;
+
     public PrimitiveInstancesManager()
     {
         Instance = this;
     }
 
+    public void Init()
+    {
+        RegisterBuffer();
+    }
+
     public override void RegisterBuffer()
     {
+        CreateImageSampler();
         CreateDescriptorsPool();
         RegisterDescriptor();
+    }
+
+    unsafe void CreateImageSampler()
+    {
+        SamplerCreateInfo _samplerCI = new()
+        {
+            SType = StructureType.SamplerCreateInfo,
+            MagFilter = Filter.Linear,
+            MinFilter = Filter.Linear,
+            MipmapMode = SamplerMipmapMode.Linear,
+            AnisotropyEnable = false,
+            MinLod = 0,
+            MaxLod = 0, // = 1000.0f, allows all mip levels
+            AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
+            AddressModeV = SamplerAddressMode.ClampToEdge,
+            AddressModeW = SamplerAddressMode.ClampToEdge,
+        };
+        CreateVulkan.vk.GetPhysicalDeviceProperties(Vulkan.PhysicalDevice.physicalDevice, out var properties);
+        _samplerCI.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
+        fixed (Sampler* samplerPtr = &imageSampler)
+            CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
     }
 
     public unsafe void RegisterDescriptor()
@@ -68,7 +99,7 @@ public class PrimitiveInstancesManager : BufferManager
 
         DescriptorImageInfo _samplerInfo = new()
         {
-            // Sampler = VulkanEngine.Instance.sampler,
+            Sampler = imageSampler,
         };
 
         WriteDescriptorSet _descriptorWrites = new()
@@ -85,7 +116,7 @@ public class PrimitiveInstancesManager : BufferManager
             PImageInfo = &_samplerInfo,
         };
 
-        CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, (uint)1, &_descriptorWrites, 0, null);
+        CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_descriptorWrites, 0, null);
     }
 
     void CreateDescriptorsPool()

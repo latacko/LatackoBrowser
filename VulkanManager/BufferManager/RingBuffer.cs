@@ -157,7 +157,7 @@ public class RingBuffer<BufferData> : IDisposable, IRenderTick where BufferData 
             i++;
         }
 
-        InstanceFinder.GetInstance<RingBufferManager>().AddTransfer(frameInFlight, _bufferData, buffersInfo[frameInFlight].Buffer, _bc);
+        InstanceRegistry.Get<RingBufferManager>().AddTransfer(frameInFlight, _bufferData, buffersInfo[frameInFlight].Buffer, _bc);
     }
 
 

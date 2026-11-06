@@ -13,7 +13,7 @@ internal unsafe class TextInstancesManager : IDisposable
     static readonly Dictionary<Type, TextInstancesManager> textInstancesManagers = [];
     readonly Dictionary<uint, InstancesBuffer<VisualElement>> textContainerInstancesBuffer = [];
     readonly Dictionary<uint, InstancesBuffer<VisualElement>> textLineInstancesBuffer = [];
-    Type instanceData;
+    readonly Type instanceData;
     internal TextInstancesManager(Type instanceData)
     {
         this.instanceData = instanceData;

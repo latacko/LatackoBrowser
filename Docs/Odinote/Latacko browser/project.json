@@ -38,7 +38,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 448,
+          "h": 535,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -99,13 +99,26 @@
                 "es": "usunięcie staging buffers po transferze",
                 "en": "usunięcie staging buffers po transferze"
               }
+            },
+            {
+              "id": "it-1794005014597-9537",
+              "x": 650,
+              "y": 357,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Przy resize okna coś się wywala i zacina całego kompa",
+                "en": "Przy resize okna coś się wywala i zacina całego kompa"
+              }
             }
           ]
         },
         {
           "id": "it-1789777727907-181",
-          "x": 602,
-          "y": 486,
+          "x": 1301,
+          "y": -267,
           "type": "board",
           "w": 300,
           "h": 240,

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Net.Http.Headers;
+using InstanceFinderCore;
 using Microsoft.VisualBasic;
 using Silk.NET.Vulkan;
 using SixLabors.ImageSharp.Processing;
@@ -10,7 +11,8 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 
 namespace TextureCore;
 
-public class TexturesManager : IDisposable
+[Instance]
+public class TexturesManager : IDisposable, IInstanceInit
 {
     CommandPool transferCommandPool;
     CommandBuffer commandBuffer;

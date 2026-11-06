@@ -12,6 +12,7 @@ using PrimitiveCore.Model;
 using TextCore.Text;
 using VulkanManager;
 using VulkanManager.BufferManager;
+using AutoLoad;
 
 // HttpClient httpClient = new();
 
@@ -84,6 +85,15 @@ browserWindow.CreateSurfaceAndSwapchain();
 Console.WriteLine("Picking the best device");
 renderEngine.PickDevice(browserWindow.khrSurface, browserWindow.surface);
 
+Console.WriteLine("Creating instances");
+InstancesBootstrap.CreateInstances();
+Console.WriteLine("Created instances");
+
+InstanceRegistry.InitInstances();
+InstanceRegistry.Get<FontsManager>().LoadFont("google-noto/NotoSerif-Regular.ttf");
+
+
+#region Shaders loading
 ShaderCreator<NodeShader> nodeShaderCreator = new();
 
 var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("shaders/Compiled/uiShader.spv");
@@ -92,31 +102,19 @@ NodeCreator.SetDefaultShader(defaultNodeShader);
 var defaultTextShader = TextShader.Create<TextLineGPUData>("shaders/Compiled/textShader.spv");
 
 renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
-
-TextureCore.TexturesManager texturesManager = new();
-texturesManager.Init();
-
-FontsManager fontManager = new();
-fontManager.LoadFont("google-noto/NotoSerif-Regular.ttf");
 // fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");
 // fontManager.LoadFont("sil-padauk-fonts/Padauk-Regular.ttf");
+#endregion
 
-EventSystem eventSystem = new();
-PrimitiveModelsDb primitiveModelsDb = new();
+var _transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
 
-InstanceFinder.CreateInstances();
-
-var _transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
-
-_transferCommandPoolManager.RegisterTransferManagers(InstanceFinder.GetInstance<RingBufferManager>());
+_transferCommandPoolManager.RegisterTransferManagers(InstanceRegistry.Get<RingBufferManager>());
 
 SiteRenderer mainBrowser = new(new LoginSite());
 browserWindow.SetTextureRenderer(mainBrowser);
 browserWindow.Run();
 
-primitiveModelsDb.Dispose();
-texturesManager.Dispose();
-fontManager.Dispose();
+InstanceRegistry.Dispose();
 
 
 // SvgLoader.Loader.Parse(_document);

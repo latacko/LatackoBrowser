@@ -37,6 +37,7 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
     #region Shader Data
     public override DescriptorSetLayout[] GetLayouts()
     {
+        
         return [PrimitiveInstancesManager.Instance.objectDescriptorLayout];
     }
 
@@ -99,7 +100,6 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
         ulong vOffset = 0;
         CreateVulkan.vk.CmdBindVertexBuffers(commandBuffer, 0, 1, ref PrimitiveModelsDb.primitiveBuffer, ref vOffset);
         CreateVulkan.vk.CmdBindIndexBuffer(commandBuffer, PrimitiveModelsDb.primitiveBuffer, PrimitiveModelsDb.indicesOffset, IndexType.Uint16);
-
         ulong _cameraBuffer = textureRenderer.GetCameraBufferDeviceAddress();
         CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, 0, sizeof(ulong), &_cameraBuffer);
 

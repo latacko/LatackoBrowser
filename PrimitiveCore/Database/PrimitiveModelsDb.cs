@@ -9,7 +9,7 @@ using Vulkan;
 using VulkanManager;
 
 namespace Vulkan;
-
+[InstanceFinderCore.Instance]
 public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 {
     CommandBuffer[] transferCommandBuffers;
@@ -36,7 +36,7 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
     public void Init()
     {
         AssetManager.RegisterMeshDataBufferManager<MeshData<ushort>>(MeshGpuRegister);
-        this.transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+        this.transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
         transferCommandBuffers = transferCommandPoolManager.CreateManagerCommandBuffers();
         CreateBuffers();
     }

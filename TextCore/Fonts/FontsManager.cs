@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using AtlasGeneratorCore;
+using InstanceFinderCore;
 using Msdfgen;
 using SharpFont;
 using Silk.NET.Vulkan;
@@ -12,7 +13,8 @@ using VulkanManager.Helpers;
 
 namespace TextCore;
 
-public class FontsManager : IDisposable
+[Instance]
+public class FontsManager : IDisposable, IInstanceInit
 {
     public static FontsManager? Instance;
     readonly Dictionary<string, FontManager> loadedFonts = new();
@@ -36,7 +38,10 @@ public class FontsManager : IDisposable
     public FontsManager()
     {
         Instance = this;
+    }
 
+    public void Init()
+    {
         CreateFontSampler();
         CreateDescriptorsPool();
         RegisterDescriptor();
@@ -44,6 +49,7 @@ public class FontsManager : IDisposable
         CreateCommandPool();
         CreateCommandBuffer();
         CreateFence();
+
     }
 
     unsafe void CreateCommandPool()
@@ -225,7 +231,7 @@ public class FontsManager : IDisposable
 
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfo);
         #endregion
-        
+
         CreateVulkan.vk.EndCommandBuffer(commandBuffer);
 
         return _stagingBuffer;
@@ -316,7 +322,7 @@ public class FontsManager : IDisposable
             PDescriptorCounts = &_variableDescCount
         };
         textDescriptorSet = TextDescriptorAllocatorGrowable.Allocate(textDescriptorLayout, (nint)(&_variableDescCountAI));
-
+        Console.WriteLine("Register descriptor set");
         DescriptorImageInfo _samplerInfo = new()
         {
             Sampler = fontSampler,
@@ -374,7 +380,10 @@ public class FontsManager : IDisposable
             PImageInfo = &_imageInfo,
         };
 
-        // Console.WriteLine("Registering texture at slot: " + slot);
+        Console.WriteLine("Logical device: " + LogicalDevice.device);
+        Console.WriteLine("imageView: " + imageView);
+        Console.WriteLine("slot: " + slot);
+        Console.WriteLine("slot: " + textDescriptorSet);
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);
     }
 

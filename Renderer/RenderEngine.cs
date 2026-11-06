@@ -3,6 +3,7 @@ using GraphicsCore;
 using GraphicsCore.Buffers;
 using GraphicsCore.Shaders;
 using InstanceFinderCore;
+using PrimitiveCore;
 using Silk.NET.Input.Sdl;
 using Silk.NET.Vulkan;
 using Silk.NET.Vulkan.Extensions.KHR;
@@ -23,8 +24,8 @@ public class RenderEngine : IDisposable
 
     public readonly string[] DeviceExtensions;
 
-    readonly HashSet<BaseShader> shaders = [];
-    internal readonly HashSet<TextShader> textShaders = [];
+    public readonly HashSet<BaseShader> Shaders = [];
+    public readonly HashSet<TextShader> TextShaders = [];
 
     public RenderEngine(string[] deviceExtensions)
     {
@@ -32,10 +33,7 @@ public class RenderEngine : IDisposable
             throw new Exception("Only one render engine can exist.");
         Instance = this;
         DeviceExtensions = deviceExtensions;
-
-        InstanceFinder.AddInstance<TransferCommandPoolManager>();
-        InstanceFinder.AddInstance<RingBufferManager>();
-        InstanceFinder.AddInstance<PrimitiveModelsDb>();
+        // InstanceAutoLoad.InstancesBootstrap.CreateInstancessBootstrap.CreateInstances();
 
         Window.PrioritizeSdl();
         Silk.NET.Windowing.Sdl.SdlWindowing.Use();
@@ -57,12 +55,6 @@ public class RenderEngine : IDisposable
 
         physicalDevice.Pick();
         logicalDevice.Create();
-
-
-        foreach (var shader in shaders)
-        {
-            shader.Init();
-        }
     }
 
     public void RegisterShaders(params BaseShader[] shaders)
@@ -71,9 +63,10 @@ public class RenderEngine : IDisposable
         {
             if (shader is TextShader textShader)
             {
-                textShaders.Add(textShader);
+                TextShaders.Add(textShader);
             }
-            this.shaders.Add(shader);
+            if (this.Shaders.Add(shader))
+                shader.Init();
         }
     }
 
@@ -83,7 +76,7 @@ public class RenderEngine : IDisposable
         // {
         //     objectsManager.Value.RegisterBuffers(site.GetId());
         // }
-        foreach (var shader in shaders)
+        foreach (var shader in Shaders)
         {
             shader.AddSite(site);
         }
@@ -91,7 +84,7 @@ public class RenderEngine : IDisposable
 
     public void Dispose()
     {
-        foreach (var shader in shaders)
+        foreach (var shader in Shaders)
         {
             shader.Dispose();
         }

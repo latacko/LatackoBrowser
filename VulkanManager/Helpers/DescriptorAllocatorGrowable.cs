@@ -141,13 +141,16 @@ public unsafe struct DescriptorAllocatorGrowable
             DescriptorPoolCreateInfo _poolInfo = new()
             {
                 SType = StructureType.DescriptorPoolCreateInfo,
-                Flags =  DescriptorPoolCreateFlags.UpdateAfterBindBit,
+                Flags = DescriptorPoolCreateFlags.UpdateAfterBindBit,
                 MaxSets = setCount,
                 PoolSizeCount = (uint)_poolSizes.Length,
                 PPoolSizes = _poolsPtr,
             };
 
-            CreateVulkan.vk.CreateDescriptorPool(LogicalDevice.device, &_poolInfo, null, out _pool);
+            Result result = CreateVulkan.vk.CreateDescriptorPool(LogicalDevice.device, &_poolInfo, null, out _pool);
+
+            if (result != Result.Success)
+                throw new Exception($"CreateDescriptorPool failed: {result}");
         }
         return _pool;
     }

@@ -6,7 +6,7 @@ namespace Vulkan;
 public unsafe class PhysicalDevice
 {
     internal static PhysicalDevice Instance { get; private set; }
-    internal static Silk.NET.Vulkan.PhysicalDevice physicalDevice;
+    public static Silk.NET.Vulkan.PhysicalDevice physicalDevice { get; private set; }
     readonly string[] deviceExtensions;
 
     KhrSurface khrSurface;

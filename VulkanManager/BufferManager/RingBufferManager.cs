@@ -6,6 +6,7 @@ using Buffer = Silk.NET.Vulkan.Buffer;
 
 namespace VulkanManager.BufferManager;
 
+[InstanceFinderCore.Instance(Priority =-99)]
 public class RingBufferManager: ITransfer, IInstanceInit
 {
     CommandBuffer[] transferCommandBuffers;
@@ -15,7 +16,7 @@ public class RingBufferManager: ITransfer, IInstanceInit
 
     public void Init()
     {
-        this.transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
+        this.transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
         transferCommandBuffers = transferCommandPoolManager.CreateManagerCommandBuffers();
         Console.WriteLine("Init ring buffer");
     }

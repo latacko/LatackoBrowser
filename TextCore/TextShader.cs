@@ -15,7 +15,7 @@ namespace TextCore;
 
 public unsafe class TextShader : BaseShader 
 {
-    public Dictionary<uint, List<TextContainer>> elements = new();
+    static readonly Dictionary<uint, List<TextContainer>> elements = [];
 
     public static bool ShowMSDF;
     public static bool ShowLOD;
@@ -198,6 +198,7 @@ public unsafe class TextShader : BaseShader
     public override void AddSite(TextureRenderer textureRenderer)
     {
         elements.Add(textureRenderer.GetId(), []);
+        textInstancesManager.RegisterBufferForSite(textureRenderer.GetId());
     }
 
     public override void Dispose()

@@ -59,6 +59,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     NodeCreator nodeCreator;
 
+    public bool wireframe;
+
 
     public SiteRenderer(ISiteController siteController)
     {
@@ -310,9 +312,11 @@ public class SiteRenderer : TextureRenderer, IDisposable
             submitInfo.SignalSemaphoreInfoCount = 1;
             submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
 
-            if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, default) != Result.Success)
+            var _result = Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, default);
+
+            if (_result != Result.Success)
             {
-                throw new Exception("Failed to submit command buffer!");
+                throw new Exception("Failed to submit command buffer! " + _result);
             }
         }
     }
@@ -451,10 +455,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
 
-        // foreach (var shader in loadedShaders)
-        // {
-        //     shader.Render(commandBuffer, FrameInFlight, wireFrameRendering);
-        // }
+        foreach (var shader in RenderEngine.Instance.Shaders)
+        {
+            shader.Render(this, commandBuffer, imageIndex, wireframe);
+        }
 
         // coreManager.RenderShader(commandBuffer, FrameInFlight, wireFrameRendering);
 
@@ -589,7 +593,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     public void Dispose()
     {
-        foreach (var item in RenderEngine.Instance.textShaders)
+        foreach (var item in RenderEngine.Instance.TextShaders)
         {
             item.UnregisterBufferForSite(GetId());
         }

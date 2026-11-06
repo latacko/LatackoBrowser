@@ -4,6 +4,7 @@ using GraphicsCore.Events;
 using TextureCore;
 using PrimitiveCore.Shader;
 using PrimitiveCore;
+using InstanceFinderCore;
 
 namespace Vulkan;
 
@@ -27,7 +28,7 @@ public class NodeCreator
     public Node Create(uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
     {
         uint objectIndex = LastCreatedIndex++;
-        Node runtimeModelData = new(modelId, objectIndex, texture, EventSystem.Instance, parent);
+        Node runtimeModelData = new(modelId, objectIndex, texture, InstanceRegistry.Get<EventSystem>(), parent);
         parent?.AddChild(runtimeModelData);
 
         VisualElement.ObjectsToCompile.Add(new()

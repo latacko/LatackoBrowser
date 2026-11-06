@@ -4,6 +4,7 @@ using Vulkan;
 
 namespace VulkanManager;
 
+[InstanceFinderCore.Instance(Priority =-100)]
 public class TransferCommandPoolManager : IDisposable, IRenderTick
 {
     public const uint TransferCommandBuffers = 4;

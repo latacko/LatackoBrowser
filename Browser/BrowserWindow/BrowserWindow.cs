@@ -40,6 +40,10 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
+    long targetTicks = Stopwatch.Frequency / 60;
+    readonly Stopwatch stopwatch = Stopwatch.StartNew();
+    long nextFrameTicks = Stopwatch.GetTimestamp();
+
     public BrowserWindow()
     {
         CreateWindow("Browser");
@@ -48,9 +52,7 @@ public unsafe partial class BrowserWindow
     public void Run()
     {
         SetupVulkan();
-        Console.WriteLine("Test0");
         OnStart?.Invoke();
-        Console.WriteLine("Test1");
         MainLoop();
         CleanUp();
     }
@@ -64,8 +66,6 @@ public unsafe partial class BrowserWindow
         // options.WindowBorder = WindowBorder.Hidden;
         options.Size = new Vector2D<int>(WIDTH, HEIGHT);
         options.Title = title;
-        // options.UpdatesPerSecond = 60;
-        // options.FramesPerSecond = 60;
 
         window = Window.Create(options);
 
@@ -130,10 +130,9 @@ public unsafe partial class BrowserWindow
     private void Start()
     {
         // coreManager.Start();
-        transferCommandPoolManager = InstanceFinder.GetInstance<TransferCommandPoolManager>();
-        ringBufferManager = InstanceFinder.GetInstance<RingBufferManager>();
+        transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
+        ringBufferManager = InstanceRegistry.Get<RingBufferManager>();
         Console.WriteLine("Init instances");
-        InstanceFinder.InitInstances();
 
         textureRenderer.Init(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
 
@@ -158,7 +157,6 @@ public unsafe partial class BrowserWindow
 
         long _allocatedGB1 = GC.GetAllocatedBytesForCurrentThread();
         using var _frame = SpeedscopeTrace.Begin("OnRender");
-
         using (SpeedscopeTrace.Begin("WaitForFences"))
         {
             CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in fences[frameInFlight], Vk.True, ulong.MaxValue);
@@ -308,7 +306,7 @@ public unsafe partial class BrowserWindow
         long _allocatedGB2 = GC.GetAllocatedBytesForCurrentThread();
         acumulatedGCInThread += _allocatedGB2 - _allocatedGB1;
 
-        if (FPS.fpsTimer >= 0.2)   // update twice per second so it stays readable
+        if (FPS.fpsTimer >= 0.1)   // update twice per second so it stays readable
         {
             double fps = FPS.fpsFrames / FPS.fpsTimer;
             double avgMs = FPS.fpsTimer * 1000.0 / FPS.fpsFrames;
@@ -334,7 +332,46 @@ public unsafe partial class BrowserWindow
 
     void MainLoop()
     {
-        window.Run();
+        window.Run(() =>
+        {
+            // 1. Obliczamy punkt docelowy dla tej klatki
+            nextFrameTicks += targetTicks;
+
+            // 2. Precyzyjne uśpienie dostosowane do Linuxa
+            while (Stopwatch.GetTimestamp() < nextFrameTicks)
+            {
+                long remainingTicks = nextFrameTicks - Stopwatch.GetTimestamp();
+                // Konwersja pozostałych ticków na milisekunde
+                double remainingMs = (double)remainingTicks / Stopwatch.Frequency * 1000.0;
+
+                if (remainingMs > 1.0)
+                {
+                    // Linuxowy scheduler idealnie usypia wątek na ~1ms bez narzutu
+                    Thread.Sleep(1);
+                }
+                else if (remainingMs > 0)
+                {
+                    // Końcówka klatki (poniżej 1ms) dociągana mikro-pauzą
+                    Thread.SpinWait(5);
+                }
+            }
+
+            // 3. OCHRONA PRZED 14% CPU (Zabezpieczenie przed nadrabianiem klatek)
+            long currentTicks = Stopwatch.GetTimestamp();
+            if (currentTicks > nextFrameTicks + targetTicks)
+            {
+                // Jeśli renderowanie lub system operacyjny złapał laga, 
+                // resetujemy zegar do czasu obecnego, zamiast wpadać w pętlę 100% CPU.
+                nextFrameTicks = currentTicks;
+            }
+
+            // 4. Cykl życia okna Silk.NET
+            window.DoEvents();
+            if (window.IsClosing) return;
+
+            window.DoUpdate();
+            window.DoRender();
+        });
 
         Vulkan.CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
     }
@@ -345,6 +382,7 @@ public unsafe partial class BrowserWindow
         // coreManager.Dispose();
         // primitiveModelsDb.Dispose();
         Dispose();
+        window.Reset();
         window.Dispose();
     }
 }

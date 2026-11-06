@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="AssetCore/AssetCore.csproj" />
   <Project Path="AtlasGeneratorCore/AtlasGeneratorCore.csproj" />
+  <Project Path="AutoLoad.Generator/AutoLoad.Generator.csproj" />
   <Project Path="Browser/Browser.csproj" />
   <Project Path="CoreManager/CoreManager.csproj" />
   <Project Path="EventCore/EventCore.csproj" />
