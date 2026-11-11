@@ -32,10 +32,11 @@ public struct PushConstants
 
 public float RoundedRectSDF(float2 uv, float2 rectSize, float4 radii)
 {
-    float2 p = (uv - 0.5) * rectSize; // uv [0,1] -> pixel space centered at 0
-    float r = p.x > 0
-                ? (p.y > 0 ? radii.z : radii.y)
-                : (p.y > 0 ? radii.w : radii.x);
-    float2 q = abs(p) - rectSize * 0.5 + r;
-    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+    return 0.0;
+    // float2 p = (uv - 0.5) * rectSize; // uv [0,1] -> pixel space centered at 0
+    // float r = p.x > 0
+    //             ? (p.y > 0 ? radii.z : radii.y)
+    //             : (p.y > 0 ? radii.w : radii.x);
+    // float2 q = abs(p) - rectSize * 0.5 + r;
+    // return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }

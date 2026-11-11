@@ -160,7 +160,6 @@ public sealed class AutoLoadGenerator : IIncrementalGenerator
 
         foreach (var invalid in result.Invalid)
             spc.ReportDiagnostic(Diagnostic.Create(InvalidInstanceClass, invalid.Location, invalid.Name));
-
         var types = result.Valid
             .Distinct()
             .OrderBy(x => x.Priority)

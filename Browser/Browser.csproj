@@ -8,7 +8,16 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ShaderWorkingDirectory>$(ProjectDir)shaders</ShaderWorkingDirectory>
     <IsAotCompatible>true</IsAotCompatible>
+
+    <Shaders>$(IntermediateOutputPath)shaders\</Shaders>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Builds the tool first, but doesn't reference it as a library -->
+    <ProjectReference Include="..\Tools\ShaderBuild\ShaderBuild.csproj"
+      ReferenceOutputAssembly="false" />
+    <ShaderSource Include="Shaders\**\*.slang;" />
+  </ItemGroup>
 
   <!-- <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <PublishAot>true</PublishAot>
@@ -51,7 +60,7 @@
 
   <ItemGroup>
     <Folder Include="BrowserWindow/" />
-    <None Update="shaders/Compiled/*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- <None Update="shaders/Compiled/*" CopyToOutputDirectory="PreserveNewest" /> -->
     <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="models/*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="textures/*" CopyToOutputDirectory="PreserveNewest" />
@@ -73,7 +82,7 @@
 
   <ItemGroup>
     <Compile Remove="Generated/**/*.cs" />
-    <ProjectReference Include="../AutoLoad.Generator/AutoLoad.Generator.csproj"
+    <ProjectReference Include="../Tools/AutoLoad.Generator/AutoLoad.Generator.csproj"
       OutputItemType="Analyzer"
       ReferenceOutputAssembly="false" />
   </ItemGroup>

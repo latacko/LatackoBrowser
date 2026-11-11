@@ -8,6 +8,7 @@
     <UserSecretsId>838c1340-abc6-4e7d-84ce-ed0dc814b872</UserSecretsId>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
+    <Shaders>$(IntermediateOutputPath)shaders\</Shaders>
   </PropertyGroup>
 
   <ItemGroup>

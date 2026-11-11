@@ -1,0 +1,40 @@
+<Project>
+    <PropertyGroup>
+        <ShaderProject>
+            $(MSBuildProjectDirectory)/../Tools/ShaderBuild/ShaderBuild.csproj
+        </ShaderProject>
+        <ShaderOut>$(MSBuildThisFileDirectory)shaders\</ShaderOut>
+
+        <ShaderLibrary>$(MSBuildThisFileDirectory)Browser/bin/$(Configuration)/net10.0/Shaders/</ShaderLibrary>
+    </PropertyGroup>
+
+    <Target Name="CompileShaders"
+        BeforeTargets="CoreCompile"
+        Condition="'$(MSBuildProjectName)' != 'ShaderBuild' and '$(Shaders)' != ''">
+
+        <MSBuild Projects="$(ShaderProject)"
+            Targets="Build"
+            Properties="Configuration=$(Configuration);Platform=$(Platform)" />
+
+        <PropertyGroup>
+            <ShaderTool>
+                $(MSBuildProjectDirectory)/../Tools/ShaderBuild/bin/$(Configuration)/net10.0/ShaderBuild.dll</ShaderTool>
+        </PropertyGroup>
+
+        <Error Condition="!Exists('$(ShaderTool)')"
+            Text="Shader compiler not found: $(ShaderTool)" />
+
+        <Exec
+            Command="dotnet &quot;$(MSBuildProjectDirectory)/../Tools/ShaderBuild/bin/$(Configuration)/net10.0/ShaderBuild.dll&quot; &quot;$(MSBuildProjectDirectory)/$(Shaders)&quot; &quot;$(ShaderLibrary)&quot;"
+            WorkingDirectory="$(MSBuildProjectDirectory)"
+            IgnoreExitCode="false" />
+
+        <ItemGroup>
+            <None Include="$(ShaderOut)**/*.spv"
+                Link="Shaders/%(RecursiveDir)%(Filename)%(Extension)"
+                CopyToOutputDirectory="PreserveNewest" />
+        </ItemGroup>
+
+    </Target>
+
+</Project>
