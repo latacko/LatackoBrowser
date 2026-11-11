@@ -23,7 +23,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     public BaseShader(string shaderPath)
     {
-        moduleShaderPath = shaderPath;
+        moduleShaderPath = "Shaders/"+shaderPath+".spv";
     }
 
     #region Init
