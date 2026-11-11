@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <UseIntegratedGPU>true</UseIntegratedGPU>
+    <UseDiscreteGpu>true</UseDiscreteGpu>
+  </PropertyGroup>
+</Project>

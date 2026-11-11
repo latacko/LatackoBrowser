@@ -36,11 +36,21 @@ public unsafe class PhysicalDevice
 
         Silk.NET.Vulkan.PhysicalDevice _bestDevice = default;
         int _bestDeviceScore = 0;
+        PhysicalDeviceType[] _allowedGPUTypes = [
+            #if USE_INTEGRATED_GPU
+            PhysicalDeviceType.IntegratedGpu,
+            #endif
+            #if USE_DISCRETE_GPU
+            PhysicalDeviceType.DiscreteGpu,
+            #endif
+        ];
 
         foreach (var device in _devices)
         {
             CreateVulkan.vk.GetPhysicalDeviceProperties2(device, out PhysicalDeviceProperties2 _physicalDeviceProperties);
             CreateVulkan.vk.GetPhysicalDeviceFeatures2(device, out PhysicalDeviceFeatures2 _physicalDeviceFeatures);
+            if (!_allowedGPUTypes.Contains(_physicalDeviceProperties.Properties.DeviceType)) continue;
+
             Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is found");
             if (!IsDeviceSuitable(device)) continue;
             Console.WriteLine(SilkMarshal.PtrToString((nint)_physicalDeviceProperties.Properties.DeviceName) + " is suitable");
@@ -157,7 +167,7 @@ public unsafe class PhysicalDevice
                 // Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
                 indices.TransferFamily = i;
             }
-            
+
             i++;
         }
 

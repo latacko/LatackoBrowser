@@ -6,6 +6,14 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
+
+    <UseIntegratedGPU>true</UseIntegratedGPU>
+    <UseDiscreteGpu>true</UseDiscreteGpu>
+
+    <_GpuConstants Condition="'$(UseIntegratedGPU)' == 'true'">USE_INTEGRATED_GPU</_GpuConstants>
+    <_GpuConstants Condition="'$(UseDiscreteGpu)' == 'true'">$(_GpuConstants);USE_DISCRETE_GPU</_GpuConstants>
+
+    <DefineConstants>$(DefineConstants);$(_GpuConstants)</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>

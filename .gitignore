@@ -1,5 +1,7 @@
 BenchmarkDotNet.Artifacts/
 
+Local.Build.props
+
 .lscache
 
 ## Ignore Visual Studio temporary files, build results, and

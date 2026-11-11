@@ -1,0 +1,14 @@
+<Project>
+    <Import Project="$(MSBuildThisFileDirectory)Local.Build.props"
+        Condition="Exists('$(MSBuildThisFileDirectory)Local.Build.props')" />
+
+    <PropertyGroup>
+        <UseIntegratedGPU Condition="'$(UseIntegratedGPU)' == ''">true</UseIntegratedGPU>
+        <UseDiscreteGpu Condition="'$(UseDiscreteGpu)' == ''">true</UseDiscreteGpu>
+
+        <DefineConstants Condition="'$(UseIntegratedGPU)' == 'true'">
+            $(DefineConstants);USE_INTEGRATED_GPU</DefineConstants>
+        <DefineConstants Condition="'$(UseDiscreteGpu)' == 'true'">
+            $(DefineConstants);USE_DISCRETE_GPU</DefineConstants>
+    </PropertyGroup>
+</Project>
