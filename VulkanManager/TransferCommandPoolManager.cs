@@ -147,11 +147,9 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
 
         if (registeredCB[currentCommandBuffer] == 0) return;
 
-        SubmitInfo2 submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo2,
-            WaitSemaphoreInfoCount = 0,
-        };
+        SubmitInfo2 submitInfo = new(
+            waitSemaphoreInfoCount: 0
+        );
 
         submitInfo.CommandBufferInfoCount = registeredCB[currentCommandBuffer];
         fixed (CommandBufferSubmitInfo* ptrCB = transferCommandBuffers[currentCommandBuffer])

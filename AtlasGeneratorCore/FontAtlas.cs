@@ -280,15 +280,13 @@ public class FontAtlas : IDisposable
 
         uploadList.Clear();
 
-        CopyBufferToImageInfo2 _copyBufferToImageInfo = new()
-        {
-            SrcBuffer = stagingBufferData.Buffer,
-            DstImage = stageUploadAtlas.atlasImage,
-
-            PRegions = _uploadRegions,
-            RegionCount = (uint)(uploadList.Count + prevUploadList.Count),
-            DstImageLayout = ImageLayout.TransferDstOptimal,
-        };
+        CopyBufferToImageInfo2 _copyBufferToImageInfo = new(
+            srcBuffer: stagingBufferData.Buffer,
+            dstImage: stageUploadAtlas.atlasImage,
+            pRegions: _uploadRegions,
+            regionCount: (uint)(uploadList.Count + prevUploadList.Count),
+            dstImageLayout: ImageLayout.TransferDstOptimal
+        );
 
         CreateVulkan.vk.CmdCopyBufferToImage2(commandBuffer, in _copyBufferToImageInfo);
 

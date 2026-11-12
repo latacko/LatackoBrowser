@@ -49,6 +49,7 @@ public class RingBufferManager: ITransfer, IInstanceInit
         {
             CopyBufferInfo2 _cbI = new()
             {
+                SType = StructureType.CopyBufferInfo2,
                 SrcBuffer = srcBuffer.Buffer,
                 PRegions = copyListAddress,
                 RegionCount = (uint)copyInfo.Length,

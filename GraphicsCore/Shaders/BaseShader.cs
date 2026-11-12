@@ -278,6 +278,8 @@ public unsafe abstract class BaseShader : IDisposable
     }
     #endregion
 
+    public abstract void CompileElement(TextureRenderer textureRenderer, VisualElement visualElement);
+
     public abstract void AddElement(TextureRenderer textureRenderer, VisualElement runtimeModelData);
     public abstract void AddSite(TextureRenderer textureRenderer);
 

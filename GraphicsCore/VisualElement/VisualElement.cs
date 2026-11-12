@@ -21,7 +21,7 @@ public abstract class VisualElement : IDisposable, IInstance
         public VisualElement runtimeModel;
         public BaseShader shader;
     }
-    public static readonly HashSet<ObjectComileInfo> ObjectsToCompile = new();
+    public static readonly Dictionary<uint, List<ObjectComileInfo>> ObjectsToCompile = [];
 
     public uint ModelId { get; private set; }
     public uint InstanceIndex { get; private set; }

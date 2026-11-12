@@ -147,6 +147,7 @@ public class RingBuffer<BufferData> : IDisposable, IRenderTick where BufferData 
 
             _bc[i] = new()
             {
+                SType = StructureType.BufferCopy2,
                 SrcOffset = _elementOffset,
                 DstOffset = slot.GetSlot().Offset,
                 Size = GetElementBucketSize(slot.GetSlot().Bucket),

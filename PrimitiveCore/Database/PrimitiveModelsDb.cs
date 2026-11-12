@@ -9,6 +9,7 @@ using Vulkan;
 using VulkanManager;
 
 namespace Vulkan;
+
 [InstanceFinderCore.Instance]
 public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 {
@@ -106,6 +107,7 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 
         BufferCopy2 _bc = new()
         {
+            SType = StructureType.BufferCopy2,
             SrcOffset = 0,
             DstOffset = 0,
             Size = _bufferSize,
@@ -113,6 +115,7 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 
         CopyBufferInfo2 _cbI = new()
         {
+            SType = StructureType.CopyBufferInfo2,
             SrcBuffer = bufferData.Buffer,
             PRegions = &_bc,
             RegionCount = 1,

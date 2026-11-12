@@ -8,6 +8,9 @@ using VulkanManager;
 using VulkanManager.BufferManager;
 using VulkanManager.Structs;
 using Semaphore = Silk.NET.Vulkan.Semaphore;
+using GraphicsCore;
+using GraphicsCore.Buffers;
+using InstanceFinderCore;
 
 namespace Renderer;
 
@@ -61,6 +64,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     public bool wireframe;
 
+    readonly List<VisualElement.ObjectComileInfo> visualElementsToCompile = [];
+
 
     public SiteRenderer(ISiteController siteController)
     {
@@ -69,9 +74,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
         if (RenderEngine.Instance == null)
             throw new System.NullReferenceException("The render engine hasn't been initialized");
         RenderEngine.Instance.RegisterSite(this);
+        VisualElement.ObjectsToCompile.Add(UniqueId, visualElementsToCompile);
 
         nodeCreator = new(UniqueId);
-        document = new(nodeCreator);
+        document = new(this, nodeCreator);
 
         siteController.SetDocument(document);
     }
@@ -82,6 +88,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         CreateResources(width, height);
         cameraBuffers.CreateBuffers();
         siteController.Start();
+
     }
 
     //TODO - Clear prev image and render to new texture
@@ -455,6 +462,12 @@ public class SiteRenderer : TextureRenderer, IDisposable
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
 
+        if (visualElementsToCompile.Count > 0)
+        {
+            Console.WriteLine("Elements to compile in shaders: " + VisualElement.ObjectsToCompile.Count);
+            CompileVisuaElements();
+        }
+
         foreach (var shader in RenderEngine.Instance.Shaders)
         {
             shader.Render(this, commandBuffer, imageIndex, wireframe);
@@ -503,6 +516,17 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 throw new Exception("Failed to record command buffer");
             }
         }
+    }
+
+    void CompileVisuaElements()
+    {
+        int _objectToCompileCount = visualElementsToCompile.Count >= 10 ? 10 : visualElementsToCompile.Count;
+        for (int i = 0; i < _objectToCompileCount; i++)
+        {
+            var _objectInfo = visualElementsToCompile[i];
+            _objectInfo.shader.CompileElement(this, _objectInfo.runtimeModel);
+        }
+        visualElementsToCompile.RemoveRange(0, _objectToCompileCount);
     }
 
     void UpdateCameraUBO(uint currentImage)

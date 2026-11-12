@@ -11,7 +11,7 @@ namespace Vulkan;
 public class NodeCreator
 {
     uint siteId;
-    public readonly HashSet<Node> Elements = [];
+    // public readonly HashSet<Node> Elements = [];
     public uint LastCreatedIndex = 0;
     static NodeShader defaultNodeShader;
 
@@ -25,19 +25,19 @@ public class NodeCreator
         defaultNodeShader = shader;
     }
 
-    public Node Create(uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
+    public Node Create(uint siteid, uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
     {
         uint objectIndex = LastCreatedIndex++;
         Node runtimeModelData = new(modelId, objectIndex, texture, InstanceRegistry.Get<EventSystem>(), parent);
         parent?.AddChild(runtimeModelData);
 
-        VisualElement.ObjectsToCompile.Add(new()
+        VisualElement.ObjectsToCompile[siteId].Add(new()
         {
             runtimeModel = runtimeModelData,
             shader = shader ?? defaultNodeShader
         });
 
-        Elements.Add(runtimeModelData);
+        // Elements.Add(runtimeModelData);
 
         return runtimeModelData;
     }

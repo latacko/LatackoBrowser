@@ -40,7 +40,7 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
-    long targetTicks = Stopwatch.Frequency / 60;
+    long targetTicks = Stopwatch.Frequency / 99999;
     readonly Stopwatch stopwatch = Stopwatch.StartNew();
     long nextFrameTicks = Stopwatch.GetTimestamp();
 
@@ -116,12 +116,10 @@ public unsafe partial class BrowserWindow
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            CommandBufferAllocateInfo commandBufferCI = new()
-            {
-                SType = StructureType.CommandBufferAllocateInfo,
-                CommandPool = vulkanEngine.commandPools[i],
-                CommandBufferCount = 1
-            };
+            CommandBufferAllocateInfo commandBufferCI = new(
+                commandPool: vulkanEngine.commandPools[i],
+                commandBufferCount:1
+            );
 
             fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
                 CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
@@ -222,12 +220,9 @@ public unsafe partial class BrowserWindow
 
         using (SpeedscopeTrace.Begin("Submit"))
         {
-            SubmitInfo2 submitInfo = new()
-            {
-                SType = StructureType.SubmitInfo,
-            };
-
-            submitInfo.WaitSemaphoreInfoCount = 2;
+            SubmitInfo2 submitInfo = new(
+                waitSemaphoreInfoCount: 2
+            );
             SemaphoreSubmitInfo* waitSemaphores = stackalloc SemaphoreSubmitInfo[]
             {
                 new()
@@ -247,16 +242,16 @@ public unsafe partial class BrowserWindow
 
             submitInfo.CommandBufferInfoCount = 1;
 
-            CommandBufferSubmitInfo _cbSubmitInfo = new()
-            {
-                CommandBuffer = commandBuffers[frameInFlight],
-            };
+            CommandBufferSubmitInfo _cbSubmitInfo = new(
+                commandBuffer: commandBuffers[frameInFlight]
+            );
             submitInfo.PCommandBufferInfos = &_cbSubmitInfo;
 
             submitInfo.SignalSemaphoreInfoCount = 1;
 
             SemaphoreSubmitInfo _signalRenderComplete = new()
             {
+                SType = StructureType.SemaphoreSubmitInfo,
                 Semaphore = renderCompleteSemaphores[frameInFlight]
             };
             submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;

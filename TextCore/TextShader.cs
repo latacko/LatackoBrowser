@@ -182,6 +182,11 @@ public unsafe class TextShader : BaseShader
         }
     }
 
+    public override void CompileElement(TextureRenderer textureRenderer, VisualElement visualElement)
+    {
+        throw new NotImplementedException();
+    }
+
     /// <summary>
     /// Remember to register the site first
     /// </summary>

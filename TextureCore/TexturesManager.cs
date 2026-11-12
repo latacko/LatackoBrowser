@@ -131,6 +131,7 @@ public class TexturesManager : IDisposable, IInstanceInit
 
             CopyBufferToImageInfo2 _copyBufferToImgInfo = new()
             {
+                SType = StructureType.CopyBufferToImageInfo2,
                 SrcBuffer = _stagingBuffer.Buffer,
 
                 DstImage = textureInfo.Image,
@@ -170,6 +171,7 @@ public class TexturesManager : IDisposable, IInstanceInit
         submitInfo.CommandBufferInfoCount = 1;
         CommandBufferSubmitInfo commandBufferSubmitInfo = new()
         {
+            SType = StructureType.CommandBufferSubmitInfo,
             CommandBuffer = commandBuffer,
         };
         submitInfo.PCommandBufferInfos = &commandBufferSubmitInfo;
@@ -222,6 +224,7 @@ public class TexturesManager : IDisposable, IInstanceInit
 
         BufferImageCopy2 _bufferImageCopy = new()
         {
+            SType = StructureType.BufferImageCopy2,
             BufferOffset = elementHead,
             BufferRowLength = 0,
             BufferImageHeight = 0,

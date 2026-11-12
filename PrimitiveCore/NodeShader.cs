@@ -113,6 +113,7 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
 
     protected override void RenderElements(uint siteId, CommandBuffer commandBuffer, uint frameInFlight)
     {
+        // Console.WriteLine("Rendering elements");
         foreach (var (modelId, elements) in elements[siteId])
         {
             var _siteModelKey = InstancesManager.MakeKey(siteId, modelId);
@@ -123,13 +124,18 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
                 element.TryWriteObjectData(instanceManager!.GetDestinationSpan(_siteModelKey, frameInFlight, element.InstanceIndex, element.ObjectDataSize), frameInFlight);
             }
             
-
             ulong _modelBuffer = instanceManager!.GetBufferDeviceAddress(_siteModelKey, frameInFlight);
             CreateVulkan.vk.CmdPushConstants(commandBuffer, PipelineLayout, ShaderStageFlags.VertexBit, sizeof(ulong), sizeof(ulong) * 1, &_modelBuffer);
 
             var _meshData = AssetManager.GetModel(modelId);
             CreateVulkan.vk.CmdDrawIndexed(commandBuffer, (uint)_meshData.GetIndicesCount(), (uint)elements.Count, _meshData.indexOffset, (int)_meshData.vertexOffset, 0);
         }
+    }
+
+    public override void CompileElement(TextureRenderer textureRenderer, VisualElement visualElement)
+    {
+        instanceManager.RegisterBufferForMesh(textureRenderer.GetId(), visualElement.ModelId);
+        AddElement(textureRenderer, visualElement);
     }
 
     /// <summary>

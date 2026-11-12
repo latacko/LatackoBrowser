@@ -15,10 +15,9 @@ public static class AssetManager
 
         uint _assetId = lastModelId++;
         meshData.AssetId = _assetId;
-
         if (instantLoad)
             add.Invoke(meshData);
-        models.Add(lastModelId, meshData);
+        models.Add(meshData.AssetId, meshData);
         return meshData.AssetId;
     }
 

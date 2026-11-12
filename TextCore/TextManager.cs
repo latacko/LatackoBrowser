@@ -35,13 +35,13 @@ public class TextManager : BufferManager, IRenderTick
         return runtimeModelData;
     }
 
-    public TextContainer AddText(string text, BaseShader shader, VisualElement parent)
+    public TextContainer AddText(uint siteid, string text, BaseShader shader, VisualElement parent)
     {
         uint objectIndex = LastCreatedIndex++;
         TextContainer runtimeTextContainer = new(text, objectIndex, this, parent);
         parent?.AddChild(runtimeTextContainer);
 
-        VisualElement.ObjectsToCompile.Add(new()
+        VisualElement.ObjectsToCompile[siteid].Add(new()
         {
             runtimeModel = runtimeTextContainer,
             shader = shader

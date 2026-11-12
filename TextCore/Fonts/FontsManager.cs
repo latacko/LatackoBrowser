@@ -130,6 +130,7 @@ public class FontsManager : IDisposable, IInstanceInit
         submitInfo.CommandBufferInfoCount = 1;
         CommandBufferSubmitInfo commandBufferSubmitInfo = new()
         {
+            SType = StructureType.CommandBufferSubmitInfo,
             CommandBuffer = commandBuffer,
         };
         submitInfo.PCommandBufferInfos = &commandBufferSubmitInfo;

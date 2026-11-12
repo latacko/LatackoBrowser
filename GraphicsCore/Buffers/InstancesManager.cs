@@ -22,11 +22,16 @@ public unsafe class InstancesManager : IDisposable
 
     public void RegisterBufferForMesh(uint siteId, uint meshId)
     {
-        if (meshData.BaseType == null || !meshData.BaseType.Equals(AssetManager.GetModel(meshId).GetType()))
+        if (meshData.BaseType == null || !meshData.Equals(AssetManager.GetModel(meshId).GetType()))
         {
             throw new Exception("Mesh " + meshId + " is not type of " + meshData);
         }
-        nodesBuffers[MakeKey(siteId, meshId)] = new(instanceData);
+        var _siteModelKey = MakeKey(siteId, meshId);
+
+        if (nodesBuffers.ContainsKey(_siteModelKey))
+            return;
+
+        nodesBuffers[_siteModelKey] = new(instanceData);
     }
 
     public void UnregisterBufferForMesh(uint siteId, uint meshId)
