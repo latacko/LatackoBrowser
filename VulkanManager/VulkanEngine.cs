@@ -33,10 +33,7 @@ public unsafe class VulkanEngine : IDisposable
 
     void CreateSynchronizationObjects()
     {
-        SemaphoreCreateInfo semaphoreCI = new()
-        {
-            SType = StructureType.SemaphoreCreateInfo,
-        };
+        SemaphoreCreateInfo semaphoreCI = new(flags:null);
 
         fixed (Semaphore* renderCompleteSemaphoresPtr = renderCompleteSemaphores)
         {
@@ -49,12 +46,10 @@ public unsafe class VulkanEngine : IDisposable
 
     public void CreateCommandPools()
     {
-        CommandPoolCreateInfo commandPoolCI = new()
-        {
-            SType = StructureType.CommandPoolCreateInfo,
-            Flags = CommandPoolCreateFlags.None,
-            QueueFamilyIndex = LogicalDevice.Indices.GraphicsFamily!.Value,
-        };
+        CommandPoolCreateInfo commandPoolCI = new(
+            flags: CommandPoolCreateFlags.None,
+            queueFamilyIndex: LogicalDevice.Indices.GraphicsFamily!.Value
+        );
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {

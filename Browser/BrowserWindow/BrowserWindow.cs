@@ -118,7 +118,7 @@ public unsafe partial class BrowserWindow
         {
             CommandBufferAllocateInfo commandBufferCI = new(
                 commandPool: vulkanEngine.commandPools[i],
-                commandBufferCount:1
+                commandBufferCount: 1
             );
 
             fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
@@ -225,18 +225,14 @@ public unsafe partial class BrowserWindow
             );
             SemaphoreSubmitInfo* waitSemaphores = stackalloc SemaphoreSubmitInfo[]
             {
-                new()
-                {
-                    SType = StructureType.SemaphoreSubmitInfo,
-                    Semaphore = imageAcquiredSemaphores[frameInFlight],
-                    StageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                },
-                new()
-                {
-                    SType = StructureType.SemaphoreSubmitInfo,
-                    Semaphore = _imageData.semaphore,
-                    StageMask = PipelineStageFlags2.FragmentShaderBit,
-                }
+                new(
+                    semaphore: imageAcquiredSemaphores[frameInFlight],
+                    stageMask: PipelineStageFlags2.ColorAttachmentOutputBit
+                ),
+                new(
+                    semaphore: _imageData.semaphore,
+                    stageMask: PipelineStageFlags2.FragmentShaderBit
+                )
             };
             submitInfo.PWaitSemaphoreInfos = waitSemaphores;
 
@@ -249,11 +245,9 @@ public unsafe partial class BrowserWindow
 
             submitInfo.SignalSemaphoreInfoCount = 1;
 
-            SemaphoreSubmitInfo _signalRenderComplete = new()
-            {
-                SType = StructureType.SemaphoreSubmitInfo,
-                Semaphore = renderCompleteSemaphores[frameInFlight]
-            };
+            SemaphoreSubmitInfo _signalRenderComplete = new(
+                semaphore: renderCompleteSemaphores[frameInFlight]
+            );
             submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;
 
             if (Vulkan.CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, fences[frameInFlight]) != Result.Success)
@@ -267,17 +261,14 @@ public unsafe partial class BrowserWindow
             fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
             fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[frameInFlight])
             {
-                PresentInfoKHR presentInfo = new()
-                {
-                    SType = StructureType.PresentInfoKhr,
+                PresentInfoKHR presentInfo = new(
+                    waitSemaphoreCount: 1,
+                    pWaitSemaphores: renderCompleteSemaphoresPtr,
 
-                    WaitSemaphoreCount = 1,
-                    PWaitSemaphores = renderCompleteSemaphoresPtr,
-
-                    SwapchainCount = 1,
-                    PSwapchains = swapChainPtr,
-                    PImageIndices = &imageIndex
-                };
+                    swapchainCount: 1,
+                    pSwapchains: swapChainPtr,
+                    pImageIndices: &imageIndex
+                );
 
                 _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.PresentQueue, &presentInfo);
 

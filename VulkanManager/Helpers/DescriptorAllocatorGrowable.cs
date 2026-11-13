@@ -71,15 +71,13 @@ public unsafe struct DescriptorAllocatorGrowable
     public DescriptorSet Allocate(DescriptorSetLayout layout, nint pNext)
     {
         var _poolToUse = GetPool();
-        DescriptorSetAllocateInfo _allocInfo = new()
-        {
-            SType = StructureType.DescriptorSetAllocateInfo,
-            PNext = (void*)pNext,
+        DescriptorSetAllocateInfo _allocInfo = new(
+            pNext: (void*)pNext,
 
-            DescriptorPool = _poolToUse,
-            DescriptorSetCount = 1,
-            PSetLayouts = &layout,
-        };
+            descriptorPool: _poolToUse,
+            descriptorSetCount: 1,
+            pSetLayouts: &layout
+        );
 
         DescriptorSet _ds;
         var _result = CreateVulkan.vk.AllocateDescriptorSets(LogicalDevice.device, &_allocInfo, out _ds);
@@ -129,23 +127,20 @@ public unsafe struct DescriptorAllocatorGrowable
         DescriptorPoolSize[] _poolSizes = new DescriptorPoolSize[ratios.Length];
         for (int i = 0; i < _poolSizes.Length; i++)
         {
-            _poolSizes[i] = new()
-            {
-                Type = ratios[i].Type,
-                DescriptorCount = (uint)(ratios[i].Ratio * setCount),
-            };
+            _poolSizes[i] = new(
+                type: ratios[i].Type,
+                descriptorCount: (uint)(ratios[i].Ratio * setCount)
+            );
         }
 
         fixed (DescriptorPoolSize* _poolsPtr = _poolSizes)
         {
-            DescriptorPoolCreateInfo _poolInfo = new()
-            {
-                SType = StructureType.DescriptorPoolCreateInfo,
-                Flags = DescriptorPoolCreateFlags.UpdateAfterBindBit,
-                MaxSets = setCount,
-                PoolSizeCount = (uint)_poolSizes.Length,
-                PPoolSizes = _poolsPtr,
-            };
+            DescriptorPoolCreateInfo _poolInfo = new(
+                flags: DescriptorPoolCreateFlags.UpdateAfterBindBit,
+                maxSets: setCount,
+                poolSizeCount: (uint)_poolSizes.Length,
+                pPoolSizes: _poolsPtr
+            );
 
             Result result = CreateVulkan.vk.CreateDescriptorPool(LogicalDevice.device, &_poolInfo, null, out _pool);
 

@@ -5,21 +5,17 @@ public static class CmdHelper
 {
     public static unsafe CommandBuffer BeginSingleTimeCommands(CommandPool commandPool)
     {
-        CommandBufferAllocateInfo _allocInfo = new()
-        {
-            SType = StructureType.CommandBufferAllocateInfo,
-            Level = CommandBufferLevel.Primary,
-            CommandPool = commandPool,
-            CommandBufferCount = 1,
-        };
+        CommandBufferAllocateInfo _allocInfo = new(
+            level: CommandBufferLevel.Primary,
+            commandPool: commandPool,
+            commandBufferCount: 1
+        );
 
         CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, &_allocInfo, out var _commandBuffer);
 
-        CommandBufferBeginInfo _beginInfo = new()
-        {
-            SType = StructureType.CommandBufferBeginInfo,
-            Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
-        };
+        CommandBufferBeginInfo _beginInfo = new(
+            flags: CommandBufferUsageFlags.OneTimeSubmitBit
+        );
 
         CreateVulkan.vk.BeginCommandBuffer(_commandBuffer, &_beginInfo);
 
@@ -30,12 +26,10 @@ public static class CmdHelper
     {
         CreateVulkan.vk.EndCommandBuffer(commandBuffer);
 
-        SubmitInfo _submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo,
-            CommandBufferCount = 1,
-            PCommandBuffers = &commandBuffer,
-        };
+        SubmitInfo _submitInfo = new(
+            commandBufferCount: 1,
+            pCommandBuffers: &commandBuffer
+        );
 
         CreateVulkan.vk.QueueSubmit(LogicalDevice.GraphicsQueue, 1, &_submitInfo, default);
         CreateVulkan.vk.QueueWaitIdle(LogicalDevice.GraphicsQueue);
@@ -47,12 +41,10 @@ public static class CmdHelper
     {
         CreateVulkan.vk.EndCommandBuffer(commandBuffer);
 
-        SubmitInfo _submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo,
-            CommandBufferCount = 1,
-            PCommandBuffers = &commandBuffer,
-        };
+        SubmitInfo _submitInfo = new(
+            commandBufferCount: 1,
+            pCommandBuffers: &commandBuffer
+        );
 
         CreateVulkan.vk.QueueSubmit(LogicalDevice.GraphicsQueue, 1, &_submitInfo, fence);
     }

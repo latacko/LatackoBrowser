@@ -51,21 +51,17 @@ public unsafe class CreateVulkan : IDisposable
             throw new System.Exception("validation layers requested, but not available!");
         }
 
-        ApplicationInfo applicationInfo = new()
-        {
-            SType = StructureType.ApplicationInfo,
-            PApplicationName = (byte*)SilkMarshal.StringToPtr("Latacko Browser"),
-            ApplicationVersion = new Version32(0, 1, 0),
-            PEngineName = (byte*)SilkMarshal.StringToPtr("Latacko Engine"),
-            EngineVersion = new Version32(0, 1, 0),
-            ApiVersion = Vk.Version13,
-        };
+        ApplicationInfo applicationInfo = new(
+            pApplicationName: (byte*)SilkMarshal.StringToPtr("Latacko Browser"),
+            applicationVersion: new Version32(0, 1, 0),
+            pEngineName: (byte*)SilkMarshal.StringToPtr("Latacko Engine"),
+            engineVersion: new Version32(0, 1, 0),
+            apiVersion: Vk.Version13
+        );
 
-        InstanceCreateInfo createInfo = new()
-        {
-            SType = StructureType.InstanceCreateInfo,
-            PApplicationInfo = &applicationInfo,
-        };
+        InstanceCreateInfo createInfo = new(
+            pApplicationInfo: &applicationInfo
+        );
 
         if (ENABLE_VALIDATION_LAYERS)
         {
@@ -75,7 +71,7 @@ public unsafe class CreateVulkan : IDisposable
             var _debugCreateInfo = PopulateDebugMessengerCreateInfo();
             createInfo.PNext = &_debugCreateInfo;
         }
-        
+
 
         var _requiredExtensions = GetRequiredExtensions(requiredExtensions, count);
         createInfo.EnabledExtensionCount = (uint)_requiredExtensions.Length;

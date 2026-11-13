@@ -11,6 +11,7 @@ using Semaphore = Silk.NET.Vulkan.Semaphore;
 using GraphicsCore;
 using GraphicsCore.Buffers;
 using InstanceFinderCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace Renderer;
 
@@ -128,12 +129,10 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            CommandBufferAllocateInfo commandBufferCI = new()
-            {
-                SType = StructureType.CommandBufferAllocateInfo,
-                CommandPool = vulkanEngine.commandPools[i],
-                CommandBufferCount = 1
-            };
+            CommandBufferAllocateInfo commandBufferCI = new(
+                commandPool: vulkanEngine.commandPools[i],
+                commandBufferCount: 1
+            );
 
             fixed (CommandBuffer* commandBufferPtr = &commandBuffers[i])
                 CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
@@ -273,11 +272,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         using var _ = SpeedscopeTrace.Begin("Site Renderer Render");
         FrameInFlight = frameInFlight;
-        SubmitInfo2 submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo2,
-            WaitSemaphoreInfoCount = 0,
-        };
+        SubmitInfo2 submitInfo = new(
+            waitSemaphoreInfoCount: 0
+        );
 
         CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[FrameInFlight], CommandPoolResetFlags.None);
 
@@ -310,11 +307,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
             fixed (CommandBufferSubmitInfo* ptrCB = subSiteCommandBuffers)
                 submitInfo.PCommandBufferInfos = ptrCB;
 
-            SemaphoreSubmitInfo _signalSemaphoreInfo = new()
-            {
-                SType = StructureType.SemaphoreSubmitInfo,
-                Semaphore = vulkanEngine.renderCompleteSemaphores[FrameInFlight],
-            };
+            SemaphoreSubmitInfo _signalSemaphoreInfo = new(
+                semaphore: vulkanEngine.renderCompleteSemaphores[FrameInFlight]
+            );
 
             submitInfo.SignalSemaphoreInfoCount = 1;
             submitInfo.PSignalSemaphoreInfos = &_signalSemaphoreInfo;
@@ -332,13 +327,9 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         using (SpeedscopeTrace.Begin("Begin command buffer"))
         {
-            CommandBufferBeginInfo _beginInfo = new()
-            {
-                SType = StructureType.CommandBufferBeginInfo,
-
-                Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
-                PInheritanceInfo = null,
-            };
+            CommandBufferBeginInfo _beginInfo = new(
+                flags: CommandBufferUsageFlags.OneTimeSubmitBit
+            );
 
 
 
@@ -351,114 +342,97 @@ public class SiteRenderer : TextureRenderer, IDisposable
         using (SpeedscopeTrace.Begin("Begin rendering"))
         {
             ImageMemoryBarrier2* _outputBarriers = stackalloc ImageMemoryBarrier2[2];
-            _outputBarriers[0] = new()
-            {
-                SType = StructureType.ImageMemoryBarrier2,
-                SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                SrcAccessMask = 0,
+            _outputBarriers[0] = new(
+                srcStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+                srcAccessMask: 0,
 
-                DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-                DstAccessMask = AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
+                dstStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+                dstAccessMask: AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
 
-                OldLayout = ImageLayout.Undefined,
-                NewLayout = ImageLayout.AttachmentOptimal,
+                oldLayout: ImageLayout.Undefined,
+                newLayout: ImageLayout.AttachmentOptimal,
 
-                Image = imagesData[imageIndex].image,
-                SubresourceRange = new()
-                {
-                    AspectMask = ImageAspectFlags.ColorBit,
-                    LevelCount = 1,
-                    LayerCount = 1,
-                },
-            };
-            _outputBarriers[1] = new()
-            {
-                SType = StructureType.ImageMemoryBarrier2,
-                SrcStageMask = PipelineStageFlags2.LateFragmentTestsBit,
-                SrcAccessMask = AccessFlags2.DepthStencilAttachmentWriteBit,
+                image: imagesData[imageIndex].image,
+                subresourceRange: new(
+                    aspectMask: ImageAspectFlags.ColorBit,
+                    levelCount: 1,
+                    layerCount: 1
+                )
+            );
+            _outputBarriers[1] = new(
+                srcStageMask: PipelineStageFlags2.LateFragmentTestsBit,
+                srcAccessMask: AccessFlags2.DepthStencilAttachmentWriteBit,
 
-                DstStageMask = PipelineStageFlags2.EarlyFragmentTestsBit,
-                DstAccessMask = AccessFlags2.DepthStencilAttachmentWriteBit,
+                dstStageMask: PipelineStageFlags2.EarlyFragmentTestsBit,
+                dstAccessMask: AccessFlags2.DepthStencilAttachmentWriteBit,
 
-                OldLayout = ImageLayout.Undefined,
-                NewLayout = ImageLayout.AttachmentOptimal,
+                oldLayout: ImageLayout.Undefined,
+                newLayout: ImageLayout.AttachmentOptimal,
 
-                Image = depth.depthImage,
-                SubresourceRange = new()
-                {
-                    AspectMask = ImageAspectFlags.DepthBit,
-                    LevelCount = 1,
-                    LayerCount = 1,
-                },
-            };
+                image: depth.depthImage,
+                subresourceRange: new(
+                    aspectMask: ImageAspectFlags.DepthBit,
+                    levelCount: 1,
+                    layerCount: 1
+                )
+            );
 
-            DependencyInfo _barrierDependencyInfo = new()
-            {
-                SType = StructureType.DependencyInfo,
-                ImageMemoryBarrierCount = 2,
-                PImageMemoryBarriers = _outputBarriers,
-            };
+            DependencyInfo _barrierDependencyInfo = new(
+                imageMemoryBarrierCount: 2,
+                pImageMemoryBarriers: _outputBarriers
+            );
+
             CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
 
-            RenderingAttachmentInfo _colorAttachmentInfo = new()
-            {
-                SType = StructureType.RenderingAttachmentInfo,
-                ImageView = imagesData[imageIndex].imageView,
-                ImageLayout = ImageLayout.AttachmentOptimal,
-                LoadOp = AttachmentLoadOp.Clear,
-                StoreOp = AttachmentStoreOp.Store,
-                ClearValue = new()
-                {
-                    Color = new(0, 0, 0, 1),
-                }
-            };
+            RenderingAttachmentInfo _colorAttachmentInfo = new(
+                imageView: imagesData[imageIndex].imageView,
+                imageLayout: ImageLayout.AttachmentOptimal,
+                loadOp: AttachmentLoadOp.Clear,
+                storeOp: AttachmentStoreOp.Store,
+                clearValue: new(
+                    color: new(0, 0, 0, 1)
+                )
+            );
 
-            RenderingAttachmentInfo _depthAttachmentInfo = new()
-            {
-                SType = StructureType.RenderingAttachmentInfo,
-                ImageView = depth.depthImageView,
-                ImageLayout = ImageLayout.AttachmentOptimal,
-                LoadOp = AttachmentLoadOp.Clear,
-                StoreOp = AttachmentStoreOp.DontCare,
-                ClearValue = new()
-                {
-                    DepthStencil = new(1, 0),
-                }
-            };
+            RenderingAttachmentInfo _depthAttachmentInfo = new(
+                imageView: depth.depthImageView,
+                imageLayout: ImageLayout.AttachmentOptimal,
+                loadOp: AttachmentLoadOp.Clear,
+                storeOp: AttachmentStoreOp.DontCare,
+                clearValue: new(
+                    depthStencil: new(1, 0)
+                )
+            );
 
-            RenderingInfo _renderingInfo = new()
-            {
-                SType = StructureType.RenderingInfo,
-                RenderArea = new()
-                {
-                    Offset = new(0, 0),
-                    Extent = screenExtent
-                },
-                LayerCount = 1,
-                ColorAttachmentCount = 1,
-                PColorAttachments = &_colorAttachmentInfo,
-                PDepthAttachment = &_depthAttachmentInfo
-            };
+            RenderingInfo _renderingInfo = new(
+                renderArea: new(
+                    offset: new(0, 0),
+                    extent: screenExtent
+                ),
+                layerCount: 1,
+                colorAttachmentCount: 1,
+                pColorAttachments: &_colorAttachmentInfo,
+                pDepthAttachment: &_depthAttachmentInfo
+            );
 
             CreateVulkan.vk.CmdBeginRendering(commandBuffer, &_renderingInfo);
         }
+
         using (SpeedscopeTrace.Begin("Viewport & scissors"))
         {
-            Viewport _vp = new()
-            {
-                X = 0,
-                Y = 0,
-                Width = width,
-                Height = height,
-                MinDepth = 0,
-                MaxDepth = 1,
-            };
+            Viewport _vp = new(
+                x: 0,
+                y: 0,
+                width: width,
+                height: height,
+                minDepth: 0,
+                maxDepth: 1
+            );
             CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
-            Rect2D _scissors = new()
-            {
-                Offset = new(0, 0),
-                Extent = screenExtent
-            };
+            Rect2D _scissors = new(
+                offset: new(0, 0),
+                extent: screenExtent
+            );
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
 
@@ -580,10 +554,12 @@ public class SiteRenderer : TextureRenderer, IDisposable
         Array.Copy(_subSiteRenderes, 0, _siteRendererWhichParentsAll.subSiteRenderers, 1, _subSiteRenderes.Length);
         _siteRendererWhichParentsAll.subSiteRenderers[0] = siteRenderer;
         _siteRendererWhichParentsAll.subSiteCommandBuffers = new CommandBufferSubmitInfo[_siteRendererWhichParentsAll.subSiteRenderers.Length + 1];
-        Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new()
+        unsafe
         {
-            SType = StructureType.CommandBufferSubmitInfo
-        });
+            Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new(
+                commandBuffer: null
+            ));
+        }
     }
 
     SiteRenderer GetParentingSiteRenderer()
@@ -608,10 +584,13 @@ public class SiteRenderer : TextureRenderer, IDisposable
         Array.Copy(_subSiteRenderes, 0, _siteRendererWhichParentsAll.subSiteRenderers, 0, _index);
         Array.Copy(_subSiteRenderes, _index + 1, _siteRendererWhichParentsAll.subSiteRenderers, _index, _subSiteRenderes.Length - _index);
         _siteRendererWhichParentsAll.subSiteCommandBuffers = new CommandBufferSubmitInfo[_siteRendererWhichParentsAll.subSiteRenderers.Length + 1];
-        Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new()
+
+        unsafe
         {
-            SType = StructureType.CommandBufferSubmitInfo
-        });
+            Array.Fill(_siteRendererWhichParentsAll.subSiteCommandBuffers, new(
+                commandBuffer: null
+            ));
+        }
     }
     #endregion
 

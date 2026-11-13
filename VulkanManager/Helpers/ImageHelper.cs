@@ -7,26 +7,22 @@ public unsafe class ImageHelper
 {
     public static void CreateImage(uint width, uint height, Format format, ImageTiling tiling, ImageUsageFlags usage, MemoryPropertyFlags properties, uint miplevels, ref Image image, ref DeviceMemory imageMemory)
     {
-        ImageCreateInfo _imageInfo = new()
-        {
-            SType = StructureType.ImageCreateInfo,
-
-            ImageType = ImageType.Type2D,
-            Extent = new()
-            {
-                Width = width,
-                Height = height,
-                Depth = 1,
-            },
-            MipLevels = miplevels,
-            ArrayLayers = 1,
-            Format = format,
-            Tiling = tiling,
-            InitialLayout = ImageLayout.Undefined,
-            Usage = usage,
-            Samples = SampleCountFlags.Count1Bit,
-            SharingMode = SharingMode.Exclusive
-        };
+        ImageCreateInfo _imageInfo = new(
+            imageType: ImageType.Type2D,
+            extent: new(
+                width: width,
+                height: height,
+                depth: 1
+            ),
+            mipLevels: miplevels,
+            arrayLayers: 1,
+            format: format,
+            tiling: tiling,
+            initialLayout: ImageLayout.Undefined,
+            usage: usage,
+            samples: SampleCountFlags.Count1Bit,
+            sharingMode: SharingMode.Exclusive
+        );
 
         if (CreateVulkan.vk.CreateImage(LogicalDevice.device, &_imageInfo, null, out image) != Result.Success)
         {
@@ -36,13 +32,10 @@ public unsafe class ImageHelper
         MemoryRequirements _memRequirements;
         CreateVulkan.vk.GetImageMemoryRequirements(LogicalDevice.device, image, &_memRequirements);
 
-        MemoryAllocateInfo allocInfo = new()
-        {
-            SType = StructureType.MemoryAllocateInfo,
-
-            AllocationSize = _memRequirements.Size,
-            MemoryTypeIndex = FindMemoryType(_memRequirements.MemoryTypeBits, properties)
-        };
+        MemoryAllocateInfo allocInfo = new(
+            allocationSize: _memRequirements.Size,
+            memoryTypeIndex: FindMemoryType(_memRequirements.MemoryTypeBits, properties)
+        );
 
         if (CreateVulkan.vk.AllocateMemory(LogicalDevice.device, &allocInfo, null, out imageMemory) != Result.Success)
         {
@@ -68,23 +61,20 @@ public unsafe class ImageHelper
 
     public static ImageView CreateImageView(Image image, Format format, ImageAspectFlags aspectFlags = ImageAspectFlags.ColorBit, uint mipLevels = 1)
     {
-        ImageViewCreateInfo _viewInfo = new()
-        {
-            SType = StructureType.ImageViewCreateInfo,
-            Image = image,
+        ImageViewCreateInfo _viewInfo = new(
+            image: image,
 
-            ViewType = ImageViewType.Type2D,
-            Format = format,
+            viewType: ImageViewType.Type2D,
+            format: format,
 
-            SubresourceRange = new()
-            {
-                AspectMask = aspectFlags,
-                BaseMipLevel = 0,
-                LevelCount = mipLevels,
-                BaseArrayLayer = 0,
-                LayerCount = 1
-            }
-        };
+            subresourceRange: new(
+                aspectMask: aspectFlags,
+                baseMipLevel: 0,
+                levelCount: mipLevels,
+                baseArrayLayer: 0,
+                layerCount: 1
+            )
+        );
 
         if (CreateVulkan.vk.CreateImageView(LogicalDevice.device, &_viewInfo, null, out var imageView) != Result.Success)
         {
@@ -94,26 +84,23 @@ public unsafe class ImageHelper
         return imageView;
     }
 
-    
+
 
     public static ImageMemoryBarrier2 TransitionImageLayout(Image image, ImageLayout oldLayout, ImageLayout newLayout, uint mipLevels = 1)
     {
-        ImageMemoryBarrier2 _barrier2 = new()
-        {
-            SType = StructureType.ImageMemoryBarrier2,
-            SrcStageMask = PipelineStageFlags2.None,
+        ImageMemoryBarrier2 _barrier2 = new(
+            srcStageMask: PipelineStageFlags2.None,
 
-            OldLayout = oldLayout,
-            NewLayout = newLayout,
+            oldLayout: oldLayout,
+            newLayout: newLayout,
 
-            Image = image,
-            SubresourceRange = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                LevelCount = mipLevels,
-                LayerCount = 1,
-            },
-        };
+            image: image,
+            subresourceRange: new(
+                aspectMask: ImageAspectFlags.ColorBit,
+                levelCount: mipLevels,
+                layerCount: 1
+            )
+        );
 
         if (oldLayout == ImageLayout.Undefined && newLayout == ImageLayout.TransferDstOptimal)
         {
@@ -148,28 +135,24 @@ public unsafe class ImageHelper
     {
         CommandBuffer commandBuffer = CmdHelper.BeginSingleTimeCommands(commandPool);
 
-        BufferImageCopy region = new()
-        {
-            BufferOffset = 0,
-            BufferRowLength = 0,
-            BufferImageHeight = 0,
+        BufferImageCopy region = new(
+            bufferOffset: 0,
+            bufferRowLength: 0,
+            bufferImageHeight: 0,
 
-            ImageSubresource = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                MipLevel = 0,
-                BaseArrayLayer = 0,
-                LayerCount = 1,
-            },
-
-            ImageOffset = new(0, 0, 0),
-            ImageExtent = new()
-            {
-                Width = width,
-                Height = height,
-                Depth = 1,
-            },
-        };
+            imageSubresource: new(
+                aspectMask: ImageAspectFlags.ColorBit,
+                mipLevel: 0,
+                baseArrayLayer: 0,
+                layerCount: 1
+            ),
+            imageOffset: new(0, 0, 0),
+            imageExtent:  new(
+                width: width,
+                height: height,
+                depth: 1
+            )
+        );
 
         CreateVulkan.vk.CmdCopyBufferToImage(commandBuffer, buffer, image, ImageLayout.TransferDstOptimal, 1, &region);
     }

@@ -48,27 +48,24 @@ public unsafe class AtlasRingBuffer : IDisposable
 
         uint _glyphSize = levelData.GlyphSize;
 
-        uploadList.Add(new()
-        {
-            BufferOffset = _offset,
-            BufferRowLength = _glyphSize,
-            BufferImageHeight = _glyphSize,
+        uploadList.Add(new(
+            bufferOffset: _offset,
+            bufferRowLength: _glyphSize,
+            bufferImageHeight: _glyphSize,
 
-            ImageSubresource = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                MipLevel = 0,
-                BaseArrayLayer = 0,
-                LayerCount = 1,
-            },
-            ImageOffset = new((int)(imageX * _glyphSize), (int)(imageY * _glyphSize), 0),
-            ImageExtent = new()
-            {
-                Width = _glyphSize,
-                Height = _glyphSize,
-                Depth = 1,
-            },
-        });
+            imageSubresource: new(
+                aspectMask: ImageAspectFlags.ColorBit,
+                mipLevel: 0,
+                baseArrayLayer: 0,
+                layerCount: 1
+            ),
+            imageOffset: new((int)(imageX * _glyphSize), (int)(imageY * _glyphSize), 0),
+            imageExtent: new(
+                width: _glyphSize,
+                height: _glyphSize,
+                depth: 1
+            )
+        ));
         glyphIndex = (int)((glyphIndex + 1) % glyphsCount);
     }
 

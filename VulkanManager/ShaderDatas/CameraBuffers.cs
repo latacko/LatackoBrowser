@@ -18,12 +18,9 @@ public unsafe class CameraBuffers
             CreateVulkan.vk.MapMemory(LogicalDevice.device, shaderDataBuffersForCamera[i].Memory, 0, (ulong)Unsafe.SizeOf<UICameraUBO>(), 0, &data);
             shaderDataBuffersForCamera[i].Mapped = data;
 
-            BufferDeviceAddressInfo addrInfo = new()
-            {
-                SType = StructureType.BufferDeviceAddressInfo,
-                Buffer = shaderDataBuffersForCamera[i].Buffer
-            };
-
+            BufferDeviceAddressInfo addrInfo = new(
+                buffer: shaderDataBuffersForCamera[i].Buffer
+            );
             shaderDataBuffersForCamera[i].DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
         }
     }

@@ -7,14 +7,12 @@ static public class BufferHelper
 {
     public static unsafe void CreateBuffer(ulong size, BufferUsageFlags usage, MemoryPropertyFlags properties, ref Buffer buffer, ref DeviceMemory bufferMemory)
     {
-        BufferCreateInfo bufferInfo = new()
-        {
-            SType = StructureType.BufferCreateInfo,
-            Size = size,
+        BufferCreateInfo bufferInfo = new(
+            size: size,
 
-            Usage = usage,
-            SharingMode = SharingMode.Exclusive
-        };
+            usage: usage,
+            sharingMode: SharingMode.Exclusive
+        );
 
         if (CreateVulkan.vk.CreateBuffer(LogicalDevice.device, ref bufferInfo, null, out buffer) != Result.Success)
         {
@@ -23,19 +21,15 @@ static public class BufferHelper
 
         CreateVulkan.vk.GetBufferMemoryRequirements(LogicalDevice.device, buffer, out var _memRequirements);
 
-        MemoryAllocateFlagsInfo allocFlags = new()
-        {
-            SType = StructureType.MemoryAllocateFlagsInfo,
-            Flags = MemoryAllocateFlags.DeviceAddressBit
-        };
+        MemoryAllocateFlagsInfo allocFlags = new(
+            flags: MemoryAllocateFlags.DeviceAddressBit
+        );
 
-        MemoryAllocateInfo allocInfo = new()
-        {
-            SType = StructureType.MemoryAllocateInfo,
-            AllocationSize = _memRequirements.Size,
-            MemoryTypeIndex = FindMemoryType(CreateVulkan.vk, PhysicalDevice.physicalDevice, _memRequirements.MemoryTypeBits, properties),
-            PNext = (usage & BufferUsageFlags.ShaderDeviceAddressBit) != 0 ? &allocFlags : null,
-        };
+        MemoryAllocateInfo allocInfo = new(
+            allocationSize: _memRequirements.Size,
+            memoryTypeIndex: FindMemoryType(CreateVulkan.vk, PhysicalDevice.physicalDevice, _memRequirements.MemoryTypeBits, properties),
+            pNext: (usage & BufferUsageFlags.ShaderDeviceAddressBit) != 0 ? &allocFlags : null
+        );
 
         var _result = CreateVulkan.vk.AllocateMemory(LogicalDevice.device, ref allocInfo, null, out bufferMemory);
         if (_result != Result.Success)
@@ -59,12 +53,11 @@ static public class BufferHelper
     {
         CommandBuffer _commandBuffer = CmdHelper.BeginSingleTimeCommands(commandPool);
 
-        BufferCopy copyRegion = new()
-        {
-            SrcOffset = 0,
-            DstOffset = 0,
-            Size = size,
-        };
+        BufferCopy copyRegion = new(
+            srcOffset: 0,
+            dstOffset: 0,
+            size: size
+        );
 
         CreateVulkan.vk.CmdCopyBuffer(_commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 

@@ -46,11 +46,9 @@ public class InstancesBuffer<Instance> : IDisposable, IRenderTick where Instance
         CreateVulkan.vk.MapMemory(LogicalDevice.device, _bufferData.Memory, 0, _bufferSize, 0, &data);
         _bufferData.Mapped = data;
 
-        BufferDeviceAddressInfo addrInfo = new()
-        {
-            SType = StructureType.BufferDeviceAddressInfo,
-            Buffer = _bufferData.Buffer
-        };
+        BufferDeviceAddressInfo addrInfo = new(
+            buffer: _bufferData.Buffer
+        );
 
         _bufferData.DeviceAddress = CreateVulkan.vk.GetBufferDeviceAddress(LogicalDevice.device, ref addrInfo);
 

@@ -15,12 +15,11 @@ public struct TextVertex(Vector3D<float> pos, Vector2D<float> textCoord, uint ch
 
     public static VertexInputBindingDescription GetBindingDescription()
     {
-        VertexInputBindingDescription bindingDescription = new()
-        {
-            Binding = 0,
-            Stride = (uint)Unsafe.SizeOf<TextVertex>(),
-            InputRate = VertexInputRate.Vertex,
-        };
+        VertexInputBindingDescription bindingDescription = new(
+            binding: 0,
+            stride: (uint)Unsafe.SizeOf<TextVertex>(),
+            inputRate: VertexInputRate.Vertex
+        );
 
         return bindingDescription;
     }

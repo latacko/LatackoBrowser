@@ -19,23 +19,20 @@ public unsafe struct DescriptorAllocator
         DescriptorPoolSize[] _poolSizes = new DescriptorPoolSize[ratios.Length];
         for (int i = 0; i < _poolSizes.Length; i++)
         {
-            _poolSizes[i] = new()
-            {
-                Type = ratios[i].Type,
-                DescriptorCount = (uint)(ratios[i].Ratio * maxSets),
-            };
+            _poolSizes[i] = new(
+                type: ratios[i].Type,
+                descriptorCount: (uint)(ratios[i].Ratio * maxSets)
+            );
         }
 
         fixed (DescriptorPoolSize* _poolsPtr = _poolSizes)
         {
-            DescriptorPoolCreateInfo _poolInfo = new()
-            {
-                SType = StructureType.DescriptorPoolCreateInfo,
-                Flags = 0,
-                MaxSets = maxSets,
-                PoolSizeCount = (uint)_poolSizes.Length,
-                PPoolSizes = _poolsPtr,
-            };
+            DescriptorPoolCreateInfo _poolInfo = new(
+                flags: 0,
+                maxSets: maxSets,
+                poolSizeCount: (uint)_poolSizes.Length,
+                pPoolSizes: _poolsPtr
+            );
 
             CreateVulkan.vk.CreateDescriptorPool(LogicalDevice.device, &_poolInfo, null, out pool);
         }
@@ -53,15 +50,13 @@ public unsafe struct DescriptorAllocator
 
     public DescriptorSet Allocate(DescriptorSetLayout layout, nint pNext)
     {
-        DescriptorSetAllocateInfo _allocInfo = new()
-        {
-            SType = StructureType.DescriptorSetAllocateInfo,
-            PNext = (void*)pNext,
+        DescriptorSetAllocateInfo _allocInfo = new(
+            pNext: (void*)pNext,
 
-            DescriptorPool = pool,
-            DescriptorSetCount = 1,
-            PSetLayouts = &layout,
-        };
+            descriptorPool: pool,
+            descriptorSetCount: 1,
+            pSetLayouts: &layout
+        );
 
 
         if (CreateVulkan.vk.AllocateDescriptorSets(LogicalDevice.device, &_allocInfo, out DescriptorSet _ds) != Result.Success)

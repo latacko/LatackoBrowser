@@ -145,13 +145,11 @@ public class RingBuffer<BufferData> : IDisposable, IRenderTick where BufferData 
             );
 
 
-            _bc[i] = new()
-            {
-                SType = StructureType.BufferCopy2,
-                SrcOffset = _elementOffset,
-                DstOffset = slot.GetSlot().Offset,
-                Size = GetElementBucketSize(slot.GetSlot().Bucket),
-            };
+            _bc[i] = new(
+                srcOffset: _elementOffset,
+                dstOffset: slot.GetSlot().Offset,
+                size: GetElementBucketSize(slot.GetSlot().Bucket)
+            );
 
             _elementOffset += (uint)Unsafe.SizeOf<BufferData>() * slot.GetDataCount();
             slot.RemoveDirty(frameInFlight);

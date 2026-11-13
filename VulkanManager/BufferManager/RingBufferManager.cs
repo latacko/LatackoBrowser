@@ -24,13 +24,9 @@ public class RingBufferManager: ITransfer, IInstanceInit
     public unsafe void BeginRecording(uint frameInFlight)
     {
         sthWasAdded = false;
-        CommandBufferBeginInfo _beginInfo = new()
-        {
-            SType = StructureType.CommandBufferBeginInfo,
-
-            Flags = CommandBufferUsageFlags.OneTimeSubmitBit,
-            PInheritanceInfo = null,
-        };
+        CommandBufferBeginInfo _beginInfo = new(
+            flags: CommandBufferUsageFlags.OneTimeSubmitBit
+        );
 
         if (CreateVulkan.vk.BeginCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer], &_beginInfo) != Result.Success)
         {
@@ -47,14 +43,12 @@ public class RingBufferManager: ITransfer, IInstanceInit
     {
         fixed (BufferCopy2* copyListAddress = copyInfo)
         {
-            CopyBufferInfo2 _cbI = new()
-            {
-                SType = StructureType.CopyBufferInfo2,
-                SrcBuffer = srcBuffer.Buffer,
-                PRegions = copyListAddress,
-                RegionCount = (uint)copyInfo.Length,
-                DstBuffer = dstBuffer,
-            };
+            CopyBufferInfo2 _cbI = new(
+                srcBuffer: srcBuffer.Buffer,
+                pRegions: copyListAddress,
+                regionCount: (uint)copyInfo.Length,
+                dstBuffer: dstBuffer
+            );
             CreateVulkan.vk.CmdCopyBuffer2(transferCommandBuffers[currentTransferCommandBuffer], ref _cbI);
             transferCommandPoolManager.AddStagingBuffer(currentTransferCommandBuffer, srcBuffer);
         }

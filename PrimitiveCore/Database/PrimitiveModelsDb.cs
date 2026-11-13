@@ -105,22 +105,18 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
         indicesOffset = (ulong)(sizeof(MeshVertex) * vertices.Length);
         indices.CopyTo(new Span<TIndices>(((byte*)bufferData.Mapped) + indicesOffset, indices.Length));
 
-        BufferCopy2 _bc = new()
-        {
-            SType = StructureType.BufferCopy2,
-            SrcOffset = 0,
-            DstOffset = 0,
-            Size = _bufferSize,
-        };
+        BufferCopy2 _bc = new(
+            srcOffset: 0,
+            dstOffset: 0,
+            size: _bufferSize
+        );
 
-        CopyBufferInfo2 _cbI = new()
-        {
-            SType = StructureType.CopyBufferInfo2,
-            SrcBuffer = bufferData.Buffer,
-            PRegions = &_bc,
-            RegionCount = 1,
-            DstBuffer = primitiveBuffer,
-        };
+        CopyBufferInfo2 _cbI = new(
+            srcBuffer: bufferData.Buffer,
+            pRegions: &_bc,
+            regionCount: 1,
+            dstBuffer: primitiveBuffer
+        );
 
         Console.WriteLine(currentTransferCommandBuffer);
         Console.WriteLine(transferCommandBuffers);

@@ -14,13 +14,11 @@ public struct MeshVertex(Vector3D<float> pos, Vector2D<float> textCoord) : IVert
 
     public static VertexInputBindingDescription GetBindingDescription()
     {
-        VertexInputBindingDescription bindingDescription = new()
-        {
-            Binding = 0,
-            Stride = (uint)Unsafe.SizeOf<MeshVertex>(),
-            InputRate = VertexInputRate.Vertex,
-        };
-
+        VertexInputBindingDescription bindingDescription = new(
+            binding: 0,
+            stride: (uint)Unsafe.SizeOf<MeshVertex>(),
+            inputRate: VertexInputRate.Vertex
+        );
         return bindingDescription;
     }
 

@@ -55,40 +55,35 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
     #region Rendering Options
 
     // // override depth — UI has no depth test
-    protected override PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
-    {
-        SType = StructureType.PipelineDepthStencilStateCreateInfo,
-        DepthTestEnable = Vk.False,
-        DepthWriteEnable = Vk.False,
-        StencilTestEnable = Vk.False,
-    };
+    protected override PipelineDepthStencilStateCreateInfo GetDepthStencil() => new(
+        depthTestEnable: Vk.False,
+        depthWriteEnable: Vk.False,
+        stencilTestEnable: Vk.False
+    );
 
     // // override blend — UI needs alpha
-    protected override PipelineColorBlendAttachmentState GetColorBlend() => new()
-    {
-        ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
+    protected override PipelineColorBlendAttachmentState GetColorBlend() => new(
+        colorWriteMask: ColorComponentFlags.RBit | ColorComponentFlags.GBit |
                         ColorComponentFlags.BBit | ColorComponentFlags.ABit,
-        BlendEnable = Vk.True,
-        SrcColorBlendFactor = BlendFactor.SrcAlpha,
-        DstColorBlendFactor = BlendFactor.OneMinusSrcAlpha,
-        ColorBlendOp = BlendOp.Add,
-        SrcAlphaBlendFactor = BlendFactor.One,
-        DstAlphaBlendFactor = BlendFactor.OneMinusSrcAlpha,
-        AlphaBlendOp = BlendOp.Add,
-    };
+        blendEnable: Vk.True,
+        srcColorBlendFactor: BlendFactor.SrcAlpha,
+        dstColorBlendFactor: BlendFactor.OneMinusSrcAlpha,
+        colorBlendOp: BlendOp.Add,
+        srcAlphaBlendFactor: BlendFactor.One,
+        dstAlphaBlendFactor: BlendFactor.OneMinusSrcAlpha,
+        alphaBlendOp: BlendOp.Add
+    );
 
-    protected override PipelineRasterizationStateCreateInfo GetRasterizer(bool wireframe) => new()
-    {
-        SType = StructureType.PipelineRasterizationStateCreateInfo,
-        DepthClampEnable = Vk.False,
-        RasterizerDiscardEnable = Vk.False,
-        PolygonMode = wireframe ? PolygonMode.Line : PolygonMode.Fill,
-        LineWidth = 1f,
+    protected override PipelineRasterizationStateCreateInfo GetRasterizer(bool wireframe) => new(
+        depthClampEnable: Vk.False,
+        rasterizerDiscardEnable: Vk.False,
+        polygonMode: wireframe ? PolygonMode.Line : PolygonMode.Fill,
+        lineWidth: 1f,
         // CullMode = CullModeFlags.BackBit,
-        CullMode = CullModeFlags.None,
-        FrontFace = FrontFace.CounterClockwise,
-        DepthBiasEnable = Vk.False,
-    };
+        cullMode: CullModeFlags.None,
+        frontFace: FrontFace.CounterClockwise,
+        depthBiasEnable: Vk.False
+    );
     #endregion
 
     public override void Render(TextureRenderer textureRenderer, CommandBuffer commandBuffer, uint frameInFlight, bool wireFrameRendering)

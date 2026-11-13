@@ -42,35 +42,29 @@ public class TexturesManager : IDisposable, IInstanceInit
     {
         Console.WriteLine(LogicalDevice.Indices);
         Console.WriteLine(LogicalDevice.Indices.TransferFamily.Value);
-        CommandPoolCreateInfo commandPoolCI = new()
-        {
-            SType = StructureType.CommandPoolCreateInfo,
-            Flags = CommandPoolCreateFlags.TransientBit,
-            QueueFamilyIndex = LogicalDevice.Indices.TransferFamily!.Value,
-        };
+        CommandPoolCreateInfo commandPoolCI = new(
+            flags: CommandPoolCreateFlags.TransientBit,
+            queueFamilyIndex: LogicalDevice.Indices.TransferFamily!.Value
+        );
 
         CreateVulkan.vk.CreateCommandPool(LogicalDevice.device, ref commandPoolCI, null, out transferCommandPool);
     }
 
-    void CreateCommandBuffer()
+    unsafe void CreateCommandBuffer()
     {
-        CommandBufferAllocateInfo commandBufferCI = new()
-        {
-            SType = StructureType.CommandBufferAllocateInfo,
-            CommandPool = transferCommandPool,
-            CommandBufferCount = 1
-        };
+        CommandBufferAllocateInfo commandBufferCI = new(
+            commandPool: transferCommandPool,
+            commandBufferCount: 1
+        );
 
         CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, out commandBuffer);
     }
 
     unsafe void CreateFence()
     {
-        FenceCreateInfo fenceCI = new()
-        {
-            SType = StructureType.FenceCreateInfo,
-            Flags = FenceCreateFlags.SignaledBit,
-        };
+        FenceCreateInfo fenceCI = new(
+            flags: FenceCreateFlags.SignaledBit
+        );
         CreateVulkan.vk.CreateFence(LogicalDevice.device, in fenceCI, null, out transferDoneFance);
     }
 
@@ -108,12 +102,10 @@ public class TexturesManager : IDisposable, IInstanceInit
             i++;
         }
 
-        DependencyInfo _barrierTexInfoTransfer = new()
-        {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = (uint)texturesToLoad.Count,
-            PImageMemoryBarriers = _barriersToTransfer
-        };
+        DependencyInfo _barrierTexInfoTransfer = new(
+            imageMemoryBarrierCount: (uint)texturesToLoad.Count,
+            pImageMemoryBarriers: _barriersToTransfer
+        );
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfoTransfer);
 
         var (_stagingBuffer, size) = BufferHelper.CreateStagingBuffer<byte>((uint)sizeOfTextures);
@@ -129,27 +121,23 @@ public class TexturesManager : IDisposable, IInstanceInit
             var (_bufferImgCopy, _barrier) = LoadImageToTexture(textureInfo, _stagingBuffer, ref _elementHead);
             _barriersToShaderRead[i] = _barrier;
 
-            CopyBufferToImageInfo2 _copyBufferToImgInfo = new()
-            {
-                SType = StructureType.CopyBufferToImageInfo2,
-                SrcBuffer = _stagingBuffer.Buffer,
+            CopyBufferToImageInfo2 _copyBufferToImgInfo = new(
+                srcBuffer: _stagingBuffer.Buffer,
 
-                DstImage = textureInfo.Image,
-                DstImageLayout = ImageLayout.TransferDstOptimal,
+                dstImage: textureInfo.Image,
+                dstImageLayout: ImageLayout.TransferDstOptimal,
 
-                RegionCount = 1,
-                PRegions = &_bufferImgCopy
-            };
+                regionCount: 1,
+                pRegions: &_bufferImgCopy
+            );
             CreateVulkan.vk.CmdCopyBufferToImage2(commandBuffer, ref _copyBufferToImgInfo);
             i++;
         }
 
-        DependencyInfo _barrierTexInfoShader = new()
-        {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = (uint)texturesToLoad.Count,
-            PImageMemoryBarriers = _barriersToShaderRead
-        };
+        DependencyInfo _barrierTexInfoShader = new(
+            imageMemoryBarrierCount: (uint)texturesToLoad.Count,
+            pImageMemoryBarriers: _barriersToShaderRead
+        );
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfoShader);
 
         if (Vulkan.CreateVulkan.vk.EndCommandBuffer(commandBuffer) != Result.Success)
@@ -162,18 +150,14 @@ public class TexturesManager : IDisposable, IInstanceInit
     {
         CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, transferCommandPool, CommandPoolResetFlags.None);
         RecordCommandBuffer();
-        SubmitInfo2 submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo2,
-            WaitSemaphoreInfoCount = 0,
-        };
+        SubmitInfo2 submitInfo = new(
+            waitSemaphoreInfoCount: 0
+        );
 
         submitInfo.CommandBufferInfoCount = 1;
-        CommandBufferSubmitInfo commandBufferSubmitInfo = new()
-        {
-            SType = StructureType.CommandBufferSubmitInfo,
-            CommandBuffer = commandBuffer,
-        };
+        CommandBufferSubmitInfo commandBufferSubmitInfo = new(
+            commandBuffer: commandBuffer
+        );
         submitInfo.PCommandBufferInfos = &commandBufferSubmitInfo;
 
         if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, transferDoneFance) != Result.Success)
@@ -222,28 +206,24 @@ public class TexturesManager : IDisposable, IInstanceInit
 
         img.CopyPixelDataTo(new Span<byte>((void*)stagingBuffer.Mapped, (int)texture.imgSize));
 
-        BufferImageCopy2 _bufferImageCopy = new()
-        {
-            SType = StructureType.BufferImageCopy2,
-            BufferOffset = elementHead,
-            BufferRowLength = 0,
-            BufferImageHeight = 0,
+        BufferImageCopy2 _bufferImageCopy = new(
+            bufferOffset: elementHead,
+            bufferRowLength: 0,
+            bufferImageHeight: 0,
 
-            ImageSubresource = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                MipLevel = 0,
-                BaseArrayLayer = 0,
-                LayerCount = 1,
-            },
-            ImageOffset = new(0, 0),
-            ImageExtent = new()
-            {
-                Width = texture.width,
-                Height = texture.height,
-                Depth = 1,
-            },
-        };
+            imageSubresource: new(
+                aspectMask: ImageAspectFlags.ColorBit,
+                mipLevel: 0,
+                baseArrayLayer: 0,
+                layerCount: 1
+            ),
+            imageOffset: new(0, 0),
+            imageExtent: new(
+                width: texture.width,
+                height: texture.height,
+                depth: 1
+            )
+        );
         elementHead += texture.imgSize;
 
         var _barrierTexRead = ImageHelper.TransitionImageLayout(texture.Image, ImageLayout.TransferDstOptimal, ImageLayout.ShaderReadOnlyOptimal);

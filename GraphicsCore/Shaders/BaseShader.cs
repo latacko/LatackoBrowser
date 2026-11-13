@@ -23,7 +23,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     public BaseShader(string shaderPath)
     {
-        moduleShaderPath = "Shaders/"+shaderPath+".spv";
+        moduleShaderPath = "Shaders/" + shaderPath + ".spv";
     }
 
     #region Init
@@ -50,54 +50,46 @@ public unsafe abstract class BaseShader : IDisposable
     protected abstract void RenderElements(uint siteId, CommandBuffer commandBuffer, uint frameInFlight);
 
     #region Graphic pipeline
-    protected virtual PipelineDepthStencilStateCreateInfo GetDepthStencil() => new()
-    {
-        SType = StructureType.PipelineDepthStencilStateCreateInfo,
-        DepthTestEnable = Vk.True,
-        DepthWriteEnable = Vk.True,
-        DepthCompareOp = CompareOp.Less,
-        DepthBoundsTestEnable = Vk.False,
-        StencilTestEnable = Vk.False,
-    };
+    protected virtual PipelineDepthStencilStateCreateInfo GetDepthStencil() => new(
+        depthTestEnable: Vk.True,
+        depthWriteEnable: Vk.True,
+        depthCompareOp: CompareOp.Less,
+        depthBoundsTestEnable: Vk.False,
+        stencilTestEnable: Vk.False
+    );
 
-    protected virtual PipelineColorBlendAttachmentState GetColorBlend() => new()
-    {
-        ColorWriteMask = ColorComponentFlags.RBit | ColorComponentFlags.GBit |
+    protected virtual PipelineColorBlendAttachmentState GetColorBlend() => new(
+        colorWriteMask: ColorComponentFlags.RBit | ColorComponentFlags.GBit |
                         ColorComponentFlags.BBit | ColorComponentFlags.ABit,
-        BlendEnable = Vk.False,
-    };
+        blendEnable: Vk.False
+    );
 
-    protected virtual PipelineRasterizationStateCreateInfo GetRasterizer(bool wireFrame) => new()
-    {
-        SType = StructureType.PipelineRasterizationStateCreateInfo,
-        DepthClampEnable = Vk.False,
-        RasterizerDiscardEnable = Vk.False,
-        PolygonMode = wireFrame ? PolygonMode.Line : PolygonMode.Fill,
-        LineWidth = 1f,
-        CullMode = CullModeFlags.BackBit,
+    protected virtual PipelineRasterizationStateCreateInfo GetRasterizer(bool wireFrame) => new(
+        depthClampEnable: Vk.False,
+        rasterizerDiscardEnable: Vk.False,
+        polygonMode: wireFrame ? PolygonMode.Line : PolygonMode.Fill,
+        lineWidth: 1f,
+        cullMode: CullModeFlags.BackBit,
         // CullMode = CullModeFlags.None,
-        FrontFace = FrontFace.CounterClockwise,
-        DepthBiasEnable = Vk.False,
-    };
+        frontFace: FrontFace.CounterClockwise,
+        depthBiasEnable: Vk.False
+    );
 
     // push constant ranges — override if needed
     protected virtual PushConstantRange[] GetPushConstantRanges() => [
-        new()
-        {
-            StageFlags = ShaderStageFlags.VertexBit,
-            Size       = sizeof(ulong)*2 // camera ubo & objects ubo
-        },
+        new(
+            stageFlags : ShaderStageFlags.VertexBit,
+            size       : sizeof(ulong)*2 // camera ubo & objects ubo
+        )
     ];
 
     protected internal abstract VertexInputBindingDescription GetBindingDescription();
     protected internal abstract VertexInputAttributeDescription[] GetAttributeDescriptions();
 
-    protected internal virtual PipelineInputAssemblyStateCreateInfo GetPipelineInputAssemblyStateCreateInfo() => new()
-    {
-        SType = StructureType.PipelineInputAssemblyStateCreateInfo,
-        Topology = PrimitiveTopology.TriangleList,
-        PrimitiveRestartEnable = Vk.False,
-    };
+    protected internal virtual PipelineInputAssemblyStateCreateInfo GetPipelineInputAssemblyStateCreateInfo() => new(
+        topology: PrimitiveTopology.TriangleList,
+        primitiveRestartEnable: Vk.False
+    );
 
     public virtual void CreatePipeline(bool wireFrameRendering = false)
     {
@@ -111,14 +103,12 @@ public unsafe abstract class BaseShader : IDisposable
             fixed (PushConstantRange* pushRangesPtr = pushRanges)
             fixed (DescriptorSetLayout* layoutsPtr = layouts)
             {
-                PipelineLayoutCreateInfo layoutInfo = new()
-                {
-                    SType = StructureType.PipelineLayoutCreateInfo,
-                    SetLayoutCount = (uint)layouts.Length,
-                    PSetLayouts = layoutsPtr,
-                    PushConstantRangeCount = (uint)pushRanges.Length,
-                    PPushConstantRanges = pushRangesPtr,
-                };
+                PipelineLayoutCreateInfo layoutInfo = new(
+                    setLayoutCount: (uint)layouts.Length,
+                    pSetLayouts: layoutsPtr,
+                    pushConstantRangeCount: (uint)pushRanges.Length,
+                    pPushConstantRanges: pushRangesPtr
+                );
 
                 if (CreateVulkan.vk.CreatePipelineLayout(LogicalDevice.device, &layoutInfo, null, out PipelineLayout) != Result.Success)
                     throw new Exception("Failed to create pipeline layout!");
@@ -134,19 +124,15 @@ public unsafe abstract class BaseShader : IDisposable
 
         var shaderModule = CreateShaderModule(vertCode);
 
-        PipelineShaderStageCreateInfo vertStage = new()
-        {
-            SType = StructureType.PipelineShaderStageCreateInfo,
-            Stage = ShaderStageFlags.VertexBit,
-            Module = shaderModule,
-            PName = (byte*)SilkMarshal.StringToPtr("VertexMain")
-        };
+        PipelineShaderStageCreateInfo vertStage = new(
+            stage: ShaderStageFlags.VertexBit,
+            module: shaderModule,
+            pName: (byte*)SilkMarshal.StringToPtr("VertexMain")
+        );
 
-        PipelineShaderStageCreateInfo fragStage = new()
-        {
-            SType = StructureType.PipelineShaderStageCreateInfo,
-            Stage = ShaderStageFlags.FragmentBit,
-        };
+        PipelineShaderStageCreateInfo fragStage = new(
+            stage: ShaderStageFlags.FragmentBit
+        );
 
         var wireframeCode = System.IO.File.ReadAllBytes(Path.GetDirectoryName(moduleShaderPath) + "/wireFrameShader.spv");
         var wireframeShaderModule = CreateShaderModule(wireframeCode);
@@ -178,72 +164,57 @@ public unsafe abstract class BaseShader : IDisposable
         fixed (Format* colorFormatPtr = &Swapchain.swapChainImageFormat)
         {
 
-            PipelineVertexInputStateCreateInfo vertexInput = new()
-            {
-                SType = StructureType.PipelineVertexInputStateCreateInfo,
+            PipelineVertexInputStateCreateInfo vertexInput = new(
+                vertexBindingDescriptionCount: 1,
+                pVertexBindingDescriptions: &bindingDesc,
 
-                VertexBindingDescriptionCount = 1,
-                PVertexBindingDescriptions = &bindingDesc,
-
-                VertexAttributeDescriptionCount = (uint)attributeDescs.Length,
-                PVertexAttributeDescriptions = attrPtr,
-            };
+                vertexAttributeDescriptionCount: (uint)attributeDescs.Length,
+                pVertexAttributeDescriptions: attrPtr
+            );
 
             PipelineInputAssemblyStateCreateInfo inputAssembly = GetPipelineInputAssemblyStateCreateInfo();
 
-            PipelineViewportStateCreateInfo viewportState = new()
-            {
-                SType = StructureType.PipelineViewportStateCreateInfo,
-                ViewportCount = 1,
-                ScissorCount = 1,
-            };
+            PipelineViewportStateCreateInfo viewportState = new(
+                viewportCount: 1,
+                scissorCount: 1
+            );
 
-            PipelineDynamicStateCreateInfo dynamicState = new()
-            {
-                SType = StructureType.PipelineDynamicStateCreateInfo,
-                DynamicStateCount = (uint)dynamicStates.Length,
-                PDynamicStates = dynPtr,
-            };
+            PipelineDynamicStateCreateInfo dynamicState = new(
+                dynamicStateCount: (uint)dynamicStates.Length,
+                pDynamicStates: dynPtr
+            );
 
-            PipelineRenderingCreateInfo renderingCI = new()
-            {
-                SType = StructureType.PipelineRenderingCreateInfo,
-                ColorAttachmentCount = 1,
-                PColorAttachmentFormats = colorFormatPtr,
-                DepthAttachmentFormat = Depth.depthFormat,
-            };
+            PipelineRenderingCreateInfo renderingCI = new(
+                colorAttachmentCount: 1,
+                pColorAttachmentFormats: colorFormatPtr,
+                depthAttachmentFormat: Depth.depthFormat
+            );
 
-            PipelineColorBlendStateCreateInfo colorBlendState = new()
-            {
-                SType = StructureType.PipelineColorBlendStateCreateInfo,
-                AttachmentCount = 1,
-                PAttachments = &colorBlend,
-            };
+            PipelineColorBlendStateCreateInfo colorBlendState = new(
+                attachmentCount: 1,
+                pAttachments: &colorBlend
+            );
 
-            PipelineMultisampleStateCreateInfo multisampleState = new()
-            {
-                SType = StructureType.PipelineMultisampleStateCreateInfo,
-                RasterizationSamples = SampleCountFlags.Count1Bit,
-            };
+            PipelineMultisampleStateCreateInfo multisampleState = new(
+                rasterizationSamples: SampleCountFlags.Count1Bit
+            );
 
-            GraphicsPipelineCreateInfo pipelineCI = new()
-            {
-                SType = StructureType.GraphicsPipelineCreateInfo,
-                PNext = &renderingCI,
+            GraphicsPipelineCreateInfo pipelineCI = new(
+                pNext: &renderingCI,
 
-                StageCount = (uint)stages.Length,
-                PStages = stagesPtr,
+                stageCount: (uint)stages.Length,
+                pStages: stagesPtr,
 
-                PVertexInputState = &vertexInput,
-                PInputAssemblyState = &inputAssembly,
-                PViewportState = &viewportState,
-                PRasterizationState = &rasterizer,
-                PMultisampleState = &multisampleState,
-                PDepthStencilState = &depthStencil,
-                PColorBlendState = &colorBlendState,
-                PDynamicState = &dynamicState,
-                Layout = PipelineLayout,
-            };
+                pVertexInputState: &vertexInput,
+                pInputAssemblyState: &inputAssembly,
+                pViewportState: &viewportState,
+                pRasterizationState: &rasterizer,
+                pMultisampleState: &multisampleState,
+                pDepthStencilState: &depthStencil,
+                pColorBlendState: &colorBlendState,
+                pDynamicState: &dynamicState,
+                layout: PipelineLayout
+            );
 
             Pipeline _pipeline;
             if (CreateVulkan.vk.CreateGraphicsPipelines(LogicalDevice.device, default, 1, &pipelineCI, null, out _pipeline) != Result.Success)
@@ -265,12 +236,10 @@ public unsafe abstract class BaseShader : IDisposable
     {
         fixed (byte* codePtr = code)
         {
-            ShaderModuleCreateInfo createInfo = new()
-            {
-                SType = StructureType.ShaderModuleCreateInfo,
-                CodeSize = (nuint)code.Length,
-                PCode = (uint*)codePtr,
-            };
+            ShaderModuleCreateInfo createInfo = new(
+                codeSize: (nuint)code.Length,
+                pCode: (uint*)codePtr
+            );
 
             CreateVulkan.vk.CreateShaderModule(LogicalDevice.device, &createInfo, null, out ShaderModule module);
             return module;

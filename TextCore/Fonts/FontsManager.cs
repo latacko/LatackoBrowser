@@ -54,35 +54,29 @@ public class FontsManager : IDisposable, IInstanceInit
 
     unsafe void CreateCommandPool()
     {
-        CommandPoolCreateInfo commandPoolCI = new()
-        {
-            SType = StructureType.CommandPoolCreateInfo,
-            Flags = CommandPoolCreateFlags.TransientBit,
-            QueueFamilyIndex = LogicalDevice.Indices.TransferFamily!.Value,
-        };
+        CommandPoolCreateInfo commandPoolCI = new(
+            flags: CommandPoolCreateFlags.TransientBit,
+            queueFamilyIndex: LogicalDevice.Indices.TransferFamily!.Value
+        );
 
         CreateVulkan.vk.CreateCommandPool(LogicalDevice.device, ref commandPoolCI, null, out transferCommandPool);
     }
 
-    void CreateCommandBuffer()
+    unsafe void CreateCommandBuffer()
     {
-        CommandBufferAllocateInfo commandBufferCI = new()
-        {
-            SType = StructureType.CommandBufferAllocateInfo,
-            CommandPool = transferCommandPool,
-            CommandBufferCount = 1
-        };
+        CommandBufferAllocateInfo commandBufferCI = new(
+            commandPool: transferCommandPool,
+            commandBufferCount: 1
+        );
 
         CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, out commandBuffer);
     }
 
     unsafe void CreateFence()
     {
-        FenceCreateInfo fenceCI = new()
-        {
-            SType = StructureType.FenceCreateInfo,
-            Flags = FenceCreateFlags.SignaledBit,
-        };
+        FenceCreateInfo fenceCI = new(
+            flags: FenceCreateFlags.SignaledBit
+        );
         CreateVulkan.vk.CreateFence(LogicalDevice.device, in fenceCI, null, out transferDoneFance);
     }
 
@@ -121,18 +115,14 @@ public class FontsManager : IDisposable, IInstanceInit
             return;
 
 
-        SubmitInfo2 submitInfo = new()
-        {
-            SType = StructureType.SubmitInfo2,
-            WaitSemaphoreInfoCount = 0,
-        };
+        SubmitInfo2 submitInfo = new(
+            waitSemaphoreInfoCount: 0
+        );
 
         submitInfo.CommandBufferInfoCount = 1;
-        CommandBufferSubmitInfo commandBufferSubmitInfo = new()
-        {
-            SType = StructureType.CommandBufferSubmitInfo,
-            CommandBuffer = commandBuffer,
-        };
+        CommandBufferSubmitInfo commandBufferSubmitInfo = new(
+            commandBuffer: commandBuffer
+        );
         submitInfo.PCommandBufferInfos = &commandBufferSubmitInfo;
 
         if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.GraphicsQueue, 1, &submitInfo, transferDoneFance) != Result.Success)
@@ -198,12 +188,10 @@ public class FontsManager : IDisposable, IInstanceInit
             _transferBarriers[i] = _fonts[i].GetFontAtlas().GetTransferImageBarrier();
         }
 
-        DependencyInfo _barrierTexInfo = new()
-        {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = (uint)_fonts.Count,
-            PImageMemoryBarriers = _transferBarriers
-        };
+        DependencyInfo _barrierTexInfo = new(
+            imageMemoryBarrierCount: (uint)_fonts.Count,
+            pImageMemoryBarriers: _transferBarriers
+        );
 
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, in _barrierTexInfo);
         #endregion
@@ -223,12 +211,10 @@ public class FontsManager : IDisposable, IInstanceInit
             _transferBarriers[i] = _fonts[i].GetFontAtlas().GetShaderOptimalImageBarrier();
         }
 
-        _barrierTexInfo = new()
-        {
-            SType = StructureType.DependencyInfo,
-            ImageMemoryBarrierCount = (uint)_fonts.Count,
-            PImageMemoryBarriers = _shaderOptimalBarriers
-        };
+        _barrierTexInfo = new(
+            imageMemoryBarrierCount: (uint)_fonts.Count,
+            pImageMemoryBarriers: _shaderOptimalBarriers
+        );
 
         CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, &_barrierTexInfo);
         #endregion
@@ -262,19 +248,17 @@ public class FontsManager : IDisposable, IInstanceInit
 
     unsafe void CreateFontSampler()
     {
-        SamplerCreateInfo _samplerCI = new()
-        {
-            SType = StructureType.SamplerCreateInfo,
-            MagFilter = Filter.Linear,
-            MinFilter = Filter.Linear,
-            MipmapMode = SamplerMipmapMode.Linear,
-            AnisotropyEnable = false,
-            MinLod = 0,
-            MaxLod = 0, // = 1000.0f, allows all mip levels
-            AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
-            AddressModeV = SamplerAddressMode.ClampToEdge,
-            AddressModeW = SamplerAddressMode.ClampToEdge,
-        };
+        SamplerCreateInfo _samplerCI = new(
+            magFilter: Filter.Linear,
+            minFilter: Filter.Linear,
+            mipmapMode: SamplerMipmapMode.Linear,
+            anisotropyEnable: false,
+            minLod: 0,
+            maxLod: 0, // = 1000.0f, allows all mip levels
+            addressModeU: SamplerAddressMode.ClampToEdge, // good for atlas
+            addressModeV: SamplerAddressMode.ClampToEdge,
+            addressModeW: SamplerAddressMode.ClampToEdge
+        );
 
         // Console.WriteLine("Creating sampler");
         fixed (Sampler* samplerPtr = &fontSampler)
@@ -288,61 +272,50 @@ public class FontsManager : IDisposable, IInstanceInit
         DescriptorBindingFlags[] _descVariableFlag = [0, DescriptorBindingFlags.VariableDescriptorCountBit | DescriptorBindingFlags.PartiallyBoundBit];
         fixed (DescriptorBindingFlags* _descVariableFlagPtr = _descVariableFlag)
         {
-            DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new()
-            {
-                SType = StructureType.DescriptorSetLayoutBindingFlagsCreateInfo,
-                BindingCount = (uint)_descVariableFlag.Length,
-                PBindingFlags = _descVariableFlagPtr
-            };
+            DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new(
+                bindingCount: (uint)_descVariableFlag.Length,
+                pBindingFlags: _descVariableFlagPtr
+            );
 
             DescriptorLayoutBuilder builder = new();
-            builder.AddBinding(new()
-            {
-                Binding = 0,
-                DescriptorType = DescriptorType.Sampler,
-                DescriptorCount = 1,
-                StageFlags = ShaderStageFlags.FragmentBit,
-            });
-            builder.AddBinding(new()
-            {
-                Binding = 1,
-                DescriptorType = DescriptorType.SampledImage,
-                DescriptorCount = 256,
-                StageFlags = ShaderStageFlags.FragmentBit,
-            });
+            builder.AddBinding(new(
+                binding: 0,
+                descriptorType: DescriptorType.Sampler,
+                descriptorCount: 1,
+                stageFlags: ShaderStageFlags.FragmentBit
+            ));
+            builder.AddBinding(new(
+                binding: 1,
+                descriptorType: DescriptorType.SampledImage,
+                descriptorCount: 256,
+                stageFlags: ShaderStageFlags.FragmentBit
+            ));
 
             textDescriptorLayout = builder.Build((nint)(&_descBindingFlags), DescriptorSetLayoutCreateFlags.UpdateAfterBindPoolBit);
 
         }
 
         uint _variableDescCount = 256;
-        DescriptorSetVariableDescriptorCountAllocateInfo _variableDescCountAI = new()
-        {
-            SType = StructureType.DescriptorSetVariableDescriptorCountAllocateInfoExt,
-            DescriptorSetCount = 1,
-            PDescriptorCounts = &_variableDescCount
-        };
+        DescriptorSetVariableDescriptorCountAllocateInfo _variableDescCountAI = new(
+            descriptorSetCount: 1,
+            pDescriptorCounts: &_variableDescCount
+        );
         textDescriptorSet = TextDescriptorAllocatorGrowable.Allocate(textDescriptorLayout, (nint)(&_variableDescCountAI));
         Console.WriteLine("Register descriptor set");
-        DescriptorImageInfo _samplerInfo = new()
-        {
-            Sampler = fontSampler,
-        };
+        DescriptorImageInfo _samplerInfo = new(
+            sampler: fontSampler
+        );
 
-        WriteDescriptorSet _descriptorWrites = new()
-        {
-            SType = StructureType.WriteDescriptorSet,
+        WriteDescriptorSet _descriptorWrites = new(
+            dstSet: textDescriptorSet,
+            dstBinding: 0,
+            dstArrayElement: 0,
 
-            DstSet = textDescriptorSet,
-            DstBinding = 0,
-            DstArrayElement = 0,
+            descriptorType: DescriptorType.Sampler,
+            descriptorCount: 1,
 
-            DescriptorType = DescriptorType.Sampler,
-            DescriptorCount = 1,
-
-            PImageInfo = &_samplerInfo,
-        };
-
+            pImageInfo: &_samplerInfo
+        );
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, (uint)1, &_descriptorWrites, 0, null);
     }
 
@@ -364,22 +337,19 @@ public class FontsManager : IDisposable, IInstanceInit
 
     public unsafe void RegisterTexture(ImageView imageView, uint slot)
     {
-        DescriptorImageInfo _imageInfo = new()
-        {
-            ImageView = imageView,
-            ImageLayout = ImageLayout.ShaderReadOnlyOptimal,
-        };
+        DescriptorImageInfo _imageInfo = new(
+            imageView: imageView,
+            imageLayout: ImageLayout.ShaderReadOnlyOptimal
+        );
 
-        WriteDescriptorSet _write = new()
-        {
-            SType = StructureType.WriteDescriptorSet,
-            DstSet = textDescriptorSet,
-            DstBinding = 1,
-            DstArrayElement = slot,
-            DescriptorType = DescriptorType.SampledImage,
-            DescriptorCount = 1,
-            PImageInfo = &_imageInfo,
-        };
+        WriteDescriptorSet _write = new(
+            dstSet: textDescriptorSet,
+            dstBinding: 1,
+            dstArrayElement: slot,
+            descriptorType: DescriptorType.SampledImage,
+            descriptorCount: 1,
+            pImageInfo: &_imageInfo
+        );
 
         Console.WriteLine("Logical device: " + LogicalDevice.device);
         Console.WriteLine("imageView: " + imageView);

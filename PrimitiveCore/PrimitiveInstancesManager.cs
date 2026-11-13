@@ -37,19 +37,17 @@ public class PrimitiveInstancesManager : BufferManager, IInstanceInit
 
     unsafe void CreateImageSampler()
     {
-        SamplerCreateInfo _samplerCI = new()
-        {
-            SType = StructureType.SamplerCreateInfo,
-            MagFilter = Filter.Linear,
-            MinFilter = Filter.Linear,
-            MipmapMode = SamplerMipmapMode.Linear,
-            AnisotropyEnable = false,
-            MinLod = 0,
-            MaxLod = 0, // = 1000.0f, allows all mip levels
-            AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
-            AddressModeV = SamplerAddressMode.ClampToEdge,
-            AddressModeW = SamplerAddressMode.ClampToEdge,
-        };
+        SamplerCreateInfo _samplerCI = new(
+            magFilter: Filter.Linear,
+            minFilter: Filter.Linear,
+            mipmapMode: SamplerMipmapMode.Linear,
+            anisotropyEnable: false,
+            minLod: 0,
+            maxLod: 0, // = 1000.0f, allows all mip levels
+            addressModeU: SamplerAddressMode.ClampToEdge, // good for atlas
+            addressModeV: SamplerAddressMode.ClampToEdge,
+            addressModeW: SamplerAddressMode.ClampToEdge
+        );
         CreateVulkan.vk.GetPhysicalDeviceProperties(Vulkan.PhysicalDevice.physicalDevice, out var properties);
         _samplerCI.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
         fixed (Sampler* samplerPtr = &imageSampler)
@@ -61,60 +59,50 @@ public class PrimitiveInstancesManager : BufferManager, IInstanceInit
         DescriptorBindingFlags[] _descVariableFlag = [0, DescriptorBindingFlags.VariableDescriptorCountBit | DescriptorBindingFlags.PartiallyBoundBit];
         fixed (DescriptorBindingFlags* _descVariableFlagPtr = _descVariableFlag)
         {
-            DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new()
-            {
-                SType = StructureType.DescriptorSetLayoutBindingFlagsCreateInfo,
-                BindingCount = (uint)_descVariableFlag.Length,
-                PBindingFlags = _descVariableFlagPtr
-            };
+            DescriptorSetLayoutBindingFlagsCreateInfo _descBindingFlags = new(
+                bindingCount: (uint)_descVariableFlag.Length,
+                pBindingFlags: _descVariableFlagPtr
+            );
 
             DescriptorLayoutBuilder builder = new();
-            builder.AddBinding(new()
-            {
-                Binding = 0,
-                DescriptorType = DescriptorType.Sampler,
-                DescriptorCount = 1,
-                StageFlags = ShaderStageFlags.FragmentBit,
-            });
-            builder.AddBinding(new()
-            {
-                Binding = 1,
-                DescriptorType = DescriptorType.SampledImage,
-                DescriptorCount = 256,
-                StageFlags = ShaderStageFlags.FragmentBit,
-            });
+            builder.AddBinding(new(
+                binding: 0,
+                descriptorType: DescriptorType.Sampler,
+                descriptorCount: 1,
+                stageFlags: ShaderStageFlags.FragmentBit
+            ));
+            builder.AddBinding(new(
+                binding: 1,
+                descriptorType: DescriptorType.SampledImage,
+                descriptorCount: 256,
+                stageFlags: ShaderStageFlags.FragmentBit
+            ));
 
             objectDescriptorLayout = builder.Build((nint)(&_descBindingFlags), DescriptorSetLayoutCreateFlags.UpdateAfterBindPoolBit);
 
         }
 
         uint _variableDescCount = 256;
-        DescriptorSetVariableDescriptorCountAllocateInfo _variableDescCountAI = new()
-        {
-            SType = StructureType.DescriptorSetVariableDescriptorCountAllocateInfoExt,
-            DescriptorSetCount = 1,
-            PDescriptorCounts = &_variableDescCount
-        };
+        DescriptorSetVariableDescriptorCountAllocateInfo _variableDescCountAI = new(
+            descriptorSetCount: 1,
+            pDescriptorCounts: &_variableDescCount
+        );
         objectDescriptorSet = ObjectDescriptorAllocatorGrowable.Allocate(objectDescriptorLayout, (nint)(&_variableDescCountAI));
 
-        DescriptorImageInfo _samplerInfo = new()
-        {
-            Sampler = imageSampler,
-        };
+        DescriptorImageInfo _samplerInfo = new(
+            sampler: imageSampler
+        );
 
-        WriteDescriptorSet _descriptorWrites = new()
-        {
-            SType = StructureType.WriteDescriptorSet,
+        WriteDescriptorSet _descriptorWrites = new(
+            dstSet: objectDescriptorSet,
+            dstBinding: 0,
+            dstArrayElement: 0,
 
-            DstSet = objectDescriptorSet,
-            DstBinding = 0,
-            DstArrayElement = 0,
+            descriptorType: DescriptorType.Sampler,
+            descriptorCount: 1,
 
-            DescriptorType = DescriptorType.Sampler,
-            DescriptorCount = 1,
-
-            PImageInfo = &_samplerInfo,
-        };
+            pImageInfo: &_samplerInfo
+        );
 
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_descriptorWrites, 0, null);
     }
@@ -137,22 +125,19 @@ public class PrimitiveInstancesManager : BufferManager, IInstanceInit
 
     public unsafe void RegisterTexture(ImageView imageView, uint slot)
     {
-        DescriptorImageInfo _imageInfo = new()
-        {
-            ImageView = imageView,
-            ImageLayout = ImageLayout.ShaderReadOnlyOptimal,
-        };
+        DescriptorImageInfo _imageInfo = new(
+            imageView: imageView,
+            imageLayout: ImageLayout.ShaderReadOnlyOptimal
+        );
 
-        WriteDescriptorSet _write = new()
-        {
-            SType = StructureType.WriteDescriptorSet,
-            DstSet = objectDescriptorSet,
-            DstBinding = 1,
-            DstArrayElement = slot,
-            DescriptorType = DescriptorType.SampledImage,
-            DescriptorCount = 1,
-            PImageInfo = &_imageInfo,
-        };
+        WriteDescriptorSet _write = new(
+            dstSet: objectDescriptorSet,
+            dstBinding: 1,
+            dstArrayElement: slot,
+            descriptorType: DescriptorType.SampledImage,
+            descriptorCount: 1,
+            pImageInfo: &_imageInfo
+        );
 
         // Console.WriteLine("Registering texture at slot: " + slot);
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);

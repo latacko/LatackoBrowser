@@ -15,7 +15,7 @@ public unsafe class Swapchain : IDisposable
 
     internal Image[] swapChainImages;
     internal static Format swapChainImageFormat;
-    public bool recreatedSwapChain {get; internal set;}
+    public bool recreatedSwapChain { get; internal set; }
 
     internal ImageView[] swapChainImageViews;
     // Framebuffer[] swapChainFrameBuffers;
@@ -99,11 +99,10 @@ public unsafe class Swapchain : IDisposable
         }
         else
         {
-            Extent2D actualExtent = new()
-            {
-                Width = (uint)framebufferSize.X,
-                Height = (uint)framebufferSize.Y
-            };
+            Extent2D actualExtent = new(
+                width: (uint)framebufferSize.X,
+                height: (uint)framebufferSize.Y
+            );
 
             actualExtent.Width = Math.Clamp(actualExtent.Width, capabilities.MinImageExtent.Width, capabilities.MaxImageExtent.Width);
             actualExtent.Height = Math.Clamp(actualExtent.Height, capabilities.MinImageExtent.Height, capabilities.MaxImageExtent.Height);
@@ -112,7 +111,7 @@ public unsafe class Swapchain : IDisposable
         }
     }
 
-    internal void CreateSwapChain(SwapchainKHR oldSwapchain=default)
+    internal void CreateSwapChain(SwapchainKHR oldSwapchain = default)
     {
         SwapChainSupportDetails _swapChainSupport = QuerySwapChainSupport(PhysicalDevice.physicalDevice);
 
@@ -124,26 +123,24 @@ public unsafe class Swapchain : IDisposable
         if (_swapChainSupport.Capabilities.MaxImageCount > 0 && _imageCount > _swapChainSupport.Capabilities.MaxImageCount)
             _imageCount = _swapChainSupport.Capabilities.MaxImageCount;
 
-        SwapchainCreateInfoKHR _swapchainCreateInfoKHR = new()
-        {
-            SType = StructureType.SwapchainCreateInfoKhr,
-            Surface = surface,
+        SwapchainCreateInfoKHR _swapchainCreateInfoKHR = new(
+            surface: surface,
 
-            MinImageCount = _imageCount,
-            ImageFormat = _surfaceFormat.Format,
-            ImageColorSpace = _surfaceFormat.ColorSpace,
-            ImageExtent = _extent,
-            ImageArrayLayers = 1,
-            ImageUsage = ImageUsageFlags.ColorAttachmentBit,
+            minImageCount: _imageCount,
+            imageFormat: _surfaceFormat.Format,
+            imageColorSpace: _surfaceFormat.ColorSpace,
+            imageExtent: _extent,
+            imageArrayLayers: 1,
+            imageUsage: ImageUsageFlags.ColorAttachmentBit,
 
-            PreTransform = _swapChainSupport.Capabilities.CurrentTransform,
-            CompositeAlpha = CompositeAlphaFlagsKHR.OpaqueBitKhr,
+            preTransform: _swapChainSupport.Capabilities.CurrentTransform,
+            compositeAlpha: CompositeAlphaFlagsKHR.OpaqueBitKhr,
 
-            PresentMode = _presentMode,
-            Clipped = Vk.True,
+            presentMode: _presentMode,
+            clipped: Vk.True,
 
-            OldSwapchain = oldSwapchain,
-        };
+            oldSwapchain: oldSwapchain
+        );
 
         QueueFamilyIndices indices = PhysicalDevice.Instance.FindQueueFamilies(PhysicalDevice.physicalDevice);
         uint[] _queueFamilyIndices = [indices.GraphicsFamily!.Value, indices.PresentFamily!.Value];

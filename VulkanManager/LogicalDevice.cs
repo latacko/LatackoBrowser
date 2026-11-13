@@ -7,7 +7,7 @@ public unsafe class LogicalDevice : IDisposable
 {
     public static Device device;
 
-    public static QueueFamilyIndices Indices {get; private set;}
+    public static QueueFamilyIndices Indices { get; private set; }
     public static Queue GraphicsQueue;
     public static Queue TransferQueue;
     public static Queue PresentQueue;
@@ -36,59 +36,49 @@ public unsafe class LogicalDevice : IDisposable
         float queuePriority = 1.0f;
         for (int i = 0; i < uniqueQueueFamilies.Length; i++)
         {
-            _queueCreateInfos[i] = new()
-            {
-                SType = StructureType.DeviceQueueCreateInfo,
-                QueueFamilyIndex = uniqueQueueFamilies[i],
-                QueueCount = 1,
-                PQueuePriorities = &queuePriority,
-                PNext = null
-            };
+            _queueCreateInfos[i] = new(
+                queueFamilyIndex: uniqueQueueFamilies[i],
+                queueCount: 1,
+                pQueuePriorities: &queuePriority
+            );
         }
 
-        PhysicalDeviceVulkan12Features enabledVk12Features = new()
-        {
-            SType = StructureType.PhysicalDeviceVulkan12Features,
-            DescriptorIndexing = true,
-            ShaderSampledImageArrayNonUniformIndexing = true,
-            DescriptorBindingVariableDescriptorCount = true,
-            DescriptorBindingPartiallyBound = true,
-            DescriptorBindingSampledImageUpdateAfterBind = true,
-            RuntimeDescriptorArray = true,
-            BufferDeviceAddress = true,
-            TimelineSemaphore = true,
-        };
+        PhysicalDeviceVulkan12Features enabledVk12Features = new(
+            descriptorIndexing: true,
+            shaderSampledImageArrayNonUniformIndexing: true,
+            descriptorBindingVariableDescriptorCount: true,
+            descriptorBindingPartiallyBound: true,
+            descriptorBindingSampledImageUpdateAfterBind: true,
+            runtimeDescriptorArray: true,
+            bufferDeviceAddress: true,
+            timelineSemaphore: true
+        );
 
-        PhysicalDeviceVulkan13Features enabledVk13Features = new()
-        {
-            SType = StructureType.PhysicalDeviceVulkan13Features,
-            PNext = &enabledVk12Features,
-            Synchronization2 = true,
-            DynamicRendering = true,
-        };
+        PhysicalDeviceVulkan13Features enabledVk13Features = new(
+            pNext: &enabledVk12Features,
+            synchronization2: true,
+            dynamicRendering: true
+        );
 
 
-        PhysicalDeviceFeatures _deviceFeatures = new()
-        {
-            SamplerAnisotropy = Vk.True,
-            FillModeNonSolid = true,
-        };
+        PhysicalDeviceFeatures _deviceFeatures = new(
+            samplerAnisotropy: Vk.True,
+            fillModeNonSolid: true
+        );
 
         fixed (DeviceQueueCreateInfo* queueCreateInfoPtr = _queueCreateInfos)
         {
-            DeviceCreateInfo _createInfo = new()
-            {
-                SType = StructureType.DeviceCreateInfo,
-                PNext = &enabledVk13Features,
+            DeviceCreateInfo _createInfo = new(
+                pNext: &enabledVk13Features,
 
-                PQueueCreateInfos = queueCreateInfoPtr,
-                QueueCreateInfoCount = (uint)_queueCreateInfos.Length,
+                pQueueCreateInfos: queueCreateInfoPtr,
+                queueCreateInfoCount: (uint)_queueCreateInfos.Length,
 
-                PEnabledFeatures = &_deviceFeatures,
+                pEnabledFeatures: &_deviceFeatures,
 
-                EnabledExtensionCount = (uint)deviceExtensions.Length,
-                PpEnabledExtensionNames = (byte**)SilkMarshal.StringArrayToPtr(deviceExtensions),
-            };
+                enabledExtensionCount: (uint)deviceExtensions.Length,
+                ppEnabledExtensionNames: (byte**)SilkMarshal.StringArrayToPtr(deviceExtensions)
+            );
 
             if (CreateVulkan.ENABLE_VALIDATION_LAYERS)
             {

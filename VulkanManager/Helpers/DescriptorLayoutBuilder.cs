@@ -27,16 +27,13 @@ public struct DescriptorLayoutBuilder
         DescriptorSetLayout _layout;
         fixed (DescriptorSetLayoutBinding* _bindingPtr = _bindingsArr)
         {
-            DescriptorSetLayoutCreateInfo _layoutInfo = new()
-            {
-                SType = StructureType.DescriptorSetLayoutCreateInfo,
+            DescriptorSetLayoutCreateInfo _layoutInfo = new(
+                bindingCount: (uint)_bindingsArr.Length,
+                pBindings: _bindingPtr,
 
-                BindingCount = (uint)_bindingsArr.Length,
-                PBindings = _bindingPtr,
-
-                PNext = (void*)pNext,
-                Flags = flags,
-            };
+                pNext: (void*)pNext,
+                flags: flags
+            );
             if (CreateVulkan.vk.CreateDescriptorSetLayout(LogicalDevice.device, &_layoutInfo, null, out _layout) != Result.Success)
             {
                 throw new Exception("Failed to create descriptor set layout!");

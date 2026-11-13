@@ -43,12 +43,10 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
 
     unsafe void CreateCommandPools()
     {
-        CommandPoolCreateInfo commandPoolCI = new()
-        {
-            SType = StructureType.CommandPoolCreateInfo,
-            Flags = CommandPoolCreateFlags.TransientBit,
-            QueueFamilyIndex = LogicalDevice.Indices.TransferFamily!.Value,
-        };
+        CommandPoolCreateInfo commandPoolCI = new(
+            flags: CommandPoolCreateFlags.TransientBit,
+            queueFamilyIndex: LogicalDevice.Indices.TransferFamily!.Value
+        );
 
         for (int i = 0; i < TransferCommandBuffers; i++)
         {
@@ -58,11 +56,9 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
 
     unsafe void CreateFences()
     {
-        FenceCreateInfo fenceCI = new()
-        {
-            SType = StructureType.FenceCreateInfo,
-            Flags = FenceCreateFlags.SignaledBit,
-        };
+        FenceCreateInfo fenceCI = new(
+            flags: FenceCreateFlags.SignaledBit
+        );
 
         fixed (Fence* fencesPtr = transferDoneFences)
         {
@@ -83,12 +79,10 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
         CommandBuffer[] _commandBuffers = new CommandBuffer[TransferCommandBuffers];
         for (int i = 0; i < TransferCommandBuffers; i++)
         {
-            CommandBufferAllocateInfo commandBufferCI = new()
-            {
-                SType = StructureType.CommandBufferAllocateInfo,
-                CommandPool = CommandPools[i],
-                CommandBufferCount = 1
-            };
+            CommandBufferAllocateInfo commandBufferCI = new(
+                commandPool: CommandPools[i],
+                commandBufferCount: 1
+            );
 
             fixed (CommandBuffer* commandBufferPtr = &_commandBuffers[i])
                 CreateVulkan.vk.AllocateCommandBuffers(LogicalDevice.device, ref commandBufferCI, commandBufferPtr);
@@ -97,7 +91,7 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
         return _commandBuffers;
     }
 
-    void AddCommandBuffer(CommandBuffer commandBuffer)
+    unsafe void AddCommandBuffer(CommandBuffer commandBuffer)
     {
         registeredCB[currentCommandBuffer]++;
 
@@ -108,11 +102,9 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
             transferCommandBuffers[currentCommandBuffer] = _newCBArray;
         }
 
-        transferCommandBuffers[currentCommandBuffer][(int)registeredCB[currentCommandBuffer]] = new()
-        {
-            SType = StructureType.CommandBufferSubmitInfo,
-            CommandBuffer = commandBuffer,
-        };
+        transferCommandBuffers[currentCommandBuffer][(int)registeredCB[currentCommandBuffer]] = new(
+            commandBuffer: commandBuffer
+        );
     }
 
     public void AddStagingBuffer(uint transferCommandBuffer, BufferData stagingBuffer)

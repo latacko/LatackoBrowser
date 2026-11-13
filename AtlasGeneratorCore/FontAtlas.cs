@@ -205,27 +205,23 @@ public class FontAtlas : IDisposable
         // );
         // }
 
-        uploadList.Add(new()
-        {
-            BufferOffset = elementHead,
-            BufferRowLength = MSDFLevelData.GlyphSize,
-            BufferImageHeight = MSDFLevelData.GlyphSize,
-
-            ImageSubresource = new()
-            {
-                AspectMask = ImageAspectFlags.ColorBit,
-                MipLevel = 0,
-                BaseArrayLayer = 0,
-                LayerCount = 1,
-            },
-            ImageOffset = new((int)(imageX * MSDFLevelData.GlyphSize), (int)(imageY * MSDFLevelData.GlyphSize), 0),
-            ImageExtent = new()
-            {
-                Width = MSDFLevelData.GlyphSize,
-                Height = MSDFLevelData.GlyphSize,
-                Depth = 1,
-            },
-        });
+        uploadList.Add(new(
+            bufferOffset : elementHead,
+            bufferRowLength: MSDFLevelData.GlyphSize,
+            bufferImageHeight: MSDFLevelData.GlyphSize,
+            imageSubresource: new(
+                aspectMask: ImageAspectFlags.ColorBit,
+                mipLevel: 0,
+                baseArrayLayer: 0,
+                layerCount: 1
+            ),
+            imageOffset: new((int)(imageX * MSDFLevelData.GlyphSize), (int)(imageY * MSDFLevelData.GlyphSize), 0),
+            imageExtent: new(
+                width: MSDFLevelData.GlyphSize,
+                height: MSDFLevelData.GlyphSize,
+                depth: 1
+            )
+        ));
 
         pixels.AsSpan().CopyTo(new Span<byte>((void*)((nint)stagingBufferData.Mapped + (nint)elementHead), (int)(MSDFLevelData.GlyphSize * MSDFLevelData.GlyphSize * 4)));
 
