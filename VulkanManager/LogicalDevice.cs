@@ -23,7 +23,7 @@ public unsafe class LogicalDevice : IDisposable
     {
         Indices = Vulkan.PhysicalDevice.Instance.FindQueueFamilies(Vulkan.PhysicalDevice.physicalDevice);
 
-        return [Indices.GraphicsFamily!.Value, Indices.PresentFamily!.Value];
+        return [Indices.GraphicsFamily!.Value, Indices.PresentFamily!.Value, Indices.TransferFamily!.Value];
     }
 
     public void Create()

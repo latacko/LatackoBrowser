@@ -53,36 +53,9 @@ public unsafe class VulkanEngine : IDisposable
 
         for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
         {
-            // Console.WriteLine(CreateVulkan.vk);
-            // Console.WriteLine(commandPools);
-            // Console.WriteLine(commandPools[i]);
             CreateVulkan.vk.CreateCommandPool(LogicalDevice.device, ref commandPoolCI, null, out commandPools[i]);
         }
     }
-
-    // void CreateImageSampler()
-    // {
-    //     SamplerCreateInfo _samplerCI = new()
-    //     {
-    //         SType = StructureType.SamplerCreateInfo,
-    //         MagFilter = Filter.Linear,
-    //         MinFilter = Filter.Linear,
-    //         MipmapMode = SamplerMipmapMode.Linear,
-    //         AnisotropyEnable = false,
-    //         MinLod = 0,
-    //         MaxLod = 0, // = 1000.0f, allows all mip levels
-    //         AddressModeU = SamplerAddressMode.ClampToEdge, // good for atlas
-    //         AddressModeV = SamplerAddressMode.ClampToEdge,
-    //         AddressModeW = SamplerAddressMode.ClampToEdge,
-    //     };
-
-    //     CreateVulkan.vk.GetPhysicalDeviceProperties(PhysicalDevice.physicalDevice, out var properties);
-    //     _samplerCI.MaxAnisotropy = properties.Limits.MaxSamplerAnisotropy;
-
-    //     // Console.WriteLine("Creating sampler");
-    //     fixed (Sampler* samplerPtr = &sampler)
-    //         CreateVulkan.vk.CreateSampler(LogicalDevice.device, &_samplerCI, null, samplerPtr);
-    // }
 
     public void Dispose()
     {

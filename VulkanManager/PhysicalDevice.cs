@@ -12,6 +12,11 @@ public unsafe class PhysicalDevice
     KhrSurface khrSurface;
     SurfaceKHR surfaceKHR;
 
+    const QueueFlags NotPureTransfer =
+        QueueFlags.GraphicsBit | QueueFlags.ComputeBit |
+        QueueFlags.VideoDecodeBitKhr | QueueFlags.VideoEncodeBitKhr |
+        QueueFlags.OpticalFlowBitNV | QueueFlags.SparseBindingBit;
+
 
     public PhysicalDevice(string[] deviceExtensions, KhrSurface khrSurface, SurfaceKHR surfaceKHR)
     {
@@ -162,9 +167,11 @@ public unsafe class PhysicalDevice
                     indices.PresentFamily = i;
             }
 
-            if (_hasTransfer && !_hasGraphics && !_hasCompute)
+            var _flags = queueFamily.QueueFlags & ~QueueFlags.SparseBindingBit;
+
+            if (!indices.TransferFamily.HasValue && _hasTransfer && _flags == QueueFlags.TransferBit )
             {
-                // Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
+                Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
                 indices.TransferFamily = i;
             }
 
