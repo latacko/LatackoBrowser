@@ -9,6 +9,7 @@
   <Project Path="InstanceFinderCore/InstanceFinderCore.csproj" />
   <Project Path="MsdfAtlasGen/MsdfAtlasGen.csproj" />
   <Project Path="PrimitiveCore/PrimitiveCore.csproj" />
+  <Project Path="RenderDocIntegration/RenderDocIntegration.csproj" />
   <Project Path="Renderer/Renderer.csproj" />
   <Project Path="SpeedScopeTrace/SpeedScopeTrace.csproj" />
   <Project Path="SvgLoader/SvgLoader.csproj" />

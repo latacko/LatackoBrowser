@@ -21,7 +21,7 @@ public class RingBufferManager: ITransfer, IInstanceInit
         Console.WriteLine("Init ring buffer");
     }
 
-    public unsafe void BeginRecording(uint frameInFlight)
+    public unsafe void BeginRecording()
     {
         sthWasAdded = false;
         CommandBufferBeginInfo _beginInfo = new(
@@ -34,7 +34,7 @@ public class RingBufferManager: ITransfer, IInstanceInit
         }
     }
 
-    public void EndRecording(uint frameInFlight)
+    public void EndRecording()
     {
         CreateVulkan.vk.EndCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer]);
     }

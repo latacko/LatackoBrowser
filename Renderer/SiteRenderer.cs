@@ -12,6 +12,7 @@ using GraphicsCore;
 using GraphicsCore.Buffers;
 using InstanceFinderCore;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
 namespace Renderer;
 
@@ -86,7 +87,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     #region Setup
     public override void Init(uint width, uint height)
     {
-        CreateResources(width, height);
+        Resize(width, height);
         cameraBuffers.CreateBuffers();
         siteController.Start();
 
@@ -109,8 +110,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             ImageData _imageData = new();
-            ImageHelper.CreateImage(width, height, Format.B8G8R8A8Srgb, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
-            _imageData.imageView = ImageHelper.CreateImageView(_imageData.image, Format.B8G8R8A8Srgb, ImageAspectFlags.ColorBit);
+            ImageHelper.CreateImage(width, height, Swapchain.swapChainImageFormat, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
+            _imageData.imageView = ImageHelper.CreateImageView(_imageData.image, Swapchain.swapChainImageFormat, ImageAspectFlags.ColorBit);
             imagesData[i] = _imageData;
         }
         depth.CreateDepthResources(width, height);
@@ -120,9 +121,14 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            imagesData[i].Dispose();
+            if (imagesData[i].image.Handle != 0)
+                imagesData[i].Dispose();
         }
-        depth.Dispose();
+        if (depth.depthImage.Handle != 0)
+        {
+            Console.WriteLine("Dispose depth");
+            depth.Dispose();
+        }
     }
 
     unsafe void CreateCommandBuffers(VulkanEngine vulkanEngine)
@@ -139,11 +145,14 @@ public class SiteRenderer : TextureRenderer, IDisposable
         }
     }
 
-    public override void CreateVulkanEngine()
+    public override unsafe void CreateVulkanEngine()
     {
         vulkanEngine = new();
         CreateCommandBuffers(vulkanEngine);
         subSiteCommandBuffers = new CommandBufferSubmitInfo[1];
+        subSiteCommandBuffers[0] = new(
+            commandBuffer: null
+        );
     }
 
     public override void DestroyVulkanEngine()
@@ -169,7 +178,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
             UpdateCameraUBO(FrameInFlight);
         }
 
-        // coreManager.OnRender(FrameInFlight);
         using (SpeedscopeTrace.Begin("Compute Styles"))
         {
             stylesManager.ComputeStyles();
@@ -182,89 +190,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
         {
             stylesManager.SetFrameAsNotDirty(FrameInFlight);
         }
-
-        // SubmitInfo submitInfo = new()
-        // {
-        //     SType = StructureType.SubmitInfo,
-        // };
-
-        // PipelineStageFlags waitStages = PipelineStageFlags.ColorAttachmentOutputBit;
-
-        // fixed (Semaphore* waitSemaphoresPtr = &vulkanEngine.imageAcquiredSemaphores[FrameInFlight])
-        // fixed (CommandBuffer* commandBufferPtr = &vulkanEngine.commandBuffers[FrameInFlight])
-        // fixed (Semaphore* renderCompleteSemaphoresPtr = &vulkanEngine.renderCompleteSemaphores[FrameInFlight])
-        // {
-        //     submitInfo.WaitSemaphoreCount = 1;
-        //     submitInfo.PWaitSemaphores = waitSemaphoresPtr;
-
-        //     submitInfo.PWaitDstStageMask = &waitStages;
-
-        //     submitInfo.CommandBufferCount = 1;
-        //     submitInfo.PCommandBuffers = commandBufferPtr;
-
-        //     submitInfo.SignalSemaphoreCount = 1;
-        //     submitInfo.PSignalSemaphores = renderCompleteSemaphoresPtr;
-
-        //     if (Vulkan.CreateVulkan.vk.QueueSubmit(LogicalDevice.graphicsQueue, 1, &submitInfo, vulkanEngine.fences[FrameInFlight]) != Result.Success)
-        //     {
-        //         throw new Exception("Failed to submit command buffer!");
-        //     }
-
-
-
-        //     PresentInfoKHR presentInfo = new()
-        //     {
-        //         SType = StructureType.PresentInfoKhr,
-
-        //         WaitSemaphoreCount = 1,
-        //         PWaitSemaphores = renderCompleteSemaphoresPtr,
-
-        //         SwapchainCount = 1,
-        //         PSwapchains = swapChainPtr,
-        //         PImageIndices = &imageIndex
-        //     };
-
-        //     _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.presentQueue, &presentInfo);
-
-        //     if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
-        //     {
-        //         framebufferResized = false;
-        //         swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
-        //         StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
-        //     }
-        //     else if (_result != Result.Success)
-        //     {
-        //         throw new Exception("failed to present swap chain image!");
-        //     }
-
-        // }
-        // diagnosticStopwatch.Stop();
-        // if (FrameInFlight == 0)
-        //     renderMicroseconds = diagnosticStopwatch.Elapsed.Microseconds;
-        // else
-        //     render2Microseconds = diagnosticStopwatch.Elapsed.Microseconds;
-
-        // for (int i = 0; i < VUL; i++)
-        // {
-
-        // }
-        // _frameCount++;
-        // _frameCount++;
-        // _fpsTimer += deltaTime;
-        // _fpsTimer2 += deltaTime;
-
-        // if (_fpsTimer >= 1.0) // every second
-        // {
-        //     lastSecondFps = _frameCount;
-        //     _frameCount = 0;
-        //     _fpsTimer = 0;
-        // }
-
-        // if (_fpsTimer2 >= 0.25)
-        // {
-        //     _fpsTimer2 = 0;
-        //     window.Title = $"FPS: {lastSecondFps} update: {updateMicroseconds}μs render: {renderMicroseconds}μs render2: {render2Microseconds}μs";
-        // }
     }
 
     //TODO - Rendering do zrobienia coding vibe o 2:45
@@ -284,21 +209,22 @@ public class SiteRenderer : TextureRenderer, IDisposable
         }
         subSiteCommandBuffers![0].CommandBuffer = commandBuffers[FrameInFlight];
 
-        using (SpeedscopeTrace.Begin("Get sub renderers"))
-        {
-            if (subSiteRenderers != null)
-            {
-                int i = 1;
-                foreach (var siteRenderer in subSiteRenderers)
-                {
-                    // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.FrameInFlight];
-                    siteRenderer.GetCommandBuffer(FrameInFlight);
-                    subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[FrameInFlight];
+        //REVIEW - Temponary disabled until normal rendering will work
+        // using (SpeedscopeTrace.Begin("Get sub renderers"))
+        // {
+        //     if (subSiteRenderers != null)
+        //     {
+        //         int i = 1;
+        //         foreach (var siteRenderer in subSiteRenderers)
+        //         {
+        //             // _renderSemaphores[i] = siteRenderer.vulkanEngine.renderCompleteSemaphores[siteRenderer.FrameInFlight];
+        //             siteRenderer.GetCommandBuffer(FrameInFlight);
+        //             subSiteCommandBuffers[i].CommandBuffer = siteRenderer.commandBuffers[FrameInFlight];
 
-                    i++;
-                }
-            }
-        }
+        //             i++;
+        //         }
+        //     }
+        // }
 
 
         using (SpeedscopeTrace.Begin("Submit"))
@@ -328,10 +254,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
         using (SpeedscopeTrace.Begin("Begin command buffer"))
         {
             CommandBufferBeginInfo _beginInfo = new(
-                flags: CommandBufferUsageFlags.OneTimeSubmitBit
+                flags: CommandBufferUsageFlags.SimultaneousUseBit
             );
-
-
 
             if (Vulkan.CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)
             {
@@ -390,7 +314,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 loadOp: AttachmentLoadOp.Clear,
                 storeOp: AttachmentStoreOp.Store,
                 clearValue: new(
-                    color: new(0, 0, 0, 1)
+                    color: new(1, 0, 0, 1)
                 )
             );
 
@@ -455,35 +379,30 @@ public class SiteRenderer : TextureRenderer, IDisposable
         {
             Vulkan.CreateVulkan.vk.CmdEndRendering(commandBuffer);
 
-            // ImageMemoryBarrier2 _barrierPresent = new()
-            // {
-            //     SType = StructureType.ImageMemoryBarrier2,
-            //     SrcStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-            //     SrcAccessMask = AccessFlags2.ColorAttachmentWriteBit,
+            ImageMemoryBarrier2 _barrierPresent = new(
+                srcStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+                srcAccessMask: AccessFlags2.ColorAttachmentWriteBit,
 
-            //     DstStageMask = PipelineStageFlags2.ColorAttachmentOutputBit,
-            //     DstAccessMask = 0,
+                dstStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+                dstAccessMask: 0,
 
-            //     OldLayout = ImageLayout.AttachmentOptimal,
-            //     NewLayout = ImageLayout.PresentSrcKhr,
+                oldLayout: ImageLayout.AttachmentOptimal,
+                newLayout: ImageLayout.PresentSrcKhr,
 
-            //     Image = swapchain.swapChainImages[imageIndex],
-            //     SubresourceRange = new()
-            //     {
-            //         AspectMask = ImageAspectFlags.ColorBit,
-            //         LevelCount = 1,
-            //         LayerCount = 1,
-            //     },
-            // };
+                image: imagesData[imageIndex].image,
+                subresourceRange: new(
+                    aspectMask: ImageAspectFlags.ColorBit,
+                    levelCount: 1,
+                    layerCount: 1
+                )
+            );
 
-            // DependencyInfo _barrierPresentDependencyInfo = new()
-            // {
-            //     SType = StructureType.DependencyInfo,
-            //     ImageMemoryBarrierCount = 1,
-            //     PImageMemoryBarriers = &_barrierPresent,
-            // };
+            DependencyInfo _barrierPresentDependencyInfo = new(
+                imageMemoryBarrierCount: 1,
+                pImageMemoryBarriers: &_barrierPresent
+            );
 
-            // Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierPresentDependencyInfo);
+            Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierPresentDependencyInfo);
 
             if (Vulkan.CreateVulkan.vk.EndCommandBuffer(commandBuffer) != Result.Success)
             {
@@ -507,8 +426,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         using (SpeedscopeTrace.Begin("Clear flag"))
         {
-            if (!dirty.HasFlag(DirtyFlag.Size))
-                return;
+            // if (!dirty.HasFlag(DirtyFlag.Size))
+            //     return;
         }
         dirty &= ~DirtyFlag.Size;
 
@@ -519,6 +438,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, width, 0, height, -1000, 1000),
             };
 
+            // Console.WriteLine("Proj width: " + width + "x" + height);
+            // Console.WriteLine("Proj ubo: " + ubo.Proj);
             cameraBuffers.Update(currentImage, ubo);
         }
     }

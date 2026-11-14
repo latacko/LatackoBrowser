@@ -14,8 +14,8 @@
 
   <ItemGroup>
     <!-- Builds the tool first, but doesn't reference it as a library -->
-    <ProjectReference Include="..\Tools\ShaderBuild\ShaderBuild.csproj"
-      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../RenderDocIntegration/RenderDocIntegration.csproj" />
+    <ProjectReference Include="..\Tools\ShaderBuild\ShaderBuild.csproj" ReferenceOutputAssembly="false" />
     <ShaderSource Include="Shaders\**\*.slang;" />
   </ItemGroup>
 
@@ -67,11 +67,9 @@
   </ItemGroup>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
-    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat"
-      WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat" WorkingDirectory="$(ShaderWorkingDirectory)" />
 
-    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh"
-      WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh" WorkingDirectory="$(ShaderWorkingDirectory)" />
   </Target>
 
 
@@ -82,8 +80,6 @@
 
   <ItemGroup>
     <Compile Remove="Generated/**/*.cs" />
-    <ProjectReference Include="../Tools/AutoLoad.Generator/AutoLoad.Generator.csproj"
-      OutputItemType="Analyzer"
-      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Tools/AutoLoad.Generator/AutoLoad.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 </Project>

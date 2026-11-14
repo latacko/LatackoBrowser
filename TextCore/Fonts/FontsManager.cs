@@ -240,7 +240,7 @@ public class FontsManager : IDisposable, IInstanceInit
         stopwatch.Start();
         uint _toLoadChars = _fontManager.LoadCharset(charset);
         stopwatch.Stop();
-        Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
+        // Console.WriteLine("czciąke " + name + " załadowałem w " + stopwatch.ElapsedMilliseconds + "ms");
         return _toLoadChars;
     }
 
@@ -351,10 +351,10 @@ public class FontsManager : IDisposable, IInstanceInit
             pImageInfo: &_imageInfo
         );
 
-        Console.WriteLine("Logical device: " + LogicalDevice.device);
-        Console.WriteLine("imageView: " + imageView);
-        Console.WriteLine("slot: " + slot);
-        Console.WriteLine("slot: " + textDescriptorSet);
+        // Console.WriteLine("Logical device: " + LogicalDevice.device);
+        // Console.WriteLine("imageView: " + imageView);
+        // Console.WriteLine("slot: " + slot);
+        // Console.WriteLine("slot: " + textDescriptorSet);
         CreateVulkan.vk.UpdateDescriptorSets(LogicalDevice.device, 1, &_write, 0, null);
     }
 

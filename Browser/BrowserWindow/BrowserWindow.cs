@@ -130,7 +130,8 @@ public unsafe partial class BrowserWindow
         // coreManager.Start();
         transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
         ringBufferManager = InstanceRegistry.Get<RingBufferManager>();
-        Console.WriteLine("Init instances");
+        Console.WriteLine("Init texture renderer");
+        Console.WriteLine("Swapchain extent: " + swapchain.swapChainExtent.Width + "x" + swapchain.swapChainExtent.Height);
 
         textureRenderer.Init(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
 
@@ -183,8 +184,6 @@ public unsafe partial class BrowserWindow
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
 
-        // Vulkan.CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in vulkanManager.fences[frameInFlight]);
-
         CreateVulkan.vk.ResetCommandBuffer(commandBuffers[frameInFlight], 0);
 
 
@@ -195,13 +194,13 @@ public unsafe partial class BrowserWindow
         (Image image, Semaphore semaphore) _imageData;
         using (SpeedscopeTrace.Begin("Ring+Texture"))
         {
-            ringBufferManager.BeginRecording(frameInFlight);
+            transferCommandPoolManager.BeginRecording();
             using (SpeedscopeTrace.Begin("Get Image"))
             {
                 _imageData = textureRenderer.GetImage(frameInFlight);
             }
 
-            ringBufferManager.EndRecording(frameInFlight);
+            transferCommandPoolManager.EndRecording();
         }
 
         using (SpeedscopeTrace.Begin("TransferTick"))
@@ -213,10 +212,6 @@ public unsafe partial class BrowserWindow
         {
             RecordCommandBuffer(commandBuffers[frameInFlight], imageIndex, _imageData.image);
         }
-        // StylesManager.SetFrameAsNotDirty(frameInFlight);
-
-
-        // UpdateUniformBufferPerspective(frameInFlight);
 
         using (SpeedscopeTrace.Begin("Submit"))
         {

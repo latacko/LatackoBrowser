@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../RenderDocIntegration/RenderDocIntegration.csproj" />
     <ProjectReference Include="../Units/Units.csproj" />
     <ProjectReference Include="..\InstanceFinderCore\InstanceFinderCore.csproj" />
   </ItemGroup>

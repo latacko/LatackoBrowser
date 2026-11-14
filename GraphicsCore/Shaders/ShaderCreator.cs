@@ -15,7 +15,6 @@ public class ShaderCreator<TBaseShader> where TBaseShader : BaseShader, IShaderF
         Type meshData = typeof(TMeshData);
         Type instanceData = typeof(TInstanceData);
         string _fullShaderSaveName = shaderPath + "_" + meshData.Name + "_" + instanceData.Name;
-        Console.WriteLine("Full shader name" + _fullShaderSaveName);
         if (createdShaders.TryGetValue(_fullShaderSaveName, out TBaseShader? shader))
             return shader;
         else

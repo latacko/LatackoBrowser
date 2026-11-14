@@ -171,7 +171,7 @@ public unsafe class PhysicalDevice
 
             if (!indices.TransferFamily.HasValue && _hasTransfer && _flags == QueueFlags.TransferBit )
             {
-                Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
+                // Console.WriteLine("Transfer family " + i + " na " + physicalDevice);
                 indices.TransferFamily = i;
             }
 

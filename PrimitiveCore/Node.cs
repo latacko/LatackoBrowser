@@ -66,10 +66,11 @@ public class Node : VisualElement
         if (renderDirty[frame].HasFlag(RenderDirtyFlags.Matrix))
         {
             cachedModel =
-                Matrix4X4.CreateScale(computedStyle.Size.X, computedStyle.Size.Y, 1f) *
-                Matrix4X4.CreateTranslation(-computedStyle.Translate.X, -computedStyle.Translate.Y, 0f) *
-                Matrix4X4.CreateFromYawPitchRoll(Style.Transform.Rotation.X, Style.Transform.Rotation.Y, Style.Transform.Rotation.Z) *
-                Matrix4X4.CreateTranslation(worldPosition.X, worldPosition.Y, 0f);
+            Matrix4X4.CreateScale(200, 200, 1f);
+            // Matrix4X4.CreateScale(computedStyle.Size.X, computedStyle.Size.Y, 1f) *
+            // Matrix4X4.CreateTranslation(-computedStyle.Translate.X, -computedStyle.Translate.Y, 0f) *
+            // Matrix4X4.CreateFromYawPitchRoll(Style.Transform.Rotation.X, Style.Transform.Rotation.Y, Style.Transform.Rotation.Z) *
+            // Matrix4X4.CreateTranslation(worldPosition.X, worldPosition.Y, 0f);
 
             if (Parent != null)
             {

@@ -4,7 +4,7 @@ using Vulkan;
 
 namespace VulkanManager;
 
-[InstanceFinderCore.Instance(Priority =-100)]
+[InstanceFinderCore.Instance(Priority = -100)]
 public class TransferCommandPoolManager : IDisposable, IRenderTick
 {
     public const uint TransferCommandBuffers = 4;
@@ -44,7 +44,7 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
     unsafe void CreateCommandPools()
     {
         CommandPoolCreateInfo commandPoolCI = new(
-            flags: CommandPoolCreateFlags.TransientBit,
+            flags: CommandPoolCreateFlags.TransientBit | CommandPoolCreateFlags.ResetCommandBufferBit,
             queueFamilyIndex: LogicalDevice.Indices.TransferFamily!.Value
         );
 
@@ -90,6 +90,25 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
 
         return _commandBuffers;
     }
+    public void BeginRecording()
+    {
+        if (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[currentCommandBuffer]) != Result.Success) return;
+
+        foreach (var manager in transfersManagers)
+        {
+            manager.BeginRecording();
+        }
+    }
+
+    public void EndRecording()
+    {
+        if (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[currentCommandBuffer]) != Result.Success) return;
+
+        foreach (var manager in transfersManagers)
+        {
+            manager.EndRecording();
+        }
+    }
 
     unsafe void AddCommandBuffer(CommandBuffer commandBuffer)
     {
@@ -98,13 +117,16 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
         if (registeredCB[currentCommandBuffer] > transferCommandBuffers[currentCommandBuffer].Length)
         {
             var _newCBArray = new CommandBufferSubmitInfo[registeredCB[currentCommandBuffer]];
-            Array.Copy(transferCommandBuffers, _newCBArray, transferCommandBuffers.Length);
+            Console.WriteLine("Length prev: " + transferCommandBuffers[currentCommandBuffer].Length);
+            Array.Copy(transferCommandBuffers[currentCommandBuffer], _newCBArray, transferCommandBuffers[currentCommandBuffer].Length);
             transferCommandBuffers[currentCommandBuffer] = _newCBArray;
         }
 
-        transferCommandBuffers[currentCommandBuffer][(int)registeredCB[currentCommandBuffer]] = new(
+        transferCommandBuffers[currentCommandBuffer][(int)registeredCB[currentCommandBuffer] - 1] = new(
             commandBuffer: commandBuffer
         );
+
+        Console.WriteLine("At current buffer: " + currentCommandBuffer + " added cb");
     }
 
     public void AddStagingBuffer(uint transferCommandBuffer, BufferData stagingBuffer)
@@ -115,22 +137,29 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
     public unsafe void RenderTick(uint appFrameInFlight)
     {
         // The transfer on the current cb is not done 
-        if (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[currentCommandBuffer]) == Result.Success) return;
-        stagingBuffers[currentCommandBuffer].Clear();
+        if (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[currentCommandBuffer]) != Result.Success) return;
+        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in transferDoneFences[currentCommandBuffer]);
+        // stagingBuffers[currentCommandBuffer].Clear();
+        // Console.WriteLine("Transfer render tick");
         uint _nextCommandBuffer = (currentCommandBuffer + 1) % TransferCommandBuffers;
 
         bool _isSthToTransfer = false;
-        registeredCB[currentCommandBuffer] = 0;
+        // registeredCB[currentCommandBuffer] = 0;
         foreach (var transfer in transfersManagers)
         {
             var _cb = transfer.GetCommandBuffer(currentCommandBuffer);
+            // Console.WriteLine("Testing if " + transfer + " has ready command buffer");
             if (!_cb.HasValue) continue;
 
             AddCommandBuffer(_cb.Value);
             _isSthToTransfer = true;
+            Console.WriteLine("At frame: " + currentCommandBuffer + " is sth to transfer");
         }
 
         if (!_isSthToTransfer) return;
+
+        Console.WriteLine("Triggering screen in renderdoc");
+        RenderDocIntegration.RenderDocApi.StartCapture(CreateVulkan.vulkanInstance.Handle, IntPtr.Zero);
 
         foreach (var transfer in transfersManagers)
         {
@@ -145,14 +174,17 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
 
         submitInfo.CommandBufferInfoCount = registeredCB[currentCommandBuffer];
         fixed (CommandBufferSubmitInfo* ptrCB = transferCommandBuffers[currentCommandBuffer])
-            submitInfo.PCommandBufferInfos = ptrCB;
-
-        if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.TransferQueue, 1, &submitInfo, transferDoneFences[currentCommandBuffer]) != Result.Success)
         {
-            throw new Exception("Failed to submit command buffer!");
+            submitInfo.PCommandBufferInfos = ptrCB;
+            if (CreateVulkan.vk.QueueSubmit2(LogicalDevice.TransferQueue, 1, &submitInfo, transferDoneFences[currentCommandBuffer]) != Result.Success)
+            {
+                throw new Exception("Failed to submit command buffer!");
+            }
         }
+        RenderDocIntegration.RenderDocApi.TriggerCapture();
 
-        ResetCommandPool(currentCommandBuffer);
+        RenderDocIntegration.RenderDocApi.EndCapture(CreateVulkan.vulkanInstance.Handle, IntPtr.Zero);
+
 
         if (Interlocked.CompareExchange(ref isTransferRunning, 1, 0) != 0)
         {
@@ -178,14 +210,25 @@ public class TransferCommandPoolManager : IDisposable, IRenderTick
     void WaitForTransferToEnd(uint currentCommandBuffer)
     {
         uint _currentCb = currentCommandBuffer;
-        while (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[_currentCb]) == Result.Success)
+        while (CreateVulkan.vk.GetFenceStatus(LogicalDevice.device, transferDoneFences[_currentCb]) != Result.Success)
         {
             CreateVulkan.vk.WaitForFences(LogicalDevice.device, 1, in transferDoneFences[_currentCb], Vk.True, ulong.MaxValue);
-
-            
-
+            CleanTransferStage(_currentCb);
             _currentCb = (_currentCb + 1) % TransferCommandBuffers;
+
         }
+    }
+
+    void CleanTransferStage(uint currentCommandBuffer)
+    {
+        ResetCommandPool(currentCommandBuffer);
+
+        foreach (var stagingBuffer in stagingBuffers[currentCommandBuffer])
+        {
+            BufferHelper.DestroyBuffer(stagingBuffer);
+        }
+        stagingBuffers[currentCommandBuffer].Clear();
+        registeredCB[currentCommandBuffer] = 0;
     }
 
 

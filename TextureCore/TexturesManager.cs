@@ -40,8 +40,8 @@ public class TexturesManager : IDisposable, IInstanceInit
 
     unsafe void CreateCommandPool()
     {
-        Console.WriteLine(LogicalDevice.Indices);
-        Console.WriteLine(LogicalDevice.Indices.TransferFamily.Value);
+        // Console.WriteLine(LogicalDevice.Indices);
+        // Console.WriteLine(LogicalDevice.Indices.TransferFamily.Value);
         CommandPoolCreateInfo commandPoolCI = new(
             flags: CommandPoolCreateFlags.TransientBit,
             queueFamilyIndex: LogicalDevice.Indices.TransferFamily!.Value

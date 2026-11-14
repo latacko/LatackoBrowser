@@ -30,9 +30,9 @@ VertexOutput VertexMain(VertexInput input, uniform CameraUBO *cameraDataPtr, uni
     CameraUBO cameraData = *cameraDataPtr;
     ObjectData objData = objectsData[instanceIndex];
 
-    float4x4 mvp = mul(cameraData.proj, objData.model);
+    float4x4 mvp = mul(objData.model, cameraData.proj);
 
-    output.Pos = mul(mvp, float4(input.Position, 1));
+    output.Pos = mul(float4(input.Position, 1), mvp);
     output.UV = input.UV;
 
     output.pos = objData.pos;
@@ -58,7 +58,8 @@ struct FragmentOutput
 FragmentOutput FragmentMain(VertexOutput input)
 {
     FragmentOutput output;
-
+    output.color = float4(0, 1, 0, 1);
+    return output;
     // RenderData objData = input;
 
     float4 radii = float4(

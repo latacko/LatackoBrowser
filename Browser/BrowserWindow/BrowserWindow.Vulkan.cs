@@ -78,7 +78,6 @@ public unsafe partial class BrowserWindow
     {
         CommandBufferBeginInfo _beginInfo = new(
             flags: CommandBufferUsageFlags.OneTimeSubmitBit
-
         );
 
         if (CreateVulkan.vk.BeginCommandBuffer(commandBuffer, &_beginInfo) != Result.Success)

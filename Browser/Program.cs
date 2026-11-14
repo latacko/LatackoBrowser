@@ -70,6 +70,10 @@ using AutoLoad;
 // string _document = File.ReadAllText(AppContext.BaseDirectory+"../"+"../"+"../"+"../"+"wiki.html");
 
 // Environment.SetEnvironmentVariable("socket","x11");
+
+bool ok = RenderDocIntegration.RenderDocApi.Init();
+Console.WriteLine($"RenderDoc API available: {ok}");
+
 BrowserWindow browserWindow = new();
 
 RenderEngine renderEngine = new([KhrSwapchain.ExtensionName]);
@@ -109,6 +113,7 @@ renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
 var _transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
 
 _transferCommandPoolManager.RegisterTransferManagers(InstanceRegistry.Get<RingBufferManager>());
+_transferCommandPoolManager.RegisterTransferManagers(InstanceRegistry.Get<PrimitiveModelsDb>());
 
 SiteRenderer mainBrowser = new(new LoginSite());
 browserWindow.SetTextureRenderer(mainBrowser);

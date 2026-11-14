@@ -102,7 +102,7 @@ public class Style
         }
         float pixels;
 
-        Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage);
+        // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage);
         // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + Environment.StackTrace);
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Layout))
@@ -231,7 +231,7 @@ public class Style
                 if (TryUpdateValue(FontProperties.fontSize, parentSize, out pixels))
                     _fontSize = pixels;
 
-                Console.WriteLine("Font size has changed to: " + _fontSize + " original font size: " + FontProperties.fontSize + " object size: " + objectSize);
+                // Console.WriteLine("Font size has changed to: " + _fontSize + " original font size: " + FontProperties.fontSize + " object size: " + objectSize);
                 computedStyles.FontSize = _fontSize;
                 FontProperties.dirty &= ~FontProperties.FontProperitesDirty.FontSize;
             }

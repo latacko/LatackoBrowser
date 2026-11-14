@@ -22,6 +22,8 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
 
     bool sthWasAdded = false;
 
+    bool transferPrimitiveBuffer = true;
+
     readonly Dictionary<PrimitiveUIModel, MeshData<ushort>> uiDb = new()
     {
         [PrimitiveUIModel.Quad] = new MeshData<ushort>(
@@ -39,7 +41,9 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
         AssetManager.RegisterMeshDataBufferManager<MeshData<ushort>>(MeshGpuRegister);
         this.transferCommandPoolManager = InstanceRegistry.Get<TransferCommandPoolManager>();
         transferCommandBuffers = transferCommandPoolManager.CreateManagerCommandBuffers();
-        CreateBuffers();
+
+        foreach (var primitiveModelInfo in uiDb)
+            AssetCore.AssetManager.RegisterModel(primitiveModelInfo.Value);
     }
 
     public MeshData<ushort> Get(PrimitiveUIModel model)
@@ -53,9 +57,6 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
     /// </summary>
     void CreateBuffers()
     {
-        foreach (var primitiveModelInfo in uiDb)
-            AssetCore.AssetManager.RegisterModel(primitiveModelInfo.Value);
-
         int _vertexCount = 0;
         int _indexCount = 0;
         foreach (var primitiveModelInfo in uiDb)
@@ -118,13 +119,12 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
             dstBuffer: primitiveBuffer
         );
 
-        Console.WriteLine(currentTransferCommandBuffer);
-        Console.WriteLine(transferCommandBuffers);
-        Console.WriteLine(transferCommandBuffers[currentTransferCommandBuffer]);
-
+        // Console.WriteLine(currentTransferCommandBuffer);
+        // Console.WriteLine(transferCommandBuffers);
+        // Console.WriteLine(transferCommandBuffers[currentTransferCommandBuffer]);
         CreateVulkan.vk.CmdCopyBuffer2(transferCommandBuffers[currentTransferCommandBuffer], ref _cbI);
-
         transferCommandPoolManager.AddStagingBuffer(currentTransferCommandBuffer, bufferData);
+
         sthWasAdded = true;
     }
 
@@ -132,9 +132,39 @@ public class PrimitiveModelsDb : IDisposable, ITransfer, IInstanceInit
     {
         if (!sthWasAdded)
             return null;
+        sthWasAdded = false;
         return transferCommandBuffers[frameInFlight];
     }
-    public void SetNextCommandBuffer(uint nextFrameInFlight) => currentTransferCommandBuffer = nextFrameInFlight;
+    public unsafe void SetNextCommandBuffer(uint nextFrameInFlight)
+    {
+        currentTransferCommandBuffer = nextFrameInFlight;
+    }
+
+    public unsafe void BeginRecording()
+    {
+        if (!transferPrimitiveBuffer) return;
+
+        CommandBufferBeginInfo _beginInfo = new(
+            flags: CommandBufferUsageFlags.OneTimeSubmitBit
+        );
+        if (CreateVulkan.vk.BeginCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer], in _beginInfo) != Result.Success)
+        {
+            throw new Exception("Failed to begin recording command buffer!");
+        }
+
+        CreateBuffers();
+    }
+
+    public void EndRecording()
+    {
+        if (!transferPrimitiveBuffer) return;
+        transferPrimitiveBuffer = false;
+
+        if (CreateVulkan.vk.EndCommandBuffer(transferCommandBuffers[currentTransferCommandBuffer]) != Result.Success)
+        {
+            throw new Exception("Failed to begin recording command buffer!");
+        }
+    }
 
     void MeshGpuRegister(IMeshData meshData)
     {
