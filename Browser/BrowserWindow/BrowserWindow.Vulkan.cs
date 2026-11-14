@@ -110,7 +110,7 @@ public unsafe partial class BrowserWindow
 
         Vulkan.CreateVulkan.vk.CmdPipelineBarrier2(commandBuffer, ref _barrierDependencyInfo);
 
-        var copyRegion = new ImageCopy(
+        var copyRegion = new ImageCopy2(
             srcSubresource: new ImageSubresourceLayers
             {
                 AspectMask = ImageAspectFlags.ColorBit,
@@ -130,11 +130,16 @@ public unsafe partial class BrowserWindow
             extent: new Extent3D(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height, 1)
         );
 
-        CreateVulkan.vk.CmdCopyImage(
-            commandBuffer,
-            siteRendererImg, ImageLayout.TransferSrcOptimal,
-            swapchain.swapChainImages[imageIndex], ImageLayout.TransferDstOptimal,
-            1, &copyRegion);
+        CopyImageInfo2 _copyImgInfo = new(
+            srcImage: siteRendererImg,
+            srcImageLayout: ImageLayout.TransferSrcOptimal,
+
+            dstImage: swapchain.swapChainImages[imageIndex],
+            dstImageLayout: ImageLayout.TransferDstOptimal,
+            regionCount: 1,
+            pRegions: &copyRegion
+        );
+        CreateVulkan.vk.CmdCopyImage2(commandBuffer, in _copyImgInfo);
 
 
         ImageMemoryBarrier2 _barrierPresent = new(

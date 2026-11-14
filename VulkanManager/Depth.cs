@@ -10,8 +10,6 @@ public unsafe class Depth : IDisposable
 
     public void CreateDepthResources(uint width, uint height)
     {
-        depthFormat = FindDepthFormat();
-
         ImageHelper.CreateImage(width, height, depthFormat, ImageTiling.Optimal, ImageUsageFlags.DepthStencilAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref depthImage, ref depthImageMemory);
         depthImageView = ImageHelper.CreateImageView(depthImage, depthFormat, ImageAspectFlags.DepthBit);
     }
@@ -21,12 +19,12 @@ public unsafe class Depth : IDisposable
         return format == Format.D32SfloatS8Uint || format == Format.D32SfloatS8Uint;
     }
 
-    Format FindDepthFormat()
+    public static void FindDepthFormat()
     {
-        return FindSupportedFormat([Format.D32Sfloat, Format.D32SfloatS8Uint, Format.D32SfloatS8Uint], ImageTiling.Optimal, FormatFeatureFlags.DepthStencilAttachmentBit);
+        depthFormat = FindSupportedFormat([Format.D32Sfloat, Format.D32SfloatS8Uint, Format.D32SfloatS8Uint], ImageTiling.Optimal, FormatFeatureFlags.DepthStencilAttachmentBit);
     }
 
-    Format FindSupportedFormat(Format[] candidates, ImageTiling tiling, FormatFeatureFlags features)
+    static Format FindSupportedFormat(Format[] candidates, ImageTiling tiling, FormatFeatureFlags features)
     {
         foreach (var format in candidates)
         {

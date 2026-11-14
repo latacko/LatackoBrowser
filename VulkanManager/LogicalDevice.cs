@@ -79,15 +79,7 @@ public unsafe class LogicalDevice : IDisposable
                 enabledExtensionCount: (uint)deviceExtensions.Length,
                 ppEnabledExtensionNames: (byte**)SilkMarshal.StringArrayToPtr(deviceExtensions)
             );
-
-            if (CreateVulkan.ENABLE_VALIDATION_LAYERS)
-            {
-                _createInfo.EnabledLayerCount = (uint)CreateVulkan.ValidationLayers.Length;
-                _createInfo.PpEnabledLayerNames = (byte**)SilkMarshal.StringArrayToPtr(CreateVulkan.ValidationLayers);
-
-                var _debugCreateInfo = CreateVulkan.PopulateDebugMessengerCreateInfo();
-            }
-
+            
             if (CreateVulkan.vk.CreateDevice(PhysicalDevice.physicalDevice, &_createInfo, null, out device) != Result.Success)
             {
                 throw new Exception("Failed to create logical device!");

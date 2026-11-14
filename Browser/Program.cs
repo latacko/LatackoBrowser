@@ -88,6 +88,8 @@ Console.WriteLine("Set up vulkan");
 browserWindow.CreateSurfaceAndSwapchain();
 Console.WriteLine("Picking the best device");
 renderEngine.PickDevice(browserWindow.khrSurface, browserWindow.surface);
+browserWindow.SetupVulkan();
+Depth.FindDepthFormat();
 
 Console.WriteLine("Creating instances");
 InstancesBootstrap.CreateInstances();

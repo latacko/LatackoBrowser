@@ -51,7 +51,6 @@ public unsafe partial class BrowserWindow
 
     public void Run()
     {
-        SetupVulkan();
         OnStart?.Invoke();
         MainLoop();
         CleanUp();
