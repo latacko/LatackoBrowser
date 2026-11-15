@@ -13,6 +13,7 @@ using GraphicsCore.Buffers;
 using InstanceFinderCore;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 
 namespace Renderer;
 
@@ -29,9 +30,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     static uint LastUniqueId;
 
-    uint width;
-    uint height;
-    Extent2D screenExtent;
+    Extent2D screenSize;
 
     readonly StylesManager stylesManager = new();
 
@@ -39,7 +38,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
     readonly ImageData[] imagesData = new ImageData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly Depth depth = new();
 
-    DirtyFlag dirty;
+    // DirtyFlag dirty;
 
 
     internal uint FrameInFlight { get; private set; } = 0;
@@ -79,7 +78,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         VisualElement.ObjectsToCompile.Add(UniqueId, visualElementsToCompile);
 
         nodeCreator = new(UniqueId);
-        document = new(this, nodeCreator);
+        document = new(this, nodeCreator, stylesManager);
 
         siteController.SetDocument(document);
     }
@@ -96,25 +95,23 @@ public class SiteRenderer : TextureRenderer, IDisposable
     //TODO - Clear prev image and render to new texture
     public override void Resize(uint width, uint height)
     {
-        dirty |= DirtyFlag.Size;
-        this.width = width;
-        this.height = height;
-        screenExtent = new(width, height);
-
+        // dirty |= DirtyFlag.Size;
+        screenSize = new(width, height);
+        stylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
         DisposeImages();
-        CreateResources(width, height);
+        CreateResources();
     }
 
-    void CreateResources(uint width, uint height)
+    void CreateResources()
     {
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             ImageData _imageData = new();
-            ImageHelper.CreateImage(width, height, Swapchain.swapChainImageFormat, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
+            ImageHelper.CreateImage(screenSize.Width, screenSize.Height, Swapchain.swapChainImageFormat, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
             _imageData.imageView = ImageHelper.CreateImageView(_imageData.image, Swapchain.swapChainImageFormat, ImageAspectFlags.ColorBit);
             imagesData[i] = _imageData;
         }
-        depth.CreateDepthResources(width, height);
+        depth.CreateDepthResources(screenSize.Width, screenSize.Height);
     }
 
     void DisposeImages()
@@ -126,7 +123,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
         }
         if (depth.depthImage.Handle != 0)
         {
-            Console.WriteLine("Dispose depth");
             depth.Dispose();
         }
     }
@@ -169,7 +165,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     #region Rendering
     //TODO - Render to texture
-    public unsafe void GetCommandBuffer(uint? frameInFlight)
+    public void GetCommandBuffer(uint? frameInFlight)
     {
         using (SpeedscopeTrace.Begin("Camera ubo"))
         {
@@ -200,8 +196,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
         SubmitInfo2 submitInfo = new(
             waitSemaphoreInfoCount: 0
         );
-
-        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, vulkanEngine.commandPools[FrameInFlight], CommandPoolResetFlags.None);
 
         using (SpeedscopeTrace.Begin("Get Command Buffer"))
         {
@@ -234,7 +228,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 submitInfo.PCommandBufferInfos = ptrCB;
 
             SemaphoreSubmitInfo _signalSemaphoreInfo = new(
-                semaphore: vulkanEngine.renderCompleteSemaphores[FrameInFlight]
+                semaphore: vulkanEngine.renderCompleteSemaphores[FrameInFlight],
+                stageMask: PipelineStageFlags2.AllCommandsBit
             );
 
             submitInfo.SignalSemaphoreInfoCount = 1;
@@ -331,7 +326,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
             RenderingInfo _renderingInfo = new(
                 renderArea: new(
                     offset: new(0, 0),
-                    extent: screenExtent
+                    extent: screenSize
                 ),
                 layerCount: 1,
                 colorAttachmentCount: 1,
@@ -347,15 +342,15 @@ public class SiteRenderer : TextureRenderer, IDisposable
             Viewport _vp = new(
                 x: 0,
                 y: 0,
-                width: width,
-                height: height,
+                width: screenSize.Width,
+                height: screenSize.Height,
                 minDepth: 0,
                 maxDepth: 1
             );
             CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
             Rect2D _scissors = new(
                 offset: new(0, 0),
-                extent: screenExtent
+                extent: screenSize
             );
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
@@ -373,8 +368,6 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
         // coreManager.RenderShader(commandBuffer, FrameInFlight, wireFrameRendering);
 
-        // if (swapchain.recreatedSwapChain)
-        //     swapchain.recreatedSwapChain = false;
         using (SpeedscopeTrace.Begin("End rendering"))
         {
             Vulkan.CreateVulkan.vk.CmdEndRendering(commandBuffer);
@@ -387,7 +380,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 dstAccessMask: 0,
 
                 oldLayout: ImageLayout.AttachmentOptimal,
-                newLayout: ImageLayout.PresentSrcKhr,
+                newLayout: ImageLayout.TransferSrcOptimal,
 
                 image: imagesData[imageIndex].image,
                 subresourceRange: new(
@@ -429,13 +422,13 @@ public class SiteRenderer : TextureRenderer, IDisposable
             // if (!dirty.HasFlag(DirtyFlag.Size))
             //     return;
         }
-        dirty &= ~DirtyFlag.Size;
+        // dirty &= ~DirtyFlag.Size;
 
         using (SpeedscopeTrace.Begin("Updating camera ubo"))
         {
             Vulkan.UICameraUBO ubo = new()
             {
-                Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, width, 0, height, -1000, 1000),
+                Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, screenSize.Width, 0, screenSize.Height, -1000, 1000),
             };
 
             // Console.WriteLine("Proj width: " + width + "x" + height);

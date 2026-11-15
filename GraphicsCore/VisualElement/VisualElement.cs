@@ -51,6 +51,7 @@ public abstract class VisualElement : IDisposable, IInstance
 
     public readonly EventHelper Events;
 
+    private readonly StylesManager? stylesManager;
     public Style? Style;
     internal protected ComputedStyle computedStyle;
 
@@ -63,10 +64,12 @@ public abstract class VisualElement : IDisposable, IInstance
             Parent = parent;
     }
 
-    public VisualElement(uint modelId, uint instanceIndex, EventSystem? eventSystem, VisualElement? parent = null)
+    public VisualElement(uint modelId, uint instanceIndex, EventSystem? eventSystem, StylesManager stylesManager, VisualElement? parent = null)
     {
         ModelId = modelId;
         InstanceIndex = instanceIndex;
+
+        this.stylesManager = stylesManager;
 
         if (eventSystem != null)
             Events = new(eventSystem, this);
@@ -132,10 +135,10 @@ public abstract class VisualElement : IDisposable, IInstance
         return this;
     }
 
-    public VisualElement SetStyle(Style style)
+    public VisualElement SetInlineStyle(Style style)
     {
         Style = style;
-        // StylesManager.AddInlineStyle(style);
+        stylesManager.AddInlineStyle(style);
         computedStyle = style.ComputeStyles(true, false, LayoutManager.GetParentSize(), computedStyle.Size);
         return this;
     }

@@ -57,7 +57,8 @@ public class StylesManager
         if (!_shouldForce)
             return;
 
-        // Console.WriteLine("Computing styles.");
+
+        Console.WriteLine("Computing styles. force: " + _shouldForce);
         // stopwatch.Restart();
 
         // Parallel.ForEach(styles, item =>
@@ -72,6 +73,7 @@ public class StylesManager
         // });
         using (SpeedscopeTrace.Begin("Compute global styles"))
         {
+            Console.WriteLine("Registeres global styles: " + styles.Count);
             foreach (var item in styles)
             {
                 item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
@@ -81,6 +83,7 @@ public class StylesManager
 
         using (SpeedscopeTrace.Begin("Compute inline styles"))
         {
+            Console.WriteLine("Registeres inline styles: " + inlineStyles.Count);
             foreach (var item in inlineStyles)
             {
                 item.computedStyles = item.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);

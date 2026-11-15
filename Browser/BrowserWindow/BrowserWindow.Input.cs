@@ -4,6 +4,7 @@ using Renderer;
 using Silk.NET.Input;
 using TextCore;
 using TextCore.Text;
+using Vulkan;
 
 namespace Browser;
 
@@ -30,6 +31,17 @@ public partial class BrowserWindow
         } else if (key == Key.Left)
         {
             // browserUI.TextTest.Style.SetFontProperties(fontProperties=>fontProperties.SetFontSize(new(--fontSize)));
+        } else if (key == Key.R)
+        {
+            CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
+            textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
+        } else if (key == Key.T)
+        {
+            CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
+            swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+        } else if (key == Key.Y)
+        {
+            CreateVulkan.vk.DeviceWaitIdle(LogicalDevice.device);
         }
     }
 

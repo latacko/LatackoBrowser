@@ -17,7 +17,7 @@ public class LoginSite: ISiteController
     public void Start()
     {
         var _background = document.CreateElement(DocumentElements.Div)
-        .SetStyle(new Style("Backround")
+        .SetInlineStyle(new Style("Backround")
             .SetLayout(layout=>layout
                 .SetWidth(new(100, UnitType.lvw))
                 .SetHeight(new(100, UnitType.lvh))

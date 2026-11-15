@@ -26,7 +26,7 @@ public unsafe partial class BrowserWindow
 
     readonly CommandBuffer[] commandBuffers = new CommandBuffer[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     readonly Fence[] fences = new Fence[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    readonly Semaphore[] renderCompleteSemaphores = new Semaphore[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    Semaphore[] renderCompleteSemaphores;
     readonly Semaphore[] imageAcquiredSemaphores = new Semaphore[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
 
 
@@ -45,6 +45,8 @@ public unsafe partial class BrowserWindow
         FenceCreateInfo fenceCI = new(
             flags: FenceCreateFlags.SignaledBit
         );
+
+        renderCompleteSemaphores = new Semaphore[Swapchain.Instance.swapChainImages.Length];
 
         fixed (Fence* fencesPtr = fences)
         fixed (Semaphore* renderCompleteSemaphoresPtr = renderCompleteSemaphores)
@@ -93,7 +95,7 @@ public unsafe partial class BrowserWindow
             dstAccessMask: AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
 
             oldLayout: ImageLayout.Undefined,
-            newLayout: ImageLayout.AttachmentOptimal,
+            newLayout: ImageLayout.TransferDstOptimal,
 
             image: swapchain.swapChainImages[imageIndex],
             subresourceRange: new(
@@ -149,7 +151,7 @@ public unsafe partial class BrowserWindow
             dstStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
             dstAccessMask: 0,
 
-            oldLayout: ImageLayout.AttachmentOptimal,
+            oldLayout: ImageLayout.TransferDstOptimal,
             newLayout: ImageLayout.PresentSrcKhr,
 
             image: swapchain.swapChainImages[imageIndex],

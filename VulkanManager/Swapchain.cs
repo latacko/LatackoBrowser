@@ -131,7 +131,7 @@ public unsafe class Swapchain : IDisposable
             imageColorSpace: _surfaceFormat.ColorSpace,
             imageExtent: _extent,
             imageArrayLayers: 1,
-            imageUsage: ImageUsageFlags.ColorAttachmentBit,
+            imageUsage: ImageUsageFlags.ColorAttachmentBit | ImageUsageFlags.TransferDstBit,
 
             preTransform: _swapChainSupport.Capabilities.CurrentTransform,
             compositeAlpha: CompositeAlphaFlagsKHR.OpaqueBitKhr,
@@ -200,9 +200,8 @@ public unsafe class Swapchain : IDisposable
         khrSwapChain?.DestroySwapchain(LogicalDevice.device, oldSwapchain, null);
 
         recreatedSwapChain = true;
-
+        Console.WriteLine("Recreate swao chain to true");
         CreateImageViews();
-        // CreateFrameBuffers();
     }
 
     internal void CreateImageViews()
@@ -214,49 +213,8 @@ public unsafe class Swapchain : IDisposable
             swapChainImageViews[i] = ImageHelper.CreateImageView(swapChainImages[i], swapChainImageFormat);
         }
     }
-
-    // void CreateFrameBuffers()
-    // {
-    //     swapChainFrameBuffers = new Framebuffer[swapChainImageViews.Length];
-
-    //     for (int i = 0; i < swapChainImageViews.Length; i++)
-    //     {
-    //         ImageView[] attachments = [
-    //             swapChainImageViews[i],
-    //             depth.depthImageView
-    //         ];
-
-    //         fixed (Framebuffer* framePtr = &swapChainFrameBuffers[i])
-    //         fixed (ImageView* attachmentPtr = attachments)
-    //         {
-    //             FramebufferCreateInfo frameBufferInfo = new()
-    //             {
-    //                 SType = StructureType.FramebufferCreateInfo,
-    //                 RenderPass = renderPass,
-    //                 AttachmentCount = (uint)attachments.Length,
-    //                 PAttachments = attachmentPtr,
-    //                 Width = swapChainExtent.Width,
-    //                 Height = swapChainExtent.Height,
-    //                 Layers = 1,
-    //             };
-
-    //             if (CreateVulkan.vk.CreateFramebuffer(LogicalDevice.device, &frameBufferInfo, null, framePtr) != Result.Success)
-    //             {
-    //                 throw new Exception("Failed to create framebuffer!");
-    //             }
-    //         }
-
-    //     }
-    // }
-
     void CleanUpSwapChain(bool destroySwapchain = true)
     {
-
-        // foreach (var framebuffer in swapChainFrameBuffers)
-        // {
-        //     LogicalDevice.DestroyFramebuffer(framebuffer, null);
-        // }
-
         foreach (var imageView in swapChainImageViews)
         {
             LogicalDevice.DestroyImageView(imageView, null);

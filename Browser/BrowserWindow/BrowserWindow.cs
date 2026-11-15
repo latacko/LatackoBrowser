@@ -40,7 +40,7 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
-    long targetTicks = Stopwatch.Frequency / 99999;
+    long targetTicks = Stopwatch.Frequency / 20;
     readonly Stopwatch stopwatch = Stopwatch.StartNew();
     long nextFrameTicks = Stopwatch.GetTimestamp();
 
@@ -141,7 +141,6 @@ public unsafe partial class BrowserWindow
     private void OnFramebufferResize(Vector2D<int> newSize)
     {
         framebufferResized = true;
-        textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
     }
 
     private void OnRender(double deltaTime)
@@ -163,7 +162,6 @@ public unsafe partial class BrowserWindow
 
         timePassed += deltaTime;
 
-        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in fences[frameInFlight]);
         frameTimeWatch.Restart();
 
         uint imageIndex;
@@ -176,20 +174,18 @@ public unsafe partial class BrowserWindow
 
         if (_result == Result.ErrorOutOfDateKhr)
         {
-            swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
-            // StylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
+            RecreateResources();
             return;
         }
         else if (_result != Result.Success && _result != Result.SuboptimalKhr)
             throw new Exception("Failed to acquire swap chain image!");
-
-        CreateVulkan.vk.ResetCommandBuffer(commandBuffers[frameInFlight], 0);
-
-
+        CreateVulkan.vk.ResetFences(LogicalDevice.device, 1, in fences[frameInFlight]);
+        CreateVulkan.vk.ResetCommandPool(LogicalDevice.device, textureRenderer.GetVulkanEngine().commandPools[frameInFlight], CommandPoolResetFlags.None);
 
         // UpdateUniformBuffer(frameInFlight);
         // coreManager.OnRender(frameInFlight);
         // StylesManager.ComputeStyles();
+        Console.WriteLine("Swapchain reacreated: " + Swapchain.Instance.recreatedSwapChain);
         (Image image, Semaphore semaphore) _imageData;
         using (SpeedscopeTrace.Begin("Ring+Texture"))
         {
@@ -240,7 +236,8 @@ public unsafe partial class BrowserWindow
             submitInfo.SignalSemaphoreInfoCount = 1;
 
             SemaphoreSubmitInfo _signalRenderComplete = new(
-                semaphore: renderCompleteSemaphores[frameInFlight]
+                semaphore: renderCompleteSemaphores[imageIndex],
+                stageMask: PipelineStageFlags2.AllCommandsBit
             );
             submitInfo.PSignalSemaphoreInfos = &_signalRenderComplete;
 
@@ -249,11 +246,12 @@ public unsafe partial class BrowserWindow
                 throw new Exception("Failed to submit command buffer!");
             }
         }
+        swapchain.recreatedSwapChain = false;
 
         using (SpeedscopeTrace.Begin("Present"))
         {
             fixed (SwapchainKHR* swapChainPtr = &swapchain.swapChain)
-            fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[frameInFlight])
+            fixed (Semaphore* renderCompleteSemaphoresPtr = &renderCompleteSemaphores[imageIndex])
             {
                 PresentInfoKHR presentInfo = new(
                     waitSemaphoreCount: 1,
@@ -269,7 +267,7 @@ public unsafe partial class BrowserWindow
                 if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
                 {
                     framebufferResized = false;
-                    swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+                    RecreateResources();
                 }
                 else if (_result != Result.Success)
                 {
@@ -298,6 +296,14 @@ public unsafe partial class BrowserWindow
         }
 
         frameInFlight = (frameInFlight + 1) % VulkanEngine.MAX_FRAMES_IN_FLIGHT;
+    }
+
+    void RecreateResources()
+    {
+        // sty.AddFlag(StylesManager.DirtyFlag.ScreenSize);
+        swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+        Console.WriteLine("New size mai123n: " + swapchain.swapChainExtent.Width + "x"+swapchain.swapChainExtent.Height);
+        textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
     }
 
     Vector2D<int> GetFrameBufferSize()

@@ -102,7 +102,7 @@ public class Style
         }
         float pixels;
 
-        // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage);
+        Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage);
         // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + Environment.StackTrace);
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Layout))
@@ -164,13 +164,13 @@ public class Style
             if (forceUpdate || Layout.dirty.HasFlag(Layout.LayoutDirty.Size) || Layout.whereIsPercentage.HasFlag(Layout.WhereIsPercentage.Size))
             {
                 var _size = computedStyles.Size;
-                // Console.WriteLine("Size is dirty parent size: " + parentSize);
+                Console.WriteLine("Size is dirty parent size: " + parentSize);
                 if (TryUpdateValue(Layout.Width, parentSize, out pixels))
                     _size.X = pixels + computedStyles.Padding.X + computedStyles.Padding.Z;
 
                 if (TryUpdateValue(Layout.Height, parentSize, out pixels))
                     _size.Y = pixels + computedStyles.Padding.Y + computedStyles.Padding.W;
-                // Console.WriteLine("Size is : " + _size);
+                Console.WriteLine("Size is : " + _size);
                 computedStyles.Size = _size;
                 objectSize = computedStyles.Size;
                 Layout.dirty &= ~Layout.LayoutDirty.Size;

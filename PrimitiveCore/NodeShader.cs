@@ -116,6 +116,7 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
             
             foreach (var element in elements)
             {
+                element.TestToUpdateStyle(frameInFlight);
                 element.TryWriteObjectData(instanceManager!.GetDestinationSpan(_siteModelKey, frameInFlight, element.InstanceIndex, element.ObjectDataSize), frameInFlight);
             }
             
@@ -131,6 +132,7 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
     {
         instanceManager.RegisterBufferForMesh(textureRenderer.GetId(), visualElement.ModelId);
         AddElement(textureRenderer, visualElement);
+        visualElement.Compile();
     }
 
     /// <summary>

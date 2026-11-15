@@ -5,6 +5,7 @@ using TextureCore;
 using PrimitiveCore.Shader;
 using PrimitiveCore;
 using InstanceFinderCore;
+using GraphicsCore.Styles;
 
 namespace Vulkan;
 
@@ -25,10 +26,10 @@ public class NodeCreator
         defaultNodeShader = shader;
     }
 
-    public Node Create(uint siteid, uint modelId, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
+    public Node Create(uint siteid, uint modelId, StylesManager stylesManager, Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
     {
         uint objectIndex = LastCreatedIndex++;
-        Node runtimeModelData = new(modelId, objectIndex, texture, InstanceRegistry.Get<EventSystem>(), parent);
+        Node runtimeModelData = new(modelId, objectIndex, texture, InstanceRegistry.Get<EventSystem>(), stylesManager, parent);
         parent?.AddChild(runtimeModelData);
 
         VisualElement.ObjectsToCompile[siteId].Add(new()

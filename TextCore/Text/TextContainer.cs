@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using AtlasGeneratorCore;
 using GraphicsCore;
+using GraphicsCore.Styles;
 using Silk.NET.Maths;
 
 namespace TextCore.Text;
@@ -16,10 +17,10 @@ public class TextContainer : VisualElement
     internal TextManager textManager;
     protected internal override int ObjectDataSize => Unsafe.SizeOf<TextContainerGPUData>();
 
-    public TextContainer(string text, uint objectIndex, TextManager textManager, VisualElement? parent = null) : base(0, objectIndex, null, parent)
+    public TextContainer(string text, uint objectIndex, TextManager textManager, StylesManager stylesManager, VisualElement? parent = null) : base(0, objectIndex, null, stylesManager, parent)
     {
         this.textManager = textManager;
-        SetStyle(TextManager.TextDefaultStyle);
+        SetInlineStyle(TextManager.TextDefaultStyle);
 
         Text = text;
         TextMemory = Text.AsMemory();
