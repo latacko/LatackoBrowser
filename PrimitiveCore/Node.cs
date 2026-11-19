@@ -21,7 +21,7 @@ public class Node : VisualElement
         Size = 1 << 1,
     }
 
-    DirtyFlags objectDirty;
+    DirtyFlags dirtyObjectProperties;
     internal Vector2D<float> worldPosition;
 
     public List<VisualElement>? Children;
@@ -33,29 +33,33 @@ public class Node : VisualElement
     {
         this.texture = texture;
         this.LayoutManager = new NodeLayoutManager();
+        this.LayoutManager.SetVisualElement(this);
     }
 
-    public override void AddChild(VisualElement runtimeModelData)
+    public override void AddChild(VisualElement visualElement)
     {
-        Children ??= [];
-        Children.Add(runtimeModelData);
+        if (visualElement.Parent != null)
+            visualElement.Parent.RemoveChild(visualElement);
 
-        objectDirty |= DirtyFlags.Layout;
+        visualElement.SetParent(this);
+        Children ??= [];
+        Children.Add(visualElement);
+
+        dirtyObjectProperties |= DirtyFlags.Layout;
+    }
+
+    public override void RemoveChild(VisualElement visualElement)
+    {
+        Children.Remove(visualElement);
+        if (Children.Count == 0)
+            Children = null;
+        dirtyObjectProperties |= DirtyFlags.Layout;
     }
 
     public override CursorType GetCursorType() => Style.Properties.Cursor;
 
     bool TryGetObjectData(out ModelGPUData data, uint frame)
     {
-        if (Swapchain.Instance.recreatedSwapChain)
-        {
-            if (Parent == null)
-                objectDirty |= DirtyFlags.Size;
-            AddFlag(RenderDirtyFlags.Matrix);
-        }
-
-        UpdateObjectDirty(frame);
-
         if (renderDirty[frame] == RenderDirtyFlags.None)
         {
             data = default;
@@ -65,7 +69,6 @@ public class Node : VisualElement
 
         if (renderDirty[frame].HasFlag(RenderDirtyFlags.Matrix))
         {
-            Console.WriteLine("New size: " + computedStyle.Size);
             cachedModel =
             // Matrix4X4.CreateScale(200, 200, 1f);
                 Matrix4X4.CreateScale(computedStyle.Size.X, computedStyle.Size.Y, 1f) *
@@ -106,28 +109,49 @@ public class Node : VisualElement
         return TryGetObjectData(out var data, frame) && WriteStruct(data, destination);
     }
 
-    void UpdateObjectDirty(uint frame)
+    void UpdateMyProperties()
     {
-        if ((objectDirty.HasFlag(DirtyFlags.Size) || base.Style.ShouldObjectUpdate[frame]) && mySizeHasChangedThisFrame[frame])
+        // if (dirtyObjectProperties.HasFlag(DirtyFlags.Size))
+        // {
+        //     Console.WriteLine("Dirty size: " + dirtyObjectProperties.HasFlag(DirtyFlags.Size));
+        //     Console.WriteLine("ShouldUpdateStyle: " + base.Style.ShouldUpdateStyle);
+        //     Console.WriteLine("mySizeHasChanged: " + mySizeHasChanged);
+        // }
+        if (dirtyObjectProperties.HasFlag(DirtyFlags.Size))
+        // if ((dirtyObjectProperties.HasFlag(DirtyFlags.Size) || base.Style.ShouldUpdateStyle) && mySizeHasChanged)
         {
             // Console.WriteLine("Size:" + computedStyle.Size);
-            UpdateMySize(frame);
-
-            objectDirty &= ~DirtyFlags.Size;
-
-            objectDirty |= DirtyFlags.Layout;
+            UpdateMySize();
         }
 
-        if (objectDirty.HasFlag(DirtyFlags.Layout))
-        {
-            UpdateArrangement();
+        // if (dirtyObjectProperties.HasFlag(DirtyFlags.Layout))
+        // {
+        //     UpdateArrangement();
 
-            objectDirty &= ~DirtyFlags.Layout;
-        }
+        //     dirtyObjectProperties &= ~DirtyFlags.Layout;
+        // }
     }
 
-    void UpdateArrangement()
+    public void UpdateArrangement()
     {
+        if (Swapchain.Instance.recreatedSwapChain)
+        {
+            if (Parent == null)
+                dirtyObjectProperties |= DirtyFlags.Size;
+            AddFlag(RenderDirtyFlags.Matrix);
+        }
+
+        if (dirtyObjectProperties == DirtyFlags.None) return;
+        Console.WriteLine("======================== Updating arrangement for " + Style.Name + " " + dirtyObjectProperties + "================================");
+
+        UpdateMyProperties();
+        TestToUpdateStyle();
+
+        Console.WriteLine("Will update arrangement: " + (!dirtyObjectProperties.HasFlag(DirtyFlags.Layout) && !mySizeHasChanged) + "\nIs layout dirty: " + dirtyObjectProperties.HasFlag(DirtyFlags.Layout) + "\nMy size has changed: " + mySizeHasChanged);
+        if (!dirtyObjectProperties.HasFlag(DirtyFlags.Layout) && !mySizeHasChanged) return;
+        dirtyObjectProperties &= ~DirtyFlags.Layout;
+        Console.WriteLine("Updating layout");
+
         if (Children == null) return;
         float sizeOfLine = 0;
         var _paddingLeft = computedStyle.Padding.X;
@@ -136,6 +160,7 @@ public class Node : VisualElement
 
         float cursorX = _paddingLeft;
         float cursorY = _paddingTop;
+        Console.WriteLine("Updating children layout");
 
         foreach (var child in Children)
         {
@@ -155,9 +180,11 @@ public class Node : VisualElement
         }
     }
 
-    void UpdateMySize(uint frame)
+    void UpdateMySize()
     {
-        // Console.WriteLine("Update my size: " + computedStyle.Size);
+        dirtyObjectProperties &= ~DirtyFlags.Size;
+        dirtyObjectProperties |= DirtyFlags.Layout;
+        LayoutManager.OnParentSizeChanged();
         // Layout.UpdateChildrenLayout();
         if (Children != null)
         {

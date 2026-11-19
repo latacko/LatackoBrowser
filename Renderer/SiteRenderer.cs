@@ -14,6 +14,7 @@ using InstanceFinderCore;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using PrimitiveCore;
 
 namespace Renderer;
 
@@ -88,8 +89,21 @@ public class SiteRenderer : TextureRenderer, IDisposable
     {
         Resize(width, height);
         cameraBuffers.CreateBuffers();
-        siteController.Start();
 
+        var _body = document.CreateElement(DocumentElements.Div)
+        .SetInlineStyle(new Style("Body")
+            .SetLayout(layout => layout
+                .SetWidth(new Units.UIUnit(100, Units.UnitType.percentageWidth))
+                .SetHeight(new Units.UIUnit(100, Units.UnitType.percentageHeight))
+            )
+            .SetProperties(properties=>properties
+                .SetBackgroundColor(0,0,1,1)
+            )
+        );
+
+        document.SetBody(_body as Node);
+
+        siteController.Start();
     }
 
     //TODO - Clear prev image and render to new texture
@@ -184,7 +198,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         }
         using (SpeedscopeTrace.Begin("Set frame as not dirty"))
         {
-            stylesManager.SetFrameAsNotDirty(FrameInFlight);
+            stylesManager.DisableUpdateOnStyles(FrameInFlight);
         }
     }
 
@@ -309,7 +323,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 loadOp: AttachmentLoadOp.Clear,
                 storeOp: AttachmentStoreOp.Store,
                 clearValue: new(
-                    color: new(1, 0, 0, 1)
+                    color: new(0, 0, 0, 1)
                 )
             );
 
@@ -360,6 +374,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
             Console.WriteLine("Elements to compile in shaders: " + VisualElement.ObjectsToCompile.Count);
             CompileVisuaElements();
         }
+
+        document.Body.UpdateArrangement();
 
         foreach (var shader in RenderEngine.Instance.Shaders)
         {

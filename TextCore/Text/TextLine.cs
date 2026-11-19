@@ -144,7 +144,7 @@ public class TextLine : VisualElement
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, (float)_width, new(0,0), new(1,1), (float)_cursorX, _text[i], ref _j, false);
+                GenerateQuad(_vertices, _indices, (float)_width, new(0, 0), new(1, 1), (float)_cursorX, _text[i], ref _j, false);
                 //TODO - Włączenie koordynatów uv
                 // GenerateQuad(_vertices, _indices, _width, _glyphData.UVMin, _glyphData.UVMax, _cursorX, _text[i], ref _j, false);
                 _cursorX += _width;
@@ -160,7 +160,7 @@ public class TextLine : VisualElement
             if (_width != 0)
             {
                 _width *= invHeight;
-                GenerateQuad(_vertices, _indices, (float)_width, new(0,0), new(1,1), (float)_cursorX, _text[i + 1], ref _j, true);
+                GenerateQuad(_vertices, _indices, (float)_width, new(0, 0), new(1, 1), (float)_cursorX, _text[i + 1], ref _j, true);
                 //TODO - Włączenie koordynatów uv
                 // GenerateQuad(_vertices, _indices, _width, _nextCharGlyphData.UVMin, _nextCharGlyphData.UVMax, _cursorX, _text[i + 1], ref _j, true);
                 _cursorX += _width;
@@ -229,6 +229,11 @@ public class TextLine : VisualElement
     public override void AddChild(VisualElement runtimeModelData)
     {
         throw new System.Exception("You can't add children to a text");
+    }
+
+    public override void RemoveChild(VisualElement runtimeModelData)
+    {
+        throw new Exception("You can't remove child to a text");
     }
 
     public override CursorType GetCursorType() => Style.FontProperties.Cursor;

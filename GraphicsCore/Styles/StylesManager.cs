@@ -58,7 +58,7 @@ public class StylesManager
             return;
 
 
-        Console.WriteLine("Computing styles. force: " + _shouldForce);
+        // Console.WriteLine("Computing styles. force: " + _shouldForce);
         // stopwatch.Restart();
 
         // Parallel.ForEach(styles, item =>
@@ -73,7 +73,7 @@ public class StylesManager
         // });
         using (SpeedscopeTrace.Begin("Compute global styles"))
         {
-            Console.WriteLine("Registeres global styles: " + styles.Count);
+            // Console.WriteLine("Registeres global styles: " + styles.Count);
             foreach (var item in styles)
             {
                 item.Value.computedStyles = item.Value.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
@@ -83,7 +83,7 @@ public class StylesManager
 
         using (SpeedscopeTrace.Begin("Compute inline styles"))
         {
-            Console.WriteLine("Registeres inline styles: " + inlineStyles.Count);
+            // Console.WriteLine("Registeres inline styles: " + inlineStyles.Count);
             foreach (var item in inlineStyles)
             {
                 item.computedStyles = item.ComputeStyles(_shouldForce, shouldMarkAsDirty: true);
@@ -97,21 +97,25 @@ public class StylesManager
         dirty = DirtyFlag.None;
     }
 
-    public void SetFrameAsNotDirty(uint frame)
+    public void DisableUpdateOnStyles(uint frame)
     {
         // Parallel.ForEach(styles, item =>
         // {
         //     item.Value.ShouldObjectUpdate[frame] = false;
         // });
 
+
         foreach (var item in styles)
         {
-            item.Value.ShouldObjectUpdate[frame] = false;
+            item.Value.ShouldUpdateStyle = false;
         }
 
         foreach (var item in inlineStyles)
         {
-            item.ShouldObjectUpdate[frame] = false;
+            if (item.ShouldUpdateStyle)
+                Console.WriteLine("Clearing dirty flags " + item.Name);
+
+            item.ShouldUpdateStyle = false;
         }
 
         // Parallel.ForEach(inlineStyles, item =>

@@ -58,8 +58,8 @@ struct FragmentOutput
 FragmentOutput FragmentMain(VertexOutput input)
 {
     FragmentOutput output;
-    output.color = float4(0, 1, 0, 1);
-    return output;
+    // output.color = float4(0, 1, 0, 1);
+    // return output;
     // RenderData objData = input;
 
     float4 radii = float4(

@@ -40,7 +40,7 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
-    long targetTicks = Stopwatch.Frequency / 20;
+    long targetTicks = Stopwatch.Frequency / 99999;
     readonly Stopwatch stopwatch = Stopwatch.StartNew();
     long nextFrameTicks = Stopwatch.GetTimestamp();
 
@@ -185,7 +185,7 @@ public unsafe partial class BrowserWindow
         // UpdateUniformBuffer(frameInFlight);
         // coreManager.OnRender(frameInFlight);
         // StylesManager.ComputeStyles();
-        Console.WriteLine("Swapchain reacreated: " + Swapchain.Instance.recreatedSwapChain);
+        // Console.WriteLine("Swapchain reacreated: " + Swapchain.Instance.recreatedSwapChain);
         (Image image, Semaphore semaphore) _imageData;
         using (SpeedscopeTrace.Begin("Ring+Texture"))
         {
@@ -302,7 +302,6 @@ public unsafe partial class BrowserWindow
     {
         // sty.AddFlag(StylesManager.DirtyFlag.ScreenSize);
         swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
-        Console.WriteLine("New size mai123n: " + swapchain.swapChainExtent.Width + "x"+swapchain.swapChainExtent.Height);
         textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
     }
 

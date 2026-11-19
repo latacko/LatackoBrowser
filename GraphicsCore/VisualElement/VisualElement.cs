@@ -43,7 +43,7 @@ public abstract class VisualElement : IDisposable, IInstance
     internal protected Vector3D<float> relativePos;
     internal protected Vector3D<float> relativeRot;
     internal protected Vector3D<float> relativeTransformation;
-    internal protected bool[] mySizeHasChangedThisFrame = new bool[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
+    internal protected bool mySizeHasChanged;
 
     public VisualElement? Parent;
 
@@ -78,7 +78,7 @@ public abstract class VisualElement : IDisposable, IInstance
             Parent = parent;
     }
 
-    public void SetParent(VisualElement? parent = null)
+    internal protected void SetParent(VisualElement? parent = null)
     {
         if (parent != null)
             Parent = parent;
@@ -104,21 +104,22 @@ public abstract class VisualElement : IDisposable, IInstance
         InstanceIndex = newInstanceId;
     }
 
-    public abstract void AddChild(VisualElement runtimeModelData);
+    public abstract void AddChild(VisualElement visualElement);
+    public abstract void RemoveChild(VisualElement visualElement);
 
     public abstract CursorType GetCursorType();
 
-    public void TestToUpdateStyle(uint frame)
+    public void TestToUpdateStyle()
     {
         if (Style == null) return;
-
+        Console.WriteLine(Style.Name + " is set as to update: " + Style.ShouldUpdateStyle);
+        if (!Style.ShouldUpdateStyle) return;
+        
         var _prevSize = computedStyle.Size;
-        if (Style.ShouldObjectUpdate[frame])
-        {
-            computedStyle = Style.ComputeStyles(false, true, LayoutManager.GetParentSize(), computedStyle.Size);
-        }
-
-        mySizeHasChangedThisFrame[frame] = _prevSize != computedStyle.Size;
+        Console.WriteLine("Updating style for " + Style.Name);
+        computedStyle = Style.ComputeStyles(false, true, LayoutManager.GetParentSize(), computedStyle.Size);
+        mySizeHasChanged = _prevSize != computedStyle.Size;
+        Console.WriteLine("My new size: " + computedStyle.Size + " my prev size: " + _prevSize);
     }
 
     public virtual void Compile()

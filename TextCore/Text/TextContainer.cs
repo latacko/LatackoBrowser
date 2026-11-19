@@ -33,6 +33,11 @@ public class TextContainer : VisualElement
         throw new Exception("You can't add children to this container. It's children are managed internaly");
     }
 
+    public override void RemoveChild(VisualElement runtimeModelData)
+    {
+        throw new Exception("You can't add children to this container. It's children are managed internaly");
+    }
+
     public void AddChild(TextLine runtimeText)
     {
         runtimeTexts.Add(runtimeText);

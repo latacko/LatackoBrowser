@@ -25,7 +25,7 @@ public interface ILayoutManager
     public virtual void OnParentSizeChanged(bool informChildren = false)
     {
         Vector2D<float> _parentSize;
-        if (GetVisualElement() != null)
+        if (GetVisualElement().Parent != null)
         {
             _parentSize = GetVisualElement().Parent.LayoutManager.GetLayoutSize();
         }
@@ -34,7 +34,6 @@ public interface ILayoutManager
             _parentSize = new(Swapchain.Instance.swapChainExtent.Width, Swapchain.Instance.swapChainExtent.Height);
         }
         SetParentSize(_parentSize);
-        Console.WriteLine("Updating my parent size: " + _parentSize);
     }
 
     public void UpdatePosition();

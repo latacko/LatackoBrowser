@@ -113,11 +113,9 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
         {
             var _siteModelKey = InstancesManager.MakeKey(siteId, modelId);
             instanceManager!.RenderTick(_siteModelKey, frameInFlight);
-            
-            foreach (var element in elements)
+            foreach (var visualElement in elements)
             {
-                element.TestToUpdateStyle(frameInFlight);
-                element.TryWriteObjectData(instanceManager!.GetDestinationSpan(_siteModelKey, frameInFlight, element.InstanceIndex, element.ObjectDataSize), frameInFlight);
+                visualElement.TryWriteObjectData(instanceManager!.GetDestinationSpan(_siteModelKey, frameInFlight, visualElement.InstanceIndex, visualElement.ObjectDataSize), frameInFlight);
             }
             
             ulong _modelBuffer = instanceManager!.GetBufferDeviceAddress(_siteModelKey, frameInFlight);

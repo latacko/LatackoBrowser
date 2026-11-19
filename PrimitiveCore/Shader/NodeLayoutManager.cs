@@ -32,6 +32,7 @@ public struct NodeLayoutManager : ILayoutManager
 
     public void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
     {
+        node.UpdateArrangement();
         updateSizeOfLine(GetLayoutSize().Y);
 
         switch (node.Style.Layout.Display)

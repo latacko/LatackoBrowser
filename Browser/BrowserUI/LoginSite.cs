@@ -19,13 +19,27 @@ public class LoginSite: ISiteController
         var _background = document.CreateElement(DocumentElements.Div)
         .SetInlineStyle(new Style("Backround")
             .SetLayout(layout=>layout
-                .SetWidth(new(100, UnitType.lvw))
-                .SetHeight(new(100, UnitType.lvh))
+                .SetWidth(new(15, UnitType.lvw))
+                .SetHeight(new(15, UnitType.lvh))
             )
             .SetProperties(properties=>properties
-                .SetBackgroundColor(0,0,0, 0.5f)
+                .SetBackgroundColor(1,0,0, 0.25f)
             )
         );
+
+        document.Body.AddChild(_background);
+
+        // var _card = document.CreateElement(DocumentElements.Div)
+        // .SetInlineStyle(new Style("Card")
+        //     .SetLayout(layout=>layout
+        //         .SetWidth(new(25, UnitType.percentageWidth))
+        //         .SetHeight(new(25, UnitType.percentageHeight))
+        //         )
+        //     .SetProperties(properties=>properties
+        //         .SetBackgroundColor(0, 1, 0, 0.25f)
+        //     )
+        // );
+        // _background.AddChild(_card);
 
         // var _form = document.CreateElement(0)
         // .SetStyle(new Style("form")
