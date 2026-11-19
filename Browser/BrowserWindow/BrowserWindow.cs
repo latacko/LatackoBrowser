@@ -40,7 +40,7 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
-    long targetTicks = Stopwatch.Frequency / 99999;
+    long targetTicks = Stopwatch.Frequency / 999999999;
     readonly Stopwatch stopwatch = Stopwatch.StartNew();
     long nextFrameTicks = Stopwatch.GetTimestamp();
 
@@ -145,6 +145,15 @@ public unsafe partial class BrowserWindow
 
     private void OnRender(double deltaTime)
     {
+        var fb = window.FramebufferSize;
+        if (fb.X == 0 || fb.Y == 0) return;
+
+        if (framebufferResized || fb != swapchain.framebufferSize) // field is set in RecreateSwapChain
+        {
+            framebufferResized = false;
+            RecreateResources();
+        }
+
         if (++traceFrames == 600)
         {
             SpeedscopeTrace.Enabled = false;
@@ -217,11 +226,11 @@ public unsafe partial class BrowserWindow
             {
                 new(
                     semaphore: imageAcquiredSemaphores[frameInFlight],
-                    stageMask: PipelineStageFlags2.ColorAttachmentOutputBit
+                    stageMask: PipelineStageFlags2.AllTransferBit
                 ),
                 new(
                     semaphore: _imageData.semaphore,
-                    stageMask: PipelineStageFlags2.FragmentShaderBit
+                    stageMask: PipelineStageFlags2.AllTransferBit
                 )
             };
             submitInfo.PWaitSemaphoreInfos = waitSemaphores;
@@ -264,15 +273,10 @@ public unsafe partial class BrowserWindow
 
                 _result = swapchain.khrSwapChain.QueuePresent(LogicalDevice.PresentQueue, &presentInfo);
 
-                if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr || framebufferResized)
-                {
-                    framebufferResized = false;
-                    RecreateResources();
-                }
+                if (_result == Result.ErrorOutOfDateKhr || _result == Result.SuboptimalKhr)
+                    framebufferResized = true;
                 else if (_result != Result.Success)
-                {
                     throw new Exception("failed to present swap chain image!");
-                }
             }
         }
 
@@ -300,9 +304,22 @@ public unsafe partial class BrowserWindow
 
     void RecreateResources()
     {
+        // Console.WriteLine("======================================= RESIZE " + swapchain.swapChainExtent.Width + "x" + swapchain.swapChainExtent.Height + " ====================================================");
         // sty.AddFlag(StylesManager.DirtyFlag.ScreenSize);
         swapchain.RecreateSwapChain(GetFrameBufferSize, OnWindowMinimized);
+        RecreateRenderCompleteSemaphores();
         textureRenderer.Resize(swapchain.swapChainExtent.Width, swapchain.swapChainExtent.Height);
+    }
+
+    void RecreateRenderCompleteSemaphores()
+    {
+        SemaphoreCreateInfo ci = new(flags: null);
+        foreach (var s in renderCompleteSemaphores)
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, s, null);
+
+        renderCompleteSemaphores = new Semaphore[swapchain.swapChainImages.Length];
+        for (int i = 0; i < renderCompleteSemaphores.Length; i++)
+            CreateVulkan.vk.CreateSemaphore(LogicalDevice.device, &ci, null, out renderCompleteSemaphores[i]);
     }
 
     Vector2D<int> GetFrameBufferSize()

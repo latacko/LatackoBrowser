@@ -112,14 +112,14 @@ public abstract class VisualElement : IDisposable, IInstance
     public void TestToUpdateStyle()
     {
         if (Style == null) return;
-        Console.WriteLine(Style.Name + " is set as to update: " + Style.ShouldUpdateStyle);
+        // Console.WriteLine(Style.Name + " is set as to update: " + Style.ShouldUpdateStyle);
         if (!Style.ShouldUpdateStyle) return;
         
         var _prevSize = computedStyle.Size;
-        Console.WriteLine("Updating style for " + Style.Name);
+        // Console.WriteLine("Updating style for " + Style.Name);
         computedStyle = Style.ComputeStyles(false, true, LayoutManager.GetParentSize(), computedStyle.Size);
         mySizeHasChanged = _prevSize != computedStyle.Size;
-        Console.WriteLine("My new size: " + computedStyle.Size + " my prev size: " + _prevSize);
+        // Console.WriteLine("My new size: " + computedStyle.Size + " my prev size: " + _prevSize);
     }
 
     public virtual void Compile()
@@ -140,7 +140,7 @@ public abstract class VisualElement : IDisposable, IInstance
     {
         Style = style;
         stylesManager.AddInlineStyle(style);
-        computedStyle = style.ComputeStyles(true, false, LayoutManager.GetParentSize(), computedStyle.Size);
+        // computedStyle = style.ComputeStyles(true, false, LayoutManager.GetParentSize(), computedStyle.Size);
         return this;
     }
 

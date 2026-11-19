@@ -88,11 +88,11 @@ public unsafe partial class BrowserWindow
         }
 
         ImageMemoryBarrier2 _outputBarriers = new(
-            srcStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+            srcStageMask: PipelineStageFlags2.AllTransferBit,
             srcAccessMask: 0,
 
-            dstStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
-            dstAccessMask: AccessFlags2.ColorAttachmentReadBit | AccessFlags2.ColorAttachmentWriteBit,
+            dstStageMask: PipelineStageFlags2.AllTransferBit,
+            dstAccessMask: AccessFlags2.TransferWriteBit,
 
             oldLayout: ImageLayout.Undefined,
             newLayout: ImageLayout.TransferDstOptimal,
@@ -145,10 +145,10 @@ public unsafe partial class BrowserWindow
 
 
         ImageMemoryBarrier2 _barrierPresent = new(
-            srcStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
-            srcAccessMask: AccessFlags2.ColorAttachmentWriteBit,
+            srcStageMask: PipelineStageFlags2.AllTransferBit,
+            srcAccessMask: AccessFlags2.TransferWriteBit,
 
-            dstStageMask: PipelineStageFlags2.ColorAttachmentOutputBit,
+            dstStageMask: PipelineStageFlags2.None,
             dstAccessMask: 0,
 
             oldLayout: ImageLayout.TransferDstOptimal,
@@ -182,8 +182,12 @@ public unsafe partial class BrowserWindow
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
             CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, imageAcquiredSemaphores[i], null);
-            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, renderCompleteSemaphores[i], null);
             CreateVulkan.vk.DestroyFence(LogicalDevice.device, fences[i], null);
+        }
+
+        for (int i = 0; i < renderCompleteSemaphores.Length; i++)
+        {
+            CreateVulkan.vk.DestroySemaphore(LogicalDevice.device, renderCompleteSemaphores[i], null);
         }
     }
 }

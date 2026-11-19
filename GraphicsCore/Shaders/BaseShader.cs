@@ -157,7 +157,7 @@ public unsafe abstract class BaseShader : IDisposable
         var rasterizer = GetRasterizer(wireFrameRendering);
 
         DynamicState[] dynamicStates = [DynamicState.Viewport, DynamicState.Scissor];
-        Console.WriteLine("Color format: " + Swapchain.swapChainImageFormat);
+        // Console.WriteLine("Color format: " + Swapchain.swapChainImageFormat);
         fixed (VertexInputAttributeDescription* attrPtr = attributeDescs)
         fixed (DynamicState* dynPtr = dynamicStates)
         fixed (PipelineShaderStageCreateInfo* stagesPtr = stages)

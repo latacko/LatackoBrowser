@@ -21,7 +21,7 @@
         "es": "ahora",
         "en": "just now"
       },
-      "items": 6
+      "items": 8
     }
   ],
   "canvases": {
@@ -37,7 +37,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 535,
+          "h": 353,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -63,7 +63,7 @@
             {
               "id": "it-1789778257552-4308",
               "x": 565,
-              "y": 95,
+              "y": 76.5,
               "type": "note",
               "w": 300,
               "h": 80,
@@ -74,42 +74,16 @@
               }
             },
             {
-              "id": "it-1790028096444-1578",
-              "x": 656,
-              "y": 141,
+              "id": "it-1795090732224-4279",
+              "x": 575,
+              "y": 177.79999542236328,
               "type": "note",
               "w": 300,
-              "h": 109,
+              "h": 101,
               "color": "white",
               "content": {
-                "es": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>",
-                "en": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread)</p>"
-              }
-            },
-            {
-              "id": "it-1793630080395-5716",
-              "x": 533,
-              "y": 257,
-              "type": "note",
-              "w": 300,
-              "h": 80,
-              "color": "white",
-              "content": {
-                "es": "usunięcie staging buffers po transferze",
-                "en": "usunięcie staging buffers po transferze"
-              }
-            },
-            {
-              "id": "it-1794005014597-9537",
-              "x": 650,
-              "y": 357,
-              "type": "note",
-              "w": 300,
-              "h": 80,
-              "color": "white",
-              "content": {
-                "es": "Przy resize okna coś się wywala i zacina całego kompa",
-                "en": "Przy resize okna coś się wywala i zacina całego kompa"
+                "es": "Okno czasem pojawia się czarne. Przy szybkim resize (okno się zmienia wielkość szybciej niż swapchain, można to zobaczyć przy szybkim resize w lewą stronę)",
+                "en": "Okno czasem pojawia się czarne. Przy szybkim resize (okno się zmienia wielkość szybciej niż swapchain, można to zobaczyć przy szybkim resize w lewą stronę)"
               }
             }
           ]
@@ -135,7 +109,7 @@
           "y": -6,
           "type": "column",
           "w": 320,
-          "h": 314,
+          "h": 245,
           "color": "white",
           "icon": "view_column",
           "content": {
@@ -143,19 +117,6 @@
             "en": "W trakcie"
           },
           "children": [
-            {
-              "id": "it-1790027976469-2786",
-              "x": 1102,
-              "y": 158,
-              "type": "note",
-              "w": 300,
-              "h": 80,
-              "color": "white",
-              "content": {
-                "es": "Zamienić managers z static na instance finder",
-                "en": "Zamienić managers z static na instance finder"
-              }
-            },
             {
               "id": "it-1790028162386-5020",
               "x": 924,
@@ -183,12 +144,96 @@
               }
             }
           ]
+        },
+        {
+          "id": "it-1795090618324-6376",
+          "x": 1293,
+          "y": -6,
+          "type": "column",
+          "w": 320,
+          "h": 332,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "Zrobione",
+            "en": "Zrobione"
+          },
+          "children": [
+            {
+              "id": "it-1794005014597-9537",
+              "x": 1200,
+              "y": 187.79999542236328,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Przy resize okna coś się wywala i zacina całego kompa",
+                "en": "Przy resize okna coś się wywala i zacina całego kompa"
+              }
+            },
+            {
+              "id": "it-1793630080395-5716",
+              "x": 1313,
+              "y": 72,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "usunięcie staging buffers po transferze",
+                "en": "usunięcie staging buffers po transferze"
+              }
+            },
+            {
+              "id": "it-1790027976469-2786",
+              "x": 1270,
+              "y": 135.79999542236328,
+              "type": "note",
+              "w": 300,
+              "h": 80,
+              "color": "white",
+              "content": {
+                "es": "Zamienić managers z static na instance finder",
+                "en": "Zamienić managers z static na instance finder"
+              }
+            }
+          ]
+        },
+        {
+          "id": "it-1795090651309-977",
+          "x": 1635,
+          "y": -6,
+          "type": "column",
+          "w": 320,
+          "h": 206,
+          "color": "white",
+          "icon": "view_column",
+          "content": {
+            "es": "Porzucone",
+            "en": "Porzucone"
+          },
+          "children": [
+            {
+              "id": "it-1790028096444-1578",
+              "x": 1601,
+              "y": 120,
+              "type": "note",
+              "w": 300,
+              "h": 128,
+              "color": "white",
+              "content": {
+                "es": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread) ~ Porzucenie róźnych threadów dla każdego okna. Wszystko na tym samym</p>",
+                "en": "<p>Zrobić z font atlas zasięg statyczny i universalny command pool (myślę aby zrobić go na osobnym thread) ~ Porzucenie róźnych threadów dla każdego okna. Wszystko na tym samym</p>"
+              }
+            }
+          ]
         }
       ],
       "connectors": [],
       "pan": {
-        "x": -196,
-        "y": -115
+        "x": -366,
+        "y": 153
       },
       "scale": 1
     },
@@ -358,8 +403,8 @@
       ],
       "connectors": [],
       "pan": {
-        "x": -29.99999999999909,
-        "y": 179.00000000000006
+        "x": 333.20001220703176,
+        "y": 150.39999389648466
       },
       "scale": 0.9999999999999988
     }

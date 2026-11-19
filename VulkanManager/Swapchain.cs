@@ -200,7 +200,7 @@ public unsafe class Swapchain : IDisposable
         khrSwapChain?.DestroySwapchain(LogicalDevice.device, oldSwapchain, null);
 
         recreatedSwapChain = true;
-        Console.WriteLine("Recreate swao chain to true");
+        // Console.WriteLine("Recreate swao chain to true");
         CreateImageViews();
     }
 

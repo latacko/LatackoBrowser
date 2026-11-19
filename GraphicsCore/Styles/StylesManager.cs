@@ -97,7 +97,7 @@ public class StylesManager
         dirty = DirtyFlag.None;
     }
 
-    public void DisableUpdateOnStyles(uint frame)
+    public void DisableUpdateOnStyles()
     {
         // Parallel.ForEach(styles, item =>
         // {
@@ -112,8 +112,8 @@ public class StylesManager
 
         foreach (var item in inlineStyles)
         {
-            if (item.ShouldUpdateStyle)
-                Console.WriteLine("Clearing dirty flags " + item.Name);
+            // if (item.ShouldUpdateStyle)
+            //     Console.WriteLine("Clearing dirty flags " + item.Name);
 
             item.ShouldUpdateStyle = false;
         }

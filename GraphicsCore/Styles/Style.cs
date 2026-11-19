@@ -35,7 +35,7 @@ public class Style
 
     void SetDirtyObjectFlag()
     {
-        Console.WriteLine("Setting " + Name + " as dirty");
+        // Console.WriteLine("Setting " + Name + " as dirty");
         ShouldUpdateStyle = true;
     }
 
@@ -100,7 +100,7 @@ public class Style
         }
         float pixels;
 
-        Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + " parent size: " + parentSize);
+        // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + " parent size: " + parentSize);
         // Console.WriteLine(Name + " Zostałem skompilowany "+ " update percentage: " + updatePercentage + Environment.StackTrace);
 
         if (_shouldForce || dirty.HasFlag(DirtyFlag.Layout))
@@ -164,10 +164,16 @@ public class Style
                 var _size = computedStyles.Size;
                 // Console.WriteLine("Size is dirty parent size: " + parentSize);
                 if (TryUpdateValue(Layout.Width, parentSize, out pixels))
+                {
                     _size.X = pixels + computedStyles.Padding.X + computedStyles.Padding.Z;
+                    // Console.WriteLine("Updating width: " + _size.X);
+                }
 
                 if (TryUpdateValue(Layout.Height, parentSize, out pixels))
+                {
                     _size.Y = pixels + computedStyles.Padding.Y + computedStyles.Padding.W;
+                    // Console.WriteLine("Updating height: " + _size.Y);
+                }
                 // Console.WriteLine("Size is : " + _size);
                 computedStyles.Size = _size;
                 objectSize = computedStyles.Size;

@@ -136,21 +136,18 @@ public class Node : VisualElement
     {
         if (Swapchain.Instance.recreatedSwapChain)
         {
-            if (Parent == null)
-                dirtyObjectProperties |= DirtyFlags.Size;
+            dirtyObjectProperties |= DirtyFlags.Size;
             AddFlag(RenderDirtyFlags.Matrix);
         }
 
         if (dirtyObjectProperties == DirtyFlags.None) return;
-        Console.WriteLine("======================== Updating arrangement for " + Style.Name + " " + dirtyObjectProperties + "================================");
 
         UpdateMyProperties();
         TestToUpdateStyle();
 
-        Console.WriteLine("Will update arrangement: " + (!dirtyObjectProperties.HasFlag(DirtyFlags.Layout) && !mySizeHasChanged) + "\nIs layout dirty: " + dirtyObjectProperties.HasFlag(DirtyFlags.Layout) + "\nMy size has changed: " + mySizeHasChanged);
+
         if (!dirtyObjectProperties.HasFlag(DirtyFlags.Layout) && !mySizeHasChanged) return;
         dirtyObjectProperties &= ~DirtyFlags.Layout;
-        Console.WriteLine("Updating layout");
 
         if (Children == null) return;
         float sizeOfLine = 0;
@@ -160,7 +157,7 @@ public class Node : VisualElement
 
         float cursorX = _paddingLeft;
         float cursorY = _paddingTop;
-        Console.WriteLine("Updating children layout");
+        // Console.WriteLine("Updating children layout");
 
         foreach (var child in Children)
         {

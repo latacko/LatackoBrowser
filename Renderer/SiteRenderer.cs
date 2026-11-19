@@ -31,14 +31,14 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     static uint LastUniqueId;
 
-    Extent2D screenSize;
-
     readonly StylesManager stylesManager = new();
 
     #region Vulkan elements
     readonly ImageData[] imagesData = new ImageData[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
-    readonly Depth depth = new();
-
+    Depth depth = new();
+    readonly List<(Depth depth, int framesLeft)> retiredDepth = [];
+    Extent2D targetSize;                       // set by Resize(), no image work here
+    readonly Extent2D[] slotSize = new Extent2D[VulkanEngine.MAX_FRAMES_IN_FLIGHT];
     // DirtyFlag dirty;
 
 
@@ -96,8 +96,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 .SetWidth(new Units.UIUnit(100, Units.UnitType.percentageWidth))
                 .SetHeight(new Units.UIUnit(100, Units.UnitType.percentageHeight))
             )
-            .SetProperties(properties=>properties
-                .SetBackgroundColor(0,0,1,1)
+            .SetProperties(properties => properties
+                .SetBackgroundColor(0, 0, 1, 1)
             )
         );
 
@@ -109,8 +109,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
     //TODO - Clear prev image and render to new texture
     public override void Resize(uint width, uint height)
     {
+        targetSize = new(width, height);
         // dirty |= DirtyFlag.Size;
-        screenSize = new(width, height);
         stylesManager.AddFlag(StylesManager.DirtyFlag.ScreenSize);
         DisposeImages();
         CreateResources();
@@ -118,14 +118,30 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     void CreateResources()
     {
-        for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
+        for (uint i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {
-            ImageData _imageData = new();
-            ImageHelper.CreateImage(screenSize.Width, screenSize.Height, Swapchain.swapChainImageFormat, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
-            _imageData.imageView = ImageHelper.CreateImageView(_imageData.image, Swapchain.swapChainImageFormat, ImageAspectFlags.ColorBit);
-            imagesData[i] = _imageData;
+            CreateImageForSlot(i, targetSize);
         }
-        depth.CreateDepthResources(screenSize.Width, screenSize.Height);
+        depth.CreateDepthResources(targetSize.Width, targetSize.Height);
+    }
+
+    void CreateImageForSlot(uint frameInFlight, Extent2D targetSize)
+    {
+        ImageData _imageData = new();
+        ImageHelper.CreateImage(targetSize.Width, targetSize.Height, Swapchain.swapChainImageFormat, ImageTiling.Optimal, ImageUsageFlags.TransferSrcBit | ImageUsageFlags.SampledBit | ImageUsageFlags.ColorAttachmentBit, MemoryPropertyFlags.DeviceLocalBit, 1, ref _imageData.image, ref _imageData.deviceMemory);
+        _imageData.imageView = ImageHelper.CreateImageView(_imageData.image, Swapchain.swapChainImageFormat, ImageAspectFlags.ColorBit);
+        imagesData[frameInFlight] = _imageData;
+    }
+
+    void EnsureSlot(uint f)   // call at start of Render(f), after the fence wait
+    {
+        if (slotSize[f].Width == targetSize.Width && slotSize[f].Height == targetSize.Height) return;
+        if (imagesData[f].image.Handle != 0) imagesData[f].Dispose();   // safe: slot f's fence signaled
+        CreateImageForSlot(f, targetSize);
+        retiredDepth.Add((depth, VulkanEngine.MAX_FRAMES_IN_FLIGHT));
+        depth = new();
+        depth.CreateDepthResources(targetSize.Width, targetSize.Height);
+        slotSize[f] = targetSize;
     }
 
     void DisposeImages()
@@ -198,13 +214,20 @@ public class SiteRenderer : TextureRenderer, IDisposable
         }
         using (SpeedscopeTrace.Begin("Set frame as not dirty"))
         {
-            stylesManager.DisableUpdateOnStyles(FrameInFlight);
+            stylesManager.DisableUpdateOnStyles();
         }
     }
 
     //TODO - Rendering do zrobienia coding vibe o 2:45
     public unsafe void Render(uint frameInFlight)
     {
+        EnsureSlot(frameInFlight);
+        for (int i = retiredDepth.Count - 1; i >= 0; i--)
+        {
+            var (d, left) = retiredDepth[i];
+            if (--left <= 0) { d.Dispose(); retiredDepth.RemoveAt(i); }
+            else retiredDepth[i] = (d, left);
+        }
         using var _ = SpeedscopeTrace.Begin("Site Renderer Render");
         FrameInFlight = frameInFlight;
         SubmitInfo2 submitInfo = new(
@@ -340,7 +363,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
             RenderingInfo _renderingInfo = new(
                 renderArea: new(
                     offset: new(0, 0),
-                    extent: screenSize
+                    extent: slotSize[imageIndex]
                 ),
                 layerCount: 1,
                 colorAttachmentCount: 1,
@@ -356,15 +379,15 @@ public class SiteRenderer : TextureRenderer, IDisposable
             Viewport _vp = new(
                 x: 0,
                 y: 0,
-                width: screenSize.Width,
-                height: screenSize.Height,
+                width: slotSize[imageIndex].Width,
+                height: slotSize[imageIndex].Height,
                 minDepth: 0,
                 maxDepth: 1
             );
             CreateVulkan.vk.CmdSetViewport(commandBuffer, 0, 1, &_vp);
             Rect2D _scissors = new(
                 offset: new(0, 0),
-                extent: screenSize
+                extent: slotSize[imageIndex]
             );
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
@@ -381,6 +404,8 @@ public class SiteRenderer : TextureRenderer, IDisposable
         {
             shader.Render(this, commandBuffer, imageIndex, wireframe);
         }
+
+        // RenderDocAPI.TriggerCapture();
 
         // coreManager.RenderShader(commandBuffer, FrameInFlight, wireFrameRendering);
 
@@ -444,7 +469,7 @@ public class SiteRenderer : TextureRenderer, IDisposable
         {
             Vulkan.UICameraUBO ubo = new()
             {
-                Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, screenSize.Width, 0, screenSize.Height, -1000, 1000),
+                Proj = Matrix4X4.CreateOrthographicOffCenter<float>(0, slotSize[currentImage].Width, 0, slotSize[currentImage].Height, -1000, 1000),
             };
 
             // Console.WriteLine("Proj width: " + width + "x" + height);
