@@ -52,7 +52,8 @@ public partial class BrowserWindow
 
     private void OnMouseClick(IMouse mouse, MouseButton button, System.Numerics.Vector2 pos)
     {
-        if (currentElement == null) return;
+        // if (currentElement == null) return;
+        textureRenderer.Click(pos);
         // currentElement.Events.ExecuteOnClick();
     }
 

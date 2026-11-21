@@ -39,4 +39,10 @@ public class Event
         }
         return null;
     }
+
+    public void Execute(VisualElement visualElement)
+    {
+        if (!elementEvents.TryGetValue(visualElement, out var ev)) return;
+        ev?.Invoke(visualElement);
+    }
 }

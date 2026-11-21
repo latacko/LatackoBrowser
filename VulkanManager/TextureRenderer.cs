@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Silk.NET.Vulkan;
 using Vulkan;
 using VulkanManager.BufferManager;
@@ -19,4 +20,6 @@ public abstract class TextureRenderer
     public abstract void Resize(uint width, uint height);
     public abstract void Update(double deltaTime);
     public abstract (Image image, Semaphore semaphore) GetImage(uint frameInFlight);
+
+    public abstract void Click(Vector2 pos);
 }

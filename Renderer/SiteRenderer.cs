@@ -15,6 +15,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using PrimitiveCore;
+using GraphicsCore.Events;
+using System.Numerics;
 
 namespace Renderer;
 
@@ -470,11 +472,11 @@ public class SiteRenderer : TextureRenderer, IDisposable
 
     void UpdateCameraUBO(uint currentImage)
     {
-        using (SpeedscopeTrace.Begin("Clear flag"))
-        {
-            // if (!dirty.HasFlag(DirtyFlag.Size))
-            //     return;
-        }
+        // using (SpeedscopeTrace.Begin("Clear flag"))
+        // {
+        //     if (!dirty.HasFlag(DirtyFlag.Size))
+        //         return;
+        // }
         // dirty &= ~DirtyFlag.Size;
 
         using (SpeedscopeTrace.Begin("Updating camera ubo"))
@@ -558,6 +560,41 @@ public class SiteRenderer : TextureRenderer, IDisposable
                 commandBuffer: null
             ));
         }
+    }
+    #endregion
+
+    #region Events
+    public override void Click(Vector2 pos)
+    {
+        var _element = FindElementAtPos(pos);
+        Console.WriteLine("Found element at x: " + pos.X + " y: " + pos.Y + ": " + _element.Style.Name);
+        InstanceRegistry.Get<EventSystem>().OnClick.Execute(_element);
+    }
+
+    public Node FindElementAtPos(Vector2 pos)
+    {
+        return GetFirstElementAtPos(pos, document.Body);
+    }
+
+    Node GetFirstElementAtPos(Vector2 pos, Node node)
+    {
+        if (node.Children == null)
+        {
+            Console.WriteLine(node.Style.Name + " Element nie ma już dzieci więc musi byc to on");
+            return node;
+        }
+
+        int _count = node.Children.Count;
+        for (int i = 0; i < _count; i++)
+        {
+            var _child = node.Children[i];
+            Console.WriteLine(_child.Style.Name + " ma bounds: " + _child.LayoutManager.GetBounds() + " a pozycja myszy " + pos);
+            if (!_child.LayoutManager.GetBounds().Contains(pos)) continue;
+            Console.WriteLine(_child.Style.Name + " jest tam gdzie mysz");
+            return GetFirstElementAtPos(pos, _child as Node);
+        }
+
+        return node;
     }
     #endregion
 

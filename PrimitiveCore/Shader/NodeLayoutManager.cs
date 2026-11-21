@@ -10,6 +10,7 @@ public struct NodeLayoutManager : ILayoutManager
 {
     Node node;
     Vector2D<float> parentSize;
+    Bounds bounds;
 
     public VisualElement GetVisualElement() => node;
 
@@ -35,23 +36,40 @@ public struct NodeLayoutManager : ILayoutManager
         node.UpdateArrangement();
         UpdateSizeOfLine(ref sizeOfLine, GetLayoutSize().Y);
 
+
+
         switch (node.Style.Layout.Display)
         {
             case GraphicsCore.Styles.Layout.DisplayType.inline:
                 if (cursorX + node.computedStyle.Size.X > width)
                     NewLine(ref cursorX, ref cursorY, paddingLeft, sizeOfLine);
 
+                UpdateBounds(in cursorX, in cursorY);
+
                 node.worldPosition = new(cursorX, cursorY);
                 cursorX += node.computedStyle.Size.X;
-
                 break;
             case GraphicsCore.Styles.Layout.DisplayType.block:
                 NewLine(ref cursorX, ref cursorY, paddingLeft, sizeOfLine);
 
+                UpdateBounds(in cursorX, in cursorY);
+                
                 node.worldPosition = new(cursorX, cursorY);
                 // Layout.BaseSize = new(width, 0);
                 break;
         }
+    }
+
+    void UpdateBounds(in float cursorX, in float cursorY)
+    {
+        bounds = new()
+        {
+            OffsetX = cursorX,
+            OffsetY = cursorY,
+
+            Width = node.computedStyle.Size.X,
+            Height = node.computedStyle.Size.Y,
+        };
     }
 
     void NewLine(ref float cursorX, ref float cursorY, in float _paddingLeft, in float sizeOfLine)
@@ -67,7 +85,7 @@ public struct NodeLayoutManager : ILayoutManager
         }
     }
 
-    public Bounds GetBounds() => new();
+    public Bounds GetBounds() => bounds;
 
     public float GetLayoutTop() => node.worldPosition.Y;
     public float GetLayoutLeft() => node.worldPosition.X;

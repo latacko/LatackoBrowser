@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace GraphicsCore;
 
-public struct Bounds
+public record struct Bounds
 {
     public float OffsetX;
     public float OffsetY;

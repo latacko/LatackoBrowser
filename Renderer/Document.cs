@@ -13,7 +13,7 @@ public class Document
     readonly TextureRenderer textureRenderer;
     readonly NodeCreator nodeCreator;
     readonly StylesManager stylesManager;
-    public Node Body { get; private set; }
+    public Node? Body { get; private set; }
     public Document(TextureRenderer textureRenderer, NodeCreator nodeCreator, StylesManager stylesManager)
     {
         this.textureRenderer = textureRenderer;
@@ -28,10 +28,8 @@ public class Document
             Console.WriteLine("[ERROR] The body was already set for this site");
             return;
         }
-        if (body == null)
-            throw new System.ArgumentNullException("The body can not be null");
-            
-        this.Body = body;
+
+        this.Body = body ?? throw new System.ArgumentNullException("The body can not be null");
     }
 
     public VisualElement CreateElement(uint modelId, TextureCore.Texture? texture = null, VisualElement? parent = null, NodeShader? shader = null)
