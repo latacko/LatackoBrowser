@@ -40,7 +40,7 @@ public unsafe partial class BrowserWindow
 
     int traceFrames;
 
-    long targetTicks = Stopwatch.Frequency / 9999999;
+    long targetTicks = Stopwatch.Frequency / 60;
     readonly Stopwatch stopwatch = Stopwatch.StartNew();
     long nextFrameTicks = Stopwatch.GetTimestamp();
 

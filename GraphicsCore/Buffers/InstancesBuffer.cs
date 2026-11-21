@@ -24,9 +24,9 @@ public class InstancesBuffer<Instance> : IDisposable, IRenderTick where Instance
 
     readonly int gpuDataSize;
 
-    public InstancesBuffer(Type gpuDataType)
+    public InstancesBuffer(int gpuDataSize)
     {
-        gpuDataSize = Marshal.SizeOf(gpuDataType);
+        this.gpuDataSize = gpuDataSize;
 
         for (int i = 0; i < VulkanEngine.MAX_FRAMES_IN_FLIGHT; i++)
         {

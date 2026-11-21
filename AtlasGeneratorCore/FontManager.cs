@@ -31,7 +31,8 @@ public class FontManager : IDisposable
         }
 
         path += name;
-
+        //FIXME - Disabled temporary. To Fix is loading glyph.
+        return;
         fontAtlas = new(lastId++, name, registerTextureCB, progress);
 
         fontAtlas.SetPixelRange(new(2.0));
@@ -47,6 +48,8 @@ public class FontManager : IDisposable
 
     public uint LoadCharset(string charset)
     {
+        //FIXME - Disabled temporary. To Fix is loading glyph.
+        return 0;
         var _face = new Face(library, path);
         var (loaded, toLoadCharacters) = fontGeometry.LoadCharset(_face, 1, charset, true);
 
@@ -66,7 +69,8 @@ public class FontManager : IDisposable
 
     public void Dispose()
     {
-        fontAtlas.Dispose();
+        //FIXME - Disabled temporary. To Fix is loading glyph.
+        // fontAtlas.Dispose();
     }
 
 

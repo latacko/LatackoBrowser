@@ -23,9 +23,9 @@ public unsafe class NodeShader : BaseShader, IShaderFactory<NodeShader>
         this.instanceManager = instanceManager;
     }
 
-    public static NodeShader Create(string shaderPath, Type meshData, Type instanceData, Func<Type, Type, InstancesManager> objectsManagerFunc)
+    public static NodeShader Create(string shaderPath, Type meshData, int instanceDataSize, Func<Type, int, InstancesManager> objectsManagerFunc)
     {
-        return new NodeShader(shaderPath, objectsManagerFunc.Invoke(meshData, instanceData));
+        return new NodeShader(shaderPath, objectsManagerFunc.Invoke(meshData, instanceDataSize));
     }
 
     public override void Init()

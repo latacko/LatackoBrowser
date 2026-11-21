@@ -22,14 +22,15 @@ public unsafe class TextShader : BaseShader
 
     readonly TextInstancesManager textInstancesManager;
 
-    TextShader(string shaderPath, Type textLineData) : base(shaderPath)
+    TextShader(string shaderPath, TextInstancesManager textInstancesManager) : base(shaderPath)
     {
-        this.textInstancesManager = TextInstancesManager.Get(textLineData);
+        this.textInstancesManager = textInstancesManager;
     }
 
     public static TextShader Create<TextLineData>(string shaderPath) where TextLineData : struct
     {
-        return new TextShader(shaderPath, typeof(TextLineData));
+        var _textInstanceManager = TextInstancesManager.Get<TextLineData>();
+        return new TextShader(shaderPath, _textInstanceManager);
     }
 
     public void UnregisterBufferForSite(uint siteId)

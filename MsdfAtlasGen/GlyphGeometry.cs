@@ -83,6 +83,8 @@ namespace MsdfAtlasGen
                 _bounds.B - (_bounds.T - _bounds.B) - 1
             );
             // Use ShapeDistanceFinder with SimpleTrueShapeDistanceFinder
+
+            //TODO - To fix in aot. ShapeDistanceFinder is using dynamic which doesnt work with aot
             var combiner = new SimpleContourCombiner<TrueDistanceSelector>(_shape);
             var finder = new ShapeDistanceFinder<SimpleContourCombiner<TrueDistanceSelector>>(_shape, combiner);
             double distance = finder.Distance(outerPoint);

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using AssetCore;
 using GraphicsCore;
 using GraphicsCore.Buffers;
@@ -13,26 +14,27 @@ internal unsafe class TextInstancesManager : IDisposable
     static readonly Dictionary<Type, TextInstancesManager> textInstancesManagers = [];
     readonly Dictionary<uint, InstancesBuffer<VisualElement>> textContainerInstancesBuffer = [];
     readonly Dictionary<uint, InstancesBuffer<VisualElement>> textLineInstancesBuffer = [];
-    readonly Type instanceData;
-    internal TextInstancesManager(Type instanceData)
+    readonly int instanceDataSize;
+    internal TextInstancesManager(int instanceDataSize)
     {
-        this.instanceData = instanceData;
-        textInstancesManagers[instanceData] = this;
+        this.instanceDataSize = instanceDataSize;
+        // textInstancesManagers[instanceData] = this;
     }
 
-    public static TextInstancesManager Get(Type instanceData)
+    public static TextInstancesManager Get<TInstanceData>()
     {
+        Type instanceData = typeof(TInstanceData);
         if (textInstancesManagers.TryGetValue(instanceData, out TextInstancesManager? value))
             return value;
 
-        textInstancesManagers[instanceData] = new TextInstancesManager(instanceData);
+        textInstancesManagers[instanceData] = new TextInstancesManager(Marshal.SizeOf<TInstanceData>());
         return textInstancesManagers[instanceData];
     }
 
     public void RegisterBufferForSite(uint siteId)
     {
-        textContainerInstancesBuffer.Add(siteId, new(instanceData));
-        textLineInstancesBuffer.Add(siteId, new(instanceData));
+        textContainerInstancesBuffer.Add(siteId, new(instanceDataSize));
+        textLineInstancesBuffer.Add(siteId, new(instanceDataSize));
     }
 
     public void UnregisterBufferForSite(uint siteId)

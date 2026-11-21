@@ -7,5 +7,5 @@ namespace GraphicsCore.Shaders;
 
 public interface IShaderFactory<TSelf> where TSelf: BaseShader
 {
-    static abstract TSelf Create(string shaderPath, Type meshData, Type instanceData, Func<Type, Type, InstancesManager> objectsManagerFunc);
+    static abstract TSelf Create(string shaderPath, Type meshData, int instanceDataSize, Func<Type, int, InstancesManager> objectsManagerFunc);
 }

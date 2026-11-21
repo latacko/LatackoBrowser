@@ -9,11 +9,11 @@ public unsafe class InstancesManager : IDisposable
     public Dictionary<ulong, InstancesBuffer<VisualElement>> nodesBuffers = [];
     public static ulong MakeKey(uint siteId, uint meshId) => ((ulong)siteId << 32) | meshId;
     readonly Type meshData;
-    readonly Type instanceData;
-    public InstancesManager(Type meshData, Type instanceData)
+    readonly int instanceDataSize;
+    public InstancesManager(Type meshData, int instanceDataSize)
     {
         this.meshData = meshData;
-        this.instanceData = instanceData;
+        this.instanceDataSize = instanceDataSize;
         if (meshData.BaseType != typeof(IMeshData))
         {
             throw new ArgumentException("Gpu data must be IMeshData. But it is " + meshData + " base type: " + meshData.BaseType);
@@ -31,7 +31,7 @@ public unsafe class InstancesManager : IDisposable
         if (nodesBuffers.ContainsKey(_siteModelKey))
             return;
 
-        nodesBuffers[_siteModelKey] = new(instanceData);
+        nodesBuffers[_siteModelKey] = new(instanceDataSize);
     }
 
     public void UnregisterBufferForMesh(uint siteId, uint meshId)
