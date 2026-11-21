@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
+    
+    <Shaders>$(IntermediateOutputPath)shaders\</Shaders>
   </PropertyGroup>
 
   <ItemGroup>

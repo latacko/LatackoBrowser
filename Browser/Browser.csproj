@@ -8,23 +8,23 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ShaderWorkingDirectory>$(ProjectDir)shaders</ShaderWorkingDirectory>
     <IsAotCompatible>true</IsAotCompatible>
-
-    <Shaders>$(IntermediateOutputPath)shaders\</Shaders>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- Builds the tool first, but doesn't reference it as a library -->
     <ProjectReference Include="../RenderDocIntegration/RenderDocIntegration.csproj" />
-    <ProjectReference Include="..\Tools\ShaderBuild\ShaderBuild.csproj" ReferenceOutputAssembly="false" />
-    <ShaderSource Include="Shaders\**\*.slang;" />
+    <ProjectReference Include="..\Tools\ShaderBuild\ShaderBuild.csproj"
+      ReferenceOutputAssembly="false"
+      Private="false"
+      SkipGetTargetFrameworkProperties="true" />
   </ItemGroup>
 
-  <!-- <PropertyGroup Condition="'$(Configuration)' == 'Release'">
-    <PublishAot>true</PublishAot>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- <PublishAot>true</PublishAot> -->
     <SelfContained>true</SelfContained>
     <Optimize>true</Optimize>
     <StripSymbols>true</StripSymbols>
-  </PropertyGroup> -->
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../CoreManager/CoreManager.csproj" />
@@ -67,9 +67,11 @@
   </ItemGroup>
 
   <Target Name="CompileShaders" BeforeTargets="Build">
-    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat" WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' == 'Windows_NT'" Command="compile.bat"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
 
-    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh" WorkingDirectory="$(ShaderWorkingDirectory)" />
+    <Exec Condition="'$(OS)' != 'Windows_NT'" Command="bash compile.sh"
+      WorkingDirectory="$(ShaderWorkingDirectory)" />
   </Target>
 
 
@@ -80,6 +82,56 @@
 
   <ItemGroup>
     <Compile Remove="Generated/**/*.cs" />
-    <ProjectReference Include="../Tools/AutoLoad.Generator/AutoLoad.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Tools/AutoLoad.Generator/AutoLoad.Generator.csproj"
+      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+
+  <Target Name="CollectShaders" AfterTargets="Build">
+
+    <!-- Ask every referenced project for its compiled shaders -->
+    <MSBuild
+      Projects="@(ProjectReference)"
+      Targets="GetCompiledShaders"
+      BuildInParallel="true"
+      SkipNonexistentTargets="true">
+
+      <Output
+        TaskParameter="TargetOutputs"
+        ItemName="_ReferencedShaders" />
+
+    </MSBuild>
+
+    <MakeDir Directories="$(OutDir)Shaders"
+      Condition="'@(_ReferencedShaders)' != ''" />
+
+    <Copy
+      SourceFiles="@(_ReferencedShaders)"
+      DestinationFiles="@(_ReferencedShaders->'$(OutDir)Shaders/%(Library)/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+      Condition="'@(_ReferencedShaders)' != ''" />
+
+    <Message Importance="high"
+      Text="Collected shaders: @(_ReferencedShaders)" />
+
+  </Target>
+
+  <Target Name="CollectShadersForPublish"
+    AfterTargets="Publish"
+    DependsOnTargets="CollectShaders">
+
+    <MakeDir
+      Directories="$(PublishDir)Shaders"
+      Condition="'@(_ReferencedShaders)' != ''" />
+
+    <Copy
+      SourceFiles="@(_ReferencedShaders)"
+      DestinationFiles="@(_ReferencedShaders->'$(PublishDir)Shaders/%(Library)/%(RecursiveDir)%(Filename)%(Extension)')"
+      SkipUnchangedFiles="true"
+      Condition="'@(_ReferencedShaders)' != ''" />
+
+    <Message
+      Importance="high"
+      Text="Published shaders to: $(PublishDir)Shaders" />
+
+  </Target>
 </Project>

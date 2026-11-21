@@ -23,7 +23,7 @@ public struct TextLineLayoutManager : ILayoutManager
     }
 
 
-    public void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
+    public void Arrange(ref float cursorX, ref float cursorY, ref float paddingLeft, ref float sizeOfLine, ref float width)
     {
         throw new System.Exception("This funtion shoudn't be executed on runtime text!");
     }

@@ -134,17 +134,24 @@ public class Node : VisualElement
 
     public void UpdateArrangement()
     {
-        if (Swapchain.Instance.recreatedSwapChain)
+        using (SpeedscopeTrace.Begin("Recreated swapchin update value"))
         {
-            dirtyObjectProperties |= DirtyFlags.Size;
-            AddFlag(RenderDirtyFlags.Matrix);
+            if (Swapchain.Instance.recreatedSwapChain)
+            {
+                dirtyObjectProperties |= DirtyFlags.Size;
+                AddFlag(RenderDirtyFlags.Matrix);
+            }
         }
 
         if (dirtyObjectProperties == DirtyFlags.None) return;
-
-        UpdateMyProperties();
-        TestToUpdateStyle();
-
+        using (SpeedscopeTrace.Begin("Updating my properties"))
+        {
+            UpdateMyProperties();
+        }
+        using (SpeedscopeTrace.Begin("Test to update style"))
+        {
+            TestToUpdateStyle();
+        }
 
         if (!dirtyObjectProperties.HasFlag(DirtyFlags.Layout) && !mySizeHasChanged) return;
         dirtyObjectProperties &= ~DirtyFlags.Layout;
@@ -158,21 +165,11 @@ public class Node : VisualElement
         float cursorX = _paddingLeft;
         float cursorY = _paddingTop;
         // Console.WriteLine("Updating children layout");
-
-        foreach (var child in Children)
+        using (SpeedscopeTrace.Begin("Arrenge children"))
         {
-            child.LayoutManager.Arrange(ref cursorX, ref cursorY, NewLine, UpdateSizeOfLine, ref innerWidth);
-        }
-        void NewLine()
-        {
-            cursorX = _paddingLeft;
-            cursorY += sizeOfLine;
-        }
-        void UpdateSizeOfLine(float newSizeOfLine)
-        {
-            if (newSizeOfLine > sizeOfLine)
+            foreach (var child in Children)
             {
-                sizeOfLine = newSizeOfLine;
+                child.LayoutManager.Arrange(ref cursorX, ref cursorY, ref _paddingLeft, ref sizeOfLine, ref innerWidth);
             }
         }
     }

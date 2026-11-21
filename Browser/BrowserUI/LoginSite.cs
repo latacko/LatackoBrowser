@@ -34,7 +34,7 @@ public class LoginSite : ISiteController
         .SetInlineStyle(new Style("Background2")
             .SetLayout(layout => layout
                 .SetWidth(new(15, UnitType.lvw))
-                .SetHeight(new(15, UnitType.lvh))
+                .SetHeight(new(20, UnitType.lvh))
 
             )
             .SetProperties(properties => properties

@@ -119,7 +119,7 @@ public unsafe class Swapchain : IDisposable
         PresentModeKHR _presentMode = ChooseSwapPresentMode(_swapChainSupport.PresentModes);
         Extent2D _extent = ChooseSwapExtent(_swapChainSupport.Capabilities);
 
-        uint _imageCount = _swapChainSupport.Capabilities.MinImageCount;
+        uint _imageCount = _swapChainSupport.Capabilities.MinImageCount + 1;
         if (_swapChainSupport.Capabilities.MaxImageCount > 0 && _imageCount > _swapChainSupport.Capabilities.MaxImageCount)
             _imageCount = _swapChainSupport.Capabilities.MaxImageCount;
 

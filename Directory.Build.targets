@@ -1,11 +1,8 @@
 <Project>
     <PropertyGroup>
-        <ShaderProject>
-            $(MSBuildProjectDirectory)/../Tools/ShaderBuild/ShaderBuild.csproj
-        </ShaderProject>
-        <ShaderOut>$(MSBuildThisFileDirectory)shaders\</ShaderOut>
-
-        <ShaderLibrary>$(MSBuildThisFileDirectory)Browser/bin/$(Configuration)/net10.0/Shaders/</ShaderLibrary>
+        <ShaderProject>$(MSBuildThisFileDirectory)/Tools/ShaderBuild/ShaderBuild.csproj</ShaderProject>
+        <ShaderLibrary>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)',
+            '$(IntermediateOutputPath)', 'shaders'))</ShaderLibrary>
     </PropertyGroup>
 
     <Target Name="CompileShaders"
@@ -17,24 +14,33 @@
             Properties="Configuration=$(Configuration);Platform=$(Platform)" />
 
         <PropertyGroup>
-            <ShaderTool>
-                $(MSBuildProjectDirectory)/../Tools/ShaderBuild/bin/$(Configuration)/net10.0/ShaderBuild.dll</ShaderTool>
+            <ShaderTool>$(MSBuildProjectDirectory)/../Tools/ShaderBuild/bin/$(Configuration)/net10.0/ShaderBuild.dll</ShaderTool>
         </PropertyGroup>
 
-        <Error Condition="!Exists('$(ShaderTool)')"
-            Text="Shader compiler not found: $(ShaderTool)" />
+        <Error Condition="!Exists('$(ShaderTool)')" Text="Shader compiler not found: $(ShaderTool)" />
+
+        <MakeDir Directories="$(ShaderLibrary)" />
+
+        <Message Importance="high" Text="Compiling shaders for $(MSBuildProjectName): $(ShaderLibrary)" />
 
         <Exec
-            Command="dotnet &quot;$(MSBuildProjectDirectory)/../Tools/ShaderBuild/bin/$(Configuration)/net10.0/ShaderBuild.dll&quot; &quot;$(MSBuildProjectDirectory)/$(Shaders)&quot; &quot;$(ShaderLibrary)&quot;"
+            Command="dotnet &quot;$(ShaderTool)&quot; &quot;$(MSBuildProjectDirectory)/$(Shaders)&quot; &quot;$(ShaderLibrary)&quot;"
             WorkingDirectory="$(MSBuildProjectDirectory)"
-            IgnoreExitCode="false" />
+            ConsoleToMSBuild="true" StandardOutputImportance="high" StandardErrorImportance="high" />
 
         <ItemGroup>
-            <None Include="$(ShaderOut)**/*.spv"
-                Link="Shaders/%(RecursiveDir)%(Filename)%(Extension)"
-                CopyToOutputDirectory="PreserveNewest" />
+            <CompiledShader Include="$(ShaderLibrary)**/*.spv" />
         </ItemGroup>
 
+        <Message Importance="high" Text="Found shaders: @(CompiledShader)" />
     </Target>
+    <Target Name="GetCompiledShaders"
+            Returns="@(_ExportedShaders)">
 
+        <ItemGroup>
+            <_ExportedShaders Include="$(ShaderLibrary)**/*.spv" Condition="Exists('$(ShaderLibrary)')">
+                <Library>$(MSBuildProjectName)</Library>
+            </_ExportedShaders>
+        </ItemGroup>
+    </Target>
 </Project>

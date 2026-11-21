@@ -33,7 +33,7 @@ public struct TextContainerLayoutManager : ILayoutManager
         parentSize = size;
     }
 
-    public void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    public void Arrange(ref float cursorX, ref float cursorY, ref float paddingLeft, ref float sizeOfLine, ref float width)
     {
         Console.WriteLine("============================= Update layout width: " + width + "px =============================");
         stopwatch.Restart();
@@ -58,14 +58,14 @@ public struct TextContainerLayoutManager : ILayoutManager
             if (_measuredTextWidth > width - cursorX)
             {
                 Console.WriteLine("Too much slicing");
-                SliceText(_runtimeTextToReuse, ref _leftSlice, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                SliceText(_runtimeTextToReuse, ref _leftSlice, ref cursorX, ref cursorY, ref paddingLeft, ref sizeOfLine, ref width);
                 _runtimeTextToReuse++;
-                newLine();
+                NewLine(ref cursorX, ref cursorY, paddingLeft, sizeOfLine);
             }
             else
             {
                 Console.WriteLine("Good adding all");
-                AddText(_runtimeTextToReuse, _leftSlice, textContainer.Text.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+                AddText(_runtimeTextToReuse, _leftSlice, textContainer.Text.Length, ref cursorX, ref cursorY, ref paddingLeft, ref sizeOfLine, ref width);
                 _leftSlice = textContainer.Text.Length;
                 _runtimeTextToReuse++;
             }
@@ -75,7 +75,7 @@ public struct TextContainerLayoutManager : ILayoutManager
         }
     }
 
-    void SliceText(int runtimeTextToReuse, ref int leftSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    void SliceText(int runtimeTextToReuse, ref int leftSlice, ref float cursorX, ref float cursorY, ref float paddingLeft, ref float sizeOfLine, ref float width)
     {
         var _span = textContainer.TextMemory.Span;
         List<int> _breakOpportunities = BreakOpportunites(_span[leftSlice..]);
@@ -84,18 +84,18 @@ public struct TextContainerLayoutManager : ILayoutManager
         // Console.WriteLine("Final index: " + _breakIndex + " left slice: " + leftSlice);
         if (_breakIndex == -1)
         {
-            AddText(runtimeTextToReuse, leftSlice, textContainer.TextMemory.Length, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            AddText(runtimeTextToReuse, leftSlice, textContainer.TextMemory.Length, ref cursorX, ref cursorY, ref paddingLeft, ref sizeOfLine, ref width);
             leftSlice = textContainer.TextMemory.Length;
         }
         else
         {
-            AddText(runtimeTextToReuse, leftSlice, leftSlice + _breakIndex, ref cursorX, ref cursorY, newLine, updatedSizeOfLine, ref width);
+            AddText(runtimeTextToReuse, leftSlice, leftSlice + _breakIndex, ref cursorX, ref cursorY, ref paddingLeft, ref sizeOfLine, ref width);
             leftSlice = leftSlice + _breakIndex + 1;
         }
     }
 
     //NOTE - Line gap was removed idk what it does. Awaiting for testing with else fonts.
-    void AddText(int runtimeTextToReuse, int leftSlice, int rightSlice, ref float cursorX, ref float cursorY, Action newLine, Action<float> updatedSizeOfLine, ref float width)
+    void AddText(int runtimeTextToReuse, int leftSlice, int rightSlice, ref float cursorX, ref float cursorY, ref float paddingLeft, ref float sizeOfLine, ref float width)
     {
         lock (textContainer.runtimeTexts)
         {
@@ -121,7 +121,7 @@ public struct TextContainerLayoutManager : ILayoutManager
             //TODO - LINE GAP TO IMPLEMENT
             Console.WriteLine("Line gap: " + textContainer.fontManager.GetFontGeometry().GetMetrics() + " line gap to imlement px font size: " + textContainer.computedStyle.FontSize);
             // updatedSizeOfLine.Invoke(fontAtlas.lineGap * computedStyle.FontSize + _size.Y);
-            updatedSizeOfLine.Invoke(textContainer.computedStyle.FontSize);
+            UpdateSizeOfLine(ref sizeOfLine, textContainer.computedStyle.FontSize);
 
             cursorX += _size.X;
         }
@@ -189,6 +189,20 @@ public struct TextContainerLayoutManager : ILayoutManager
 
         return _bestBreakPos;
     }
+
+    void NewLine(ref float cursorX, ref float cursorY, in float _paddingLeft, in float sizeOfLine)
+    {
+        cursorX = _paddingLeft;
+        cursorY += sizeOfLine;
+    }
+    void UpdateSizeOfLine(ref float sizeOfLine, in float newSizeOfLine)
+    {
+        if (newSizeOfLine > sizeOfLine)
+        {
+            sizeOfLine = newSizeOfLine;
+        }
+    }
+
 
     public Bounds GetBounds()
     {

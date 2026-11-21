@@ -30,23 +30,23 @@ public struct NodeLayoutManager : ILayoutManager
         // throw new NotImplementedException();
     }
 
-    public void Arrange(ref float cursorX, ref float cursorY, Action newLine, Action<float> updateSizeOfLine, ref float width)
+    public void Arrange(ref float cursorX, ref float cursorY, ref float paddingLeft, ref float sizeOfLine, ref float width)
     {
         node.UpdateArrangement();
-        updateSizeOfLine(GetLayoutSize().Y);
+        UpdateSizeOfLine(ref sizeOfLine, GetLayoutSize().Y);
 
         switch (node.Style.Layout.Display)
         {
             case GraphicsCore.Styles.Layout.DisplayType.inline:
                 if (cursorX + node.computedStyle.Size.X > width)
-                    newLine.Invoke();
+                    NewLine(ref cursorX, ref cursorY, paddingLeft, sizeOfLine);
 
                 node.worldPosition = new(cursorX, cursorY);
                 cursorX += node.computedStyle.Size.X;
 
                 break;
             case GraphicsCore.Styles.Layout.DisplayType.block:
-                newLine.Invoke();
+                NewLine(ref cursorX, ref cursorY, paddingLeft, sizeOfLine);
 
                 node.worldPosition = new(cursorX, cursorY);
                 // Layout.BaseSize = new(width, 0);
@@ -54,11 +54,24 @@ public struct NodeLayoutManager : ILayoutManager
         }
     }
 
-    public Bounds GetBounds()=>new();
+    void NewLine(ref float cursorX, ref float cursorY, in float _paddingLeft, in float sizeOfLine)
+    {
+        cursorX = _paddingLeft;
+        cursorY += sizeOfLine;
+    }
+    void UpdateSizeOfLine(ref float sizeOfLine, in float newSizeOfLine)
+    {
+        if (newSizeOfLine > sizeOfLine)
+        {
+            sizeOfLine = newSizeOfLine;
+        }
+    }
 
-    public float GetLayoutTop()=>node.worldPosition.Y;
-    public float GetLayoutLeft()=>node.worldPosition.X;
-    public Vector2D<float> GetLayoutSize()=>node.computedStyle.Size;
+    public Bounds GetBounds() => new();
+
+    public float GetLayoutTop() => node.worldPosition.Y;
+    public float GetLayoutLeft() => node.worldPosition.X;
+    public Vector2D<float> GetLayoutSize() => node.computedStyle.Size;
 
     public void UpdatePosition()
     {

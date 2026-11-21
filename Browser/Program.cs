@@ -102,10 +102,10 @@ InstanceRegistry.Get<FontsManager>().LoadFont("google-noto/NotoSerif-Regular.ttf
 #region Shaders loading
 ShaderCreator<NodeShader> nodeShaderCreator = new();
 
-var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("uiShader");
+var defaultNodeShader = nodeShaderCreator.CreateShader<MeshData<ushort>, ModelGPUData>("PrimitiveCore/uiShader");
 NodeCreator.SetDefaultShader(defaultNodeShader);
 
-var defaultTextShader = TextShader.Create<TextLineGPUData>("textShader");
+var defaultTextShader = TextShader.Create<TextLineGPUData>("TextCore/textShader");
 
 renderEngine.RegisterShaders(defaultNodeShader, defaultTextShader);
 // fontManager.LoadFont("stix-fonts/STIXTwoText-Regular.otf");

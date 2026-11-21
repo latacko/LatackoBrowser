@@ -225,9 +225,14 @@ public class SiteRenderer : TextureRenderer, IDisposable
         for (int i = retiredDepth.Count - 1; i >= 0; i--)
         {
             var (d, left) = retiredDepth[i];
-            if (--left <= 0) { d.Dispose(); retiredDepth.RemoveAt(i); }
+            if (--left <= 0)
+            {
+                d.Dispose();
+                retiredDepth.RemoveAt(i);
+            }
             else retiredDepth[i] = (d, left);
         }
+
         using var _ = SpeedscopeTrace.Begin("Site Renderer Render");
         FrameInFlight = frameInFlight;
         SubmitInfo2 submitInfo = new(
@@ -392,17 +397,24 @@ public class SiteRenderer : TextureRenderer, IDisposable
             CreateVulkan.vk.CmdSetScissor(commandBuffer, 0, 1, &_scissors);
         }
 
-        if (visualElementsToCompile.Count > 0)
+        using (SpeedscopeTrace.Begin("Compiling elements"))
         {
-            Console.WriteLine("Elements to compile in shaders: " + VisualElement.ObjectsToCompile.Count);
-            CompileVisuaElements();
+            if (visualElementsToCompile.Count > 0)
+            {
+                Console.WriteLine("Elements to compile in shaders: " + VisualElement.ObjectsToCompile.Count);
+                CompileVisuaElements();
+            }
         }
-
-        document.Body.UpdateArrangement();
-
-        foreach (var shader in RenderEngine.Instance.Shaders)
+        using (SpeedscopeTrace.Begin("Updating arrengments"))
         {
-            shader.Render(this, commandBuffer, imageIndex, wireframe);
+            document.Body.UpdateArrangement();
+        }
+        using (SpeedscopeTrace.Begin("Rendering elements"))
+        {
+            foreach (var shader in RenderEngine.Instance.Shaders)
+            {
+                shader.Render(this, commandBuffer, imageIndex, wireframe);
+            }
         }
 
         // RenderDocAPI.TriggerCapture();

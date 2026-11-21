@@ -23,7 +23,7 @@ public unsafe abstract class BaseShader : IDisposable
 
     public BaseShader(string shaderPath)
     {
-        moduleShaderPath = "Shaders/" + shaderPath + ".spv";
+        moduleShaderPath = AppContext.BaseDirectory + "/Shaders/" + shaderPath + ".spv";
     }
 
     #region Init
@@ -134,7 +134,7 @@ public unsafe abstract class BaseShader : IDisposable
             stage: ShaderStageFlags.FragmentBit
         );
 
-        var wireframeCode = System.IO.File.ReadAllBytes(Path.GetDirectoryName(moduleShaderPath) + "/wireFrameShader.spv");
+        var wireframeCode = System.IO.File.ReadAllBytes(Path.GetDirectoryName(moduleShaderPath) + "/../Renderer/wireFrameShader.spv");
         var wireframeShaderModule = CreateShaderModule(wireframeCode);
         if (wireFrameRendering)
         {

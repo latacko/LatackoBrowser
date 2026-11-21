@@ -14,7 +14,6 @@ public class Program
 
         string srcDir = Path.GetFullPath(args[0]);
         string outDir = Path.GetFullPath(args[1]);
-        bool debug = args.Contains("--debug");
         Directory.CreateDirectory(outDir);
         Console.WriteLine(srcDir);
 
@@ -86,7 +85,6 @@ public class Program
             File.WriteAllBytes(outFile, result.ToArray());
             Console.WriteLine($"Compiled {rel} -> {Path.GetFileName(outFile)}");
         }
-
         return failures == 0 ? 0 : 1;
     }
 
